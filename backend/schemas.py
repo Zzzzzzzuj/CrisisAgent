@@ -12,6 +12,11 @@ class AgentTraceItem(BaseModel):
     name: str
     input: Any
     output: Any
+    start_time: str
+    end_time: str
+    status: str
+    mode: str
+    fallback: bool
 
 
 class ScoreBundle(BaseModel):

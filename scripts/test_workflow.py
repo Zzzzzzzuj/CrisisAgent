@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from datetime import datetime
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -22,7 +23,20 @@ def main() -> None:
     print(f"scores: {response.scores.model_dump()}")
     print("agent_trace:")
     for item in response.agent_trace:
-        print(f"- {item.agent}: {item.name}")
+        start_time = datetime.fromisoformat(item.start_time)
+        end_time = datetime.fromisoformat(item.end_time)
+        duration_ms = int((end_time - start_time).total_seconds() * 1000)
+
+        print(item.agent)
+        print("-" * 9)
+        print(f"name: {item.name}")
+        print(f"mode: {item.mode}")
+        print(f"status: {item.status}")
+        print(f"fallback: {str(item.fallback).lower()}")
+        print(f"start_time: {item.start_time}")
+        print(f"end_time: {item.end_time}")
+        print(f"duration: {duration_ms} ms")
+        print()
 
 
 if __name__ == "__main__":
