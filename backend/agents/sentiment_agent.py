@@ -14,6 +14,8 @@ REQUIRED_FIELDS = (
     "recommended_tone",
     "analysis_summary",
 )
+ALLOWED_PUBLIC_EMOTIONS = {"angry", "worried", "neutral", "positive"}
+DEFAULT_RECOMMENDED_TONE = "先共情、再回应行动、避免抢先定性"
 
 
 def run(event: str) -> dict:
@@ -45,15 +47,14 @@ def _run_mock(event: str) -> dict:
         keywords.append("公众愤怒")
 
     risk_level = "high" if any(word in event for word in ["过期", "监管", "爆", "曝光"]) else "medium"
-    public_emotion = "angry" if any(word in event for word in ["要求", "曝光", "愤怒", "偷拍视频"]) else "concerned"
-    recommended_tone = "先共情、再回应行动、避免抢先定性"
+    public_emotion = "angry" if any(word in event for word in ["要求", "曝光", "愤怒", "偷拍视频"]) else "worried"
 
     return _normalize_output(
         {
             "risk_level": risk_level,
             "public_emotion": public_emotion,
             "keywords": keywords or ["舆情扩散"],
-            "recommended_tone": recommended_tone,
+            "recommended_tone": DEFAULT_RECOMMENDED_TONE,
             "analysis_summary": "当前事件具有较强传播性和监管敏感性，回应应强调重视、调查、整改与配合监管。",
         }
     )
@@ -73,9 +74,9 @@ def _run_llm(event: str) -> dict:
     logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
     mapped_output = {
         "risk_level": validated["risk_level"],
-        "public_emotion": validated["public_emotion"],
+        "public_emotion": _normalize_public_emotion(validated["public_emotion"]),
         "keywords": validated["keywords"],
-        "recommended_tone": validated["recommended_tone"],
+        "recommended_tone": _normalize_recommended_tone(validated["recommended_tone"]),
         "analysis_summary": validated["analysis_summary"],
     }
     normalized_output = _normalize_output(mapped_output)
@@ -102,14 +103,63 @@ def _validate_llm_output(payload: dict) -> dict:
     if not isinstance(payload["analysis_summary"], str):
         raise TypeError("Field 'analysis_summary' must be a string.")
 
+    normalized_emotion = _normalize_public_emotion(payload["public_emotion"])
+    if normalized_emotion not in ALLOWED_PUBLIC_EMOTIONS:
+        raise ValueError(
+            "Field 'public_emotion' must normalize to one of: angry, worried, neutral, positive."
+        )
+
     return payload
+
+
+def _normalize_public_emotion(value: str) -> str:
+    normalized = value.strip().lower()
+
+    if normalized in ALLOWED_PUBLIC_EMOTIONS:
+        return normalized
+    if any(token in normalized for token in ["angry", "anger", "distrust", "rage", "愤怒", "不信任"]):
+        return "angry"
+    if any(token in normalized for token in ["worried", "concern", "anxious", "fear", "担忧", "焦虑", "担心"]):
+        return "worried"
+    if any(token in normalized for token in ["positive", "supportive", "认可", "支持", "正面"]):
+        return "positive"
+    if any(token in normalized for token in ["neutral", "mixed", "中性", "观望", "复杂"]):
+        return "neutral"
+
+    raise ValueError(f"Unsupported public_emotion value: {value}")
+
+
+def _normalize_recommended_tone(value: str) -> str:
+    normalized = value.strip().lower()
+
+    if any(
+        token in normalized
+        for token in [
+            "先共情",
+            "回应行动",
+            "避免抢先定性",
+            "empathy",
+            "action",
+            "avoid premature",
+            "avoid premature judgment",
+        ]
+    ):
+        return DEFAULT_RECOMMENDED_TONE
+
+    if any(token in normalized for token in ["冷静", "事实", "审慎", "calm", "fact-based", "cautious"]):
+        return "保持冷静、基于事实回应、避免情绪化对抗"
+
+    if any(token in normalized for token in ["透明", "及时", "更新", "transparent", "timely", "update"]):
+        return "保持透明、及时同步进展、持续回应关切"
+
+    return DEFAULT_RECOMMENDED_TONE
 
 
 def _normalize_output(payload: dict) -> dict:
     return {
         "risk_level": str(payload["risk_level"]),
-        "public_emotion": str(payload["public_emotion"]),
+        "public_emotion": _normalize_public_emotion(str(payload["public_emotion"])),
         "keywords": [str(item) for item in payload["keywords"]],
-        "recommended_tone": str(payload["recommended_tone"]),
+        "recommended_tone": _normalize_recommended_tone(str(payload["recommended_tone"])),
         "analysis_summary": str(payload["analysis_summary"]),
     }

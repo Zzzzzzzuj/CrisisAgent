@@ -36,6 +36,19 @@ README.md
 pip install -r requirements.txt
 ```
 
+## Development Setup
+
+For local development and testing, install the same requirements file:
+
+```bash
+pip install -r requirements.txt
+```
+
+This includes:
+- Runtime dependencies for FastAPI
+- Lightweight LLM infrastructure dependencies
+- `pytest` for local unit tests
+
 ## Start the Server
 
 ```bash
@@ -76,6 +89,20 @@ Run from the project root:
 
 ```bash
 python scripts/test_workflow.py
+```
+
+## Run Tests
+
+Run the Agent A test file from the project root:
+
+```bash
+python -m pytest tests/test_sentiment_agent.py
+```
+
+Run the whole test directory:
+
+```bash
+python -m pytest tests
 ```
 
 ## Environment Configuration
