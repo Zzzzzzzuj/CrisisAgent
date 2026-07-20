@@ -1,58 +1,55 @@
 # CrisisAgent MVP
 
-这是一个面向企业危机公关场景的最小可运行后端 MVP，使用 `FastAPI + Python` 实现多智能体 workflow 骨架。
+CrisisAgent is a FastAPI backend MVP for enterprise crisis PR workflows.
 
-当前版本不接入真实大模型，也不包含前端。所有 Agent 都是规则函数 / mock 输出，目标是先跑通后端流程、接口和 `agent_trace`。
+Current status:
+- The workflow is fully mock/rule based.
+- No real LLM is connected yet.
+- `POST /api/crisis/run` remains the main execution API.
+- Session storage and query APIs are available.
 
-## 项目结构
+## Project Structure
 
 ```text
 backend/
   agents/
-    decision_agent.py
-    legal_agent.py
-    redteam_agent.py
-    sentiment_agent.py
-    writer_agent.py
-  __init__.py
+  prompts/
+  utils/
+  config.py
+  llm_client.py
+  logger.py
   main.py
+  prompt_loader.py
   schemas.py
   storage.py
   workflow.py
 cases/
-  sample_cases.json
+scripts/
+.env.example
 requirements.txt
 README.md
 ```
 
-## 安装依赖
-
-建议先创建虚拟环境，再安装依赖：
+## Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 启动服务
-
-在项目根目录执行：
+## Start the Server
 
 ```bash
 uvicorn backend.main:app --reload
 ```
 
-启动后默认访问地址：
-
+Available endpoints:
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
-- 健康检查: `http://127.0.0.1:8000/health`
+- Health check: `http://127.0.0.1:8000/health`
 
-## 在 Swagger 测试 `/api/crisis/run`
+## Test the Main Workflow
 
-1. 启动服务后，打开 `http://127.0.0.1:8000/docs`
-2. 找到 `POST /api/crisis/run`
-3. 点击 `Try it out`
-4. 输入示例请求：
+Use Swagger at `http://127.0.0.1:8000/docs` and call `POST /api/crisis/run` with:
 
 ```json
 {
@@ -60,46 +57,74 @@ uvicorn backend.main:app --reload
 }
 ```
 
-5. 点击 `Execute`
-6. 你会看到包含以下字段的响应：
-   - `session_id`
-   - `final_statement`
-   - `scores`
-   - `agent_trace`
+The response keeps the same structure:
+- `session_id`
+- `final_statement`
+- `scores`
+- `agent_trace`
 
-## Workflow 说明
+## Session Query APIs
 
-当前 workflow 固定为：
+- `GET /api/crisis/sessions`
+- `GET /api/crisis/sessions/{session_id}`
 
-1. Agent A - 舆情分析 Agent
-2. Agent C - 策略文案 Agent（第一版）
-3. Agent D - 红队攻击 Agent
-4. Agent B - 合规审查 Agent
-5. Agent C - 策略文案 Agent（第二版）
-6. Agent E - 最终决策 Agent
+You can first run `POST /api/crisis/run`, copy the returned `session_id`, then query the saved session.
 
-其中：
+## Local Workflow Test Script
 
-- `main.py` 只负责接收请求并返回响应
-- `workflow.py` 是唯一的流程编排入口
-- 每个 Agent 文件只暴露清晰函数，便于后续替换为真实 LLM 调用
+Run from the project root:
 
-## 当前版本的 Mock 特性
+```bash
+python scripts/test_workflow.py
+```
 
-- 舆情分析基于关键词规则判断风险和情绪
-- 文案 Agent 输出固定模板并根据上下文做轻量调整
-- 红队 Agent 返回可能的舆论攻击点
-- 合规 Agent 返回法律风险与修订建议
-- 决策 Agent 生成最终声明并给出规则分数
+## Environment Configuration
 
-## 后续替换为真实 LLM 的建议
+Copy `.env.example` to `.env` and fill values when needed.
 
-后续如果接入真实模型，建议优先替换这些文件中的函数实现：
+Example:
 
-- `backend/agents/sentiment_agent.py`
-- `backend/agents/writer_agent.py`
-- `backend/agents/redteam_agent.py`
-- `backend/agents/legal_agent.py`
-- `backend/agents/decision_agent.py`
+```env
+AGENT_MODE=mock
+LLM_API_KEY=
+LLM_BASE_URL=
+LLM_MODEL=
+LLM_TIMEOUT_SECONDS=30
+```
 
-对外接口和 `workflow.py` 的主流程可以保持不变，这样前后端联调成本会更低。
+### AGENT_MODE
+
+- `mock`
+  - Default mode.
+  - No LLM configuration is required.
+  - The current project should keep working exactly as before.
+- `llm`
+  - Reserved for future LLM integration.
+  - Requires `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL`.
+
+## v0.4.1 LLM Infrastructure
+
+This version only adds the infrastructure needed for future LLM integration:
+- `backend/config.py`
+- `backend/llm_client.py`
+- `backend/prompt_loader.py`
+- `backend/logger.py`
+- `backend/utils/json_parser.py`
+- `backend/prompts/*.md`
+
+Important:
+- Existing agents are still mock/rule based.
+- `workflow.py` is unchanged.
+- `main.py` is unchanged.
+- `POST /api/crisis/run` request and response structures are unchanged.
+
+## Future LLM Migration Path
+
+Later, a single agent can be upgraded incrementally:
+
+1. Load a prompt from `backend/prompts/`
+2. Call `call_llm(prompt)` from `backend/llm_client.py`
+3. Parse the response with `parse_llm_json(...)`
+4. Map the parsed JSON back into the existing agent output schema
+
+This keeps the workflow and API stable while replacing one agent at a time.
