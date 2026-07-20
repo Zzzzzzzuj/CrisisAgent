@@ -1,4 +1,37 @@
+from backend.config import get_config
+from backend.llm_client import call_llm
+from backend.logger import get_logger
+from backend.prompt_loader import load_prompt
+from backend.utils.json_parser import parse_llm_json
+
+
+logger = get_logger(__name__)
+AGENT_NAME = "Agent C"
+FIRST_DRAFT_REQUIRED_FIELDS = ("statement", "strategy", "tone", "notes")
+
+
+def run(payload: dict) -> dict:
+    config = get_config()
+
+    if config.agent_mode == "llm":
+        try:
+            return _run_llm(payload)
+        except Exception as exc:
+            logger.warning(
+                "%s fallback to mock mode due to llm failure: %s | %s",
+                AGENT_NAME,
+                exc.__class__.__name__,
+                str(exc),
+            )
+
+    return _run_mock(payload)
+
+
 def generate_first_draft(payload: dict) -> dict:
+    return run(payload)
+
+
+def _run_mock(payload: dict) -> dict:
     event = payload["event"]
     sentiment = payload["sentiment_analysis"]
 
@@ -9,11 +42,66 @@ def generate_first_draft(payload: dict) -> dict:
         "对于事件给消费者带来的不安，我们表示诚挚歉意。"
     )
 
+    return _normalize_first_draft_output(
+        {
+            "statement": statement,
+            "strategy": "快速回应，先表达重视与歉意，再说明核查与配合监管。",
+            "tone": sentiment["recommended_tone"],
+            "notes": f"基于事件“{event}”生成第一版回应。",
+        }
+    )
+
+
+def _run_llm(payload: dict) -> dict:
+    prompt = load_prompt(
+        "writer_agent",
+        {
+            "event": payload["event"],
+            "sentiment_analysis": payload["sentiment_analysis"],
+            "redteam_review": "",
+            "legal_review": "",
+        },
+    )
+    raw_text = call_llm(prompt)
+    parsed = parse_llm_json(raw_text)
+
+    if "error_type" in parsed:
+        raise ValueError(
+            f"JSON parsing failed: {parsed['error_type']} - {parsed['message']}"
+        )
+
+    validated = _validate_first_draft_output(parsed)
+    logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
+
+    mapped_output = {
+        "statement": validated["statement"],
+        "strategy": validated["strategy"],
+        "tone": validated["tone"],
+        "notes": validated["notes"],
+    }
+    normalized_output = _normalize_first_draft_output(mapped_output)
+    logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
+    return normalized_output
+
+
+def _validate_first_draft_output(payload: dict) -> dict:
+    missing_fields = [field for field in FIRST_DRAFT_REQUIRED_FIELDS if field not in payload]
+    if missing_fields:
+        raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+
+    for field in FIRST_DRAFT_REQUIRED_FIELDS:
+        if not isinstance(payload[field], str):
+            raise TypeError(f"Field '{field}' must be a string.")
+
+    return payload
+
+
+def _normalize_first_draft_output(payload: dict) -> dict:
     return {
-        "statement": statement,
-        "strategy": "快速回应，先表达重视与歉意，再说明核查与配合监管。",
-        "tone": sentiment["recommended_tone"],
-        "notes": f"基于事件“{event}”生成第一版回应。",
+        "statement": str(payload["statement"]),
+        "strategy": str(payload["strategy"]),
+        "tone": str(payload["tone"]),
+        "notes": str(payload["notes"]),
     }
 
 
