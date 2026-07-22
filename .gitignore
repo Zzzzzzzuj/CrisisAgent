@@ -1,6 +1,14 @@
-﻿.venv/
+﻿# Python
+.venv/
 __pycache__/
 *.pyc
+
+# Environment
 .env
 .env.local
+
+# OS
 .DS_Store
+
+# Evaluation generated outputs
+evaluation/outputs/

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "food-safety-001",
+    "event": "某食品品牌被爆使用过期原料，偷拍视频在网上传播，网友要求监管介入。",
+    "expected_risk": "high",
+    "expected_emotion": "angry",
+    "expected_tone": "先共情、再回应行动、避免抢先定性",
+    "category": "food_safety",
+    "tags": ["食品安全", "视频曝光", "监管风险"]
+  },
+  {
+    "id": "service-outage-001",
+    "event": "某在线教育平台在大促当晚大面积宕机，付费用户无法上课并集中投诉，舆论持续发酵。",
+    "expected_risk": "medium",
+    "expected_emotion": "worried",
+    "expected_tone": "先共情、再回应行动、避免抢先定性",
+    "category": "service_outage",
+    "tags": ["服务中断", "投诉", "大促"]
+  },
+  {
+    "id": "data-leak-001",
+    "event": "某互联网平台被曝光疑似发生用户数据泄露，大量网友质疑平台安全能力并要求解释。",
+    "expected_risk": "high",
+    "expected_emotion": "angry",
+    "expected_tone": "先共情、再回应行动、避免抢先定性",
+    "category": "data_security",
+    "tags": ["数据泄露", "隐私", "信任危机"]
+  },
+  {
+    "id": "charity-positive-001",
+    "event": "某品牌在灾后第一时间发布救援计划并追加捐赠，公众评价整体正面。",
+    "expected_risk": "medium",
+    "expected_emotion": "positive",
+    "expected_tone": "先共情、再回应行动、避免抢先定性",
+    "category": "brand_reputation",
+    "tags": ["公益", "捐赠", "正向舆情"]
+  },
+  {
+    "id": "product-quality-001",
+    "event": "某消费电子品牌新机发布后频繁出现电池鼓包投诉，多个社交平台出现维权帖。",
+    "expected_risk": "medium",
+    "expected_emotion": "worried",
+    "expected_tone": "先共情、再回应行动、避免抢先定性",
+    "category": "product_quality",
+    "tags": ["产品质量", "电池安全", "维权"]
+  },
+  {
+    "id": "executive-misconduct-001",
+    "event": "某上市公司高管被曝在公开场合发表不当言论，引发网友抵制并要求品牌致歉。",
+    "expected_risk": "high",
+    "expected_emotion": "angry",
+    "expected_tone": "先共情、再回应行动、避免抢先定性",
+    "category": "executive_misconduct",
+    "tags": ["高管失言", "抵制", "品牌道歉"]
+  }
+]
