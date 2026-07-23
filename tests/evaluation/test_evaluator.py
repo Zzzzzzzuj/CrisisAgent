@@ -4,19 +4,20 @@ from pathlib import Path
 from evaluation import evaluator
 
 
-def test_load_cases_reads_new_fields(tmp_path: Path):
+def test_load_cases_reads_rag_fields(tmp_path: Path):
     cases_path = tmp_path / "cases.json"
     cases_path.write_text(
         json.dumps(
             [
                 {
                     "id": "case-1",
-                    "event": "事件A",
+                    "event": "event A",
                     "expected_risk": "high",
                     "expected_emotion": "angry",
-                    "expected_tone": "先共情、再回应行动、避免抢先定性",
+                    "expected_tone": "tone A",
                     "category": "food_safety",
-                    "tags": ["标签1", "标签2"],
+                    "tags": ["tag-1", "tag-2"],
+                    "expected_sources": ["food_safety.md"],
                 }
             ],
             ensure_ascii=False,
@@ -28,11 +29,12 @@ def test_load_cases_reads_new_fields(tmp_path: Path):
 
     assert len(cases) == 1
     assert cases[0]["category"] == "food_safety"
-    assert cases[0]["expected_tone"] == "先共情、再回应行动、避免抢先定性"
-    assert cases[0]["tags"] == ["标签1", "标签2"]
+    assert cases[0]["expected_tone"] == "tone A"
+    assert cases[0]["tags"] == ["tag-1", "tag-2"]
+    assert cases[0]["expected_sources"] == ["food_safety.md"]
 
 
-def test_summarize_results_includes_tone_and_category_metrics():
+def test_summarize_results_includes_rag_and_category_metrics():
     summary = evaluator.summarize_results(
         [
             {
@@ -43,10 +45,14 @@ def test_summarize_results_includes_tone_and_category_metrics():
                 "tone_match": True,
                 "trace_duration_ms": 100,
                 "fallback": True,
+                "rag_enabled": True,
+                "rag_hit": True,
+                "rag_sources": ["food_safety.md"],
+                "rag_source_count": 1,
                 "trace": [
                     {
                         "agent": "Agent A",
-                        "name": "舆情分析 Agent",
+                        "name": "sentiment",
                         "start_time": "2026-07-20T10:00:00+00:00",
                         "end_time": "2026-07-20T10:00:01+00:00",
                         "fallback": False,
@@ -61,10 +67,14 @@ def test_summarize_results_includes_tone_and_category_metrics():
                 "tone_match": False,
                 "trace_duration_ms": 300,
                 "fallback": False,
+                "rag_enabled": True,
+                "rag_hit": False,
+                "rag_sources": [],
+                "rag_source_count": 0,
                 "trace": [
                     {
                         "agent": "Agent A",
-                        "name": "舆情分析 Agent",
+                        "name": "sentiment",
                         "start_time": "2026-07-20T10:01:00+00:00",
                         "end_time": "2026-07-20T10:01:02+00:00",
                         "fallback": False,
@@ -78,12 +88,16 @@ def test_summarize_results_includes_tone_and_category_metrics():
     assert summary["risk_accuracy"] == 0.5
     assert summary["emotion_accuracy"] == 0.5
     assert summary["tone_accuracy"] == 0.5
+    assert summary["rag_hit_rate"] == 0.5
+    assert summary["average_retrieved_sources"] == 0.5
+    assert summary["source_distribution"] == {"food_safety.md": 1}
     assert summary["category_metrics"]["food_safety"]["total_cases"] == 2
     assert summary["category_metrics"]["food_safety"]["risk_accuracy"] == 0.5
     assert summary["category_metrics"]["food_safety"]["tone_accuracy"] == 0.5
+    assert summary["category_metrics"]["food_safety"]["rag_hit_rate"] == 0.5
 
 
-def test_evaluate_case_collects_new_case_fields(monkeypatch):
+def test_evaluate_case_collects_rag_trace_fields(monkeypatch):
     fake_response = {
         "session_id": "session-1",
         "final_statement": "statement",
@@ -91,13 +105,13 @@ def test_evaluate_case_collects_new_case_fields(monkeypatch):
         "agent_trace": [
             {
                 "agent": "Agent A",
-                "name": "舆情分析 Agent",
-                "input": "事件A",
+                "name": "sentiment",
+                "input": "event A",
                 "output": {
                     "risk_level": "high",
                     "public_emotion": "angry",
-                    "keywords": ["曝光"],
-                    "recommended_tone": "先共情、再回应行动、避免抢先定性",
+                    "keywords": ["exposure"],
+                    "recommended_tone": "tone A",
                     "analysis_summary": "summary",
                 },
                 "start_time": "2026-07-20T10:00:00+00:00",
@@ -105,7 +119,25 @@ def test_evaluate_case_collects_new_case_fields(monkeypatch):
                 "status": "success",
                 "mode": "mock",
                 "fallback": False,
-            }
+                "rag": None,
+            },
+            {
+                "agent": "Agent B",
+                "name": "legal",
+                "input": {},
+                "output": {},
+                "start_time": "2026-07-20T10:00:01+00:00",
+                "end_time": "2026-07-20T10:00:02+00:00",
+                "status": "success",
+                "mode": "llm",
+                "fallback": False,
+                "rag": {
+                    "enabled": True,
+                    "hit": True,
+                    "sources": ["food_safety.md", "legal_risk_rules.md"],
+                    "count": 2,
+                },
+            },
         ],
     }
 
@@ -118,23 +150,29 @@ def test_evaluate_case_collects_new_case_fields(monkeypatch):
     result = evaluator.evaluate_case(
         {
             "id": "case-1",
-            "event": "事件A",
+            "event": "event A",
             "expected_risk": "high",
             "expected_emotion": "angry",
-            "expected_tone": "先共情、再回应行动、避免抢先定性",
+            "expected_tone": "tone A",
             "category": "food_safety",
-            "tags": ["标签1"],
+            "tags": ["tag-1"],
+            "expected_sources": ["food_safety.md"],
         }
     )
 
     assert result["category"] == "food_safety"
-    assert result["tags"] == ["标签1"]
-    assert result["predicted_tone"] == "先共情、再回应行动、避免抢先定性"
+    assert result["tags"] == ["tag-1"]
+    assert result["predicted_tone"] == "tone A"
     assert result["tone_match"] is True
     assert result["final_scores"] == {"legal_safety": 8, "empathy": 7, "robustness": 9}
+    assert result["expected_sources"] == ["food_safety.md"]
+    assert result["rag_enabled"] is True
+    assert result["rag_hit"] is True
+    assert result["rag_sources"] == ["food_safety.md", "legal_risk_rules.md"]
+    assert result["rag_source_count"] == 2
 
 
-def test_save_results_generates_compatible_json_and_markdown_reports(tmp_path: Path):
+def test_save_results_generates_json_and_markdown_reports_with_rag(tmp_path: Path):
     summary = {
         "total_cases": 1,
         "risk_accuracy": 1.0,
@@ -142,10 +180,13 @@ def test_save_results_generates_compatible_json_and_markdown_reports(tmp_path: P
         "tone_accuracy": 1.0,
         "fallback_rate": 0.0,
         "average_duration_ms": 120.0,
+        "rag_hit_rate": 1.0,
+        "average_retrieved_sources": 1.0,
+        "source_distribution": {"food_safety.md": 1},
         "agent_metrics": {
             "Agent A": {
                 "agent": "Agent A",
-                "name": "舆情分析 Agent",
+                "name": "sentiment",
                 "average_duration_ms": 50.0,
                 "fallback_count": 0,
                 "fallback_rate": 0.0,
@@ -160,20 +201,23 @@ def test_save_results_generates_compatible_json_and_markdown_reports(tmp_path: P
                 "tone_accuracy": 1.0,
                 "fallback_rate": 0.0,
                 "average_duration_ms": 120.0,
+                "rag_hit_rate": 1.0,
+                "average_retrieved_sources": 1.0,
             }
         },
         "case_results": [
             {
                 "id": "case-1",
-                "event": "事件A",
+                "event": "event A",
                 "category": "food_safety",
-                "tags": ["标签1"],
+                "tags": ["tag-1"],
                 "expected_risk": "high",
                 "expected_emotion": "angry",
-                "expected_tone": "先共情、再回应行动、避免抢先定性",
+                "expected_tone": "tone A",
+                "expected_sources": ["food_safety.md"],
                 "predicted_risk": "high",
                 "predicted_emotion": "angry",
-                "predicted_tone": "先共情、再回应行动、避免抢先定性",
+                "predicted_tone": "tone A",
                 "risk_match": True,
                 "emotion_match": True,
                 "tone_match": True,
@@ -183,6 +227,10 @@ def test_save_results_generates_compatible_json_and_markdown_reports(tmp_path: P
                 "trace_duration_ms": 120,
                 "fallback_count": 0,
                 "fallback": False,
+                "rag_enabled": True,
+                "rag_hit": True,
+                "rag_sources": ["food_safety.md"],
+                "rag_source_count": 1,
             }
         ],
     }
@@ -203,6 +251,8 @@ def test_save_results_generates_compatible_json_and_markdown_reports(tmp_path: P
     saved_markdown = markdown_path.read_text(encoding="utf-8")
 
     assert saved_json["tone_accuracy"] == 1.0
+    assert saved_json["rag_hit_rate"] == 1.0
+    assert "## RAG Source Distribution" in saved_markdown
     assert "## Category Metrics" in saved_markdown
     assert "food_safety" in saved_markdown
     assert "PASS" in saved_markdown

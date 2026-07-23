@@ -14,7 +14,10 @@ from backend.workflow import run_crisis_workflow
 from evaluation.metrics import (
     calculate_accuracy,
     calculate_average_duration_ms,
+    calculate_average_retrieved_sources,
     calculate_fallback_rate,
+    calculate_rag_hit_rate,
+    calculate_source_distribution,
     calculate_trace_duration_ms,
     summarize_agent_metrics,
     summarize_category_metrics,
@@ -40,10 +43,28 @@ def _extract_agent_a_output(agent_trace: list[dict]) -> dict:
     raise ValueError("Agent A output not found in trace.")
 
 
+def _extract_agent_b_rag(agent_trace: list[dict]) -> dict:
+    for item in agent_trace:
+        if item["agent"] == "Agent B":
+            return item.get("rag") or {
+                "enabled": False,
+                "hit": False,
+                "sources": [],
+                "count": 0,
+            }
+    return {
+        "enabled": False,
+        "hit": False,
+        "sources": [],
+        "count": 0,
+    }
+
+
 def evaluate_case(case: dict) -> dict:
     response = run_crisis_workflow(CrisisRunRequest(event=case["event"])).model_dump()
     agent_trace = response["agent_trace"]
     agent_a_output = _extract_agent_a_output(agent_trace)
+    agent_b_rag = _extract_agent_b_rag(agent_trace)
     trace_duration_ms = calculate_trace_duration_ms(agent_trace)
     fallback_count = sum(1 for item in agent_trace if item["fallback"])
 
@@ -55,6 +76,7 @@ def evaluate_case(case: dict) -> dict:
         "expected_risk": case["expected_risk"],
         "expected_emotion": case["expected_emotion"],
         "expected_tone": case["expected_tone"],
+        "expected_sources": case.get("expected_sources", []),
         "predicted_risk": agent_a_output["risk_level"],
         "predicted_emotion": agent_a_output["public_emotion"],
         "predicted_tone": agent_a_output["recommended_tone"],
@@ -67,6 +89,10 @@ def evaluate_case(case: dict) -> dict:
         "trace_duration_ms": trace_duration_ms,
         "fallback_count": fallback_count,
         "fallback": fallback_count > 0,
+        "rag_enabled": agent_b_rag.get("enabled", False),
+        "rag_hit": agent_b_rag.get("hit", False),
+        "rag_sources": agent_b_rag.get("sources", []),
+        "rag_source_count": agent_b_rag.get("count", 0),
     }
 
 
@@ -80,6 +106,9 @@ def summarize_results(case_results: list[dict]) -> dict:
             "tone_accuracy": 0.0,
             "fallback_rate": 0.0,
             "average_duration_ms": 0.0,
+            "rag_hit_rate": 0.0,
+            "average_retrieved_sources": 0.0,
+            "source_distribution": {},
             "agent_metrics": {},
             "category_metrics": {},
             "case_results": [],
@@ -92,6 +121,9 @@ def summarize_results(case_results: list[dict]) -> dict:
         "tone_accuracy": calculate_accuracy(case_results, "tone_match"),
         "fallback_rate": calculate_fallback_rate(case_results),
         "average_duration_ms": calculate_average_duration_ms(case_results),
+        "rag_hit_rate": calculate_rag_hit_rate(case_results),
+        "average_retrieved_sources": calculate_average_retrieved_sources(case_results),
+        "source_distribution": calculate_source_distribution(case_results),
         "agent_metrics": summarize_agent_metrics(case_results),
         "category_metrics": summarize_category_metrics(case_results),
         "case_results": case_results,
@@ -110,12 +142,27 @@ def _build_markdown_report(summary: dict) -> str:
         f"- Tone accuracy: {summary['tone_accuracy']}",
         f"- Fallback rate: {summary['fallback_rate']}",
         f"- Average duration: {summary['average_duration_ms']} ms",
+        f"- RAG hit rate: {summary['rag_hit_rate']}",
+        f"- Average retrieved sources: {summary['average_retrieved_sources']}",
         "",
+        "## RAG Source Distribution",
+        "",
+        "| Source | Count |",
+        "| --- | ---: |",
+    ]
+
+    for source, count in summary["source_distribution"].items():
+        lines.append(f"| {source} | {count} |")
+
+    lines.extend(
+        [
+            "",
         "## Agent Metrics",
         "",
         "| Agent | Name | Avg Duration (ms) | Fallback Count | Fallback Rate | Total Runs |",
         "| --- | --- | ---: | ---: | ---: | ---: |",
-    ]
+        ]
+    )
 
     for metrics in summary["agent_metrics"].values():
         lines.append(
@@ -128,8 +175,8 @@ def _build_markdown_report(summary: dict) -> str:
             "",
             "## Category Metrics",
             "",
-            "| Category | Total Cases | Risk Accuracy | Emotion Accuracy | Tone Accuracy | Fallback Rate | Avg Duration (ms) |",
-            "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Category | Total Cases | Risk Accuracy | Emotion Accuracy | Tone Accuracy | Fallback Rate | Avg Duration (ms) | RAG Hit Rate | Avg Sources |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
 
@@ -137,7 +184,8 @@ def _build_markdown_report(summary: dict) -> str:
         lines.append(
             f"| {category} | {metrics['total_cases']} | {metrics['risk_accuracy']} | "
             f"{metrics['emotion_accuracy']} | {metrics['tone_accuracy']} | "
-            f"{metrics['fallback_rate']} | {metrics['average_duration_ms']} |"
+            f"{metrics['fallback_rate']} | {metrics['average_duration_ms']} | "
+            f"{metrics['rag_hit_rate']} | {metrics['average_retrieved_sources']} |"
         )
 
     lines.extend(["", "## Case Details", ""])
@@ -157,6 +205,9 @@ def _build_markdown_report(summary: dict) -> str:
                 f"- Actual emotion: `{case['predicted_emotion']}`",
                 f"- Expected tone: `{case['expected_tone']}`",
                 f"- Actual tone: `{case['predicted_tone']}`",
+                f"- Expected sources: `{', '.join(case.get('expected_sources', []))}`",
+                f"- RAG hit: `{case.get('rag_hit', False)}`",
+                f"- RAG sources: `{', '.join(case.get('rag_sources', []))}`",
                 f"- Result: {'PASS' if overall_pass else 'FAIL'}",
                 f"- Fallback: `{case['fallback']}`",
                 f"- Trace duration: `{case['trace_duration_ms']} ms`",

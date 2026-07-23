@@ -17,6 +17,7 @@ class AgentTraceItem(BaseModel):
     status: str
     mode: str
     fallback: bool
+    rag: dict[str, Any] | None = None
 
 
 class ScoreBundle(BaseModel):

@@ -14,6 +14,36 @@ def test_accuracy_and_fallback_metrics():
     assert metrics.calculate_average_duration_ms(case_results) == 200.0
 
 
+def test_rag_metrics():
+    case_results = [
+        {
+            "rag_enabled": True,
+            "rag_hit": True,
+            "rag_sources": ["food_safety.md", "legal_risk_rules.md"],
+            "rag_source_count": 2,
+        },
+        {
+            "rag_enabled": True,
+            "rag_hit": False,
+            "rag_sources": [],
+            "rag_source_count": 0,
+        },
+        {
+            "rag_enabled": False,
+            "rag_hit": False,
+            "rag_sources": [],
+            "rag_source_count": 0,
+        },
+    ]
+
+    assert metrics.calculate_rag_hit_rate(case_results) == 0.5
+    assert metrics.calculate_average_retrieved_sources(case_results) == 1.0
+    assert metrics.calculate_source_distribution(case_results) == {
+        "food_safety.md": 1,
+        "legal_risk_rules.md": 1,
+    }
+
+
 def test_category_metrics_summary():
     case_results = [
         {
@@ -23,6 +53,9 @@ def test_category_metrics_summary():
             "tone_match": False,
             "fallback": True,
             "trace_duration_ms": 100,
+            "rag_enabled": True,
+            "rag_hit": True,
+            "rag_source_count": 2,
         },
         {
             "category": "food_safety",
@@ -31,6 +64,9 @@ def test_category_metrics_summary():
             "tone_match": True,
             "fallback": False,
             "trace_duration_ms": 300,
+            "rag_enabled": True,
+            "rag_hit": False,
+            "rag_source_count": 0,
         },
         {
             "category": "service_outage",
@@ -39,6 +75,9 @@ def test_category_metrics_summary():
             "tone_match": True,
             "fallback": False,
             "trace_duration_ms": 200,
+            "rag_enabled": False,
+            "rag_hit": False,
+            "rag_source_count": 0,
         },
     ]
 
@@ -50,8 +89,11 @@ def test_category_metrics_summary():
     assert summary["food_safety"]["tone_accuracy"] == 0.5
     assert summary["food_safety"]["fallback_rate"] == 0.5
     assert summary["food_safety"]["average_duration_ms"] == 200.0
+    assert summary["food_safety"]["rag_hit_rate"] == 0.5
+    assert summary["food_safety"]["average_retrieved_sources"] == 1.0
     assert summary["service_outage"]["total_cases"] == 1
     assert summary["service_outage"]["risk_accuracy"] == 1.0
+    assert summary["service_outage"]["rag_hit_rate"] == 0.0
 
 
 def test_agent_metrics_summary():

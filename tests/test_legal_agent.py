@@ -22,7 +22,13 @@ def test_legal_agent_mock_mode_returns_expected_schema(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "mock")
     get_config.cache_clear()
 
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("retriever should not be called in mock mode")
+
+    monkeypatch.setattr(legal_agent, "retrieve", fail_if_called)
+
     result = legal_agent.run(TEST_PAYLOAD)
+    rag_info = legal_agent.get_last_rag_info()
 
     assert set(result.keys()) >= {
         "legal_risks",
@@ -30,30 +36,43 @@ def test_legal_agent_mock_mode_returns_expected_schema(monkeypatch):
         "revision_advice",
         "public_opinion_suggestions",
         "integrated_revision_tasks",
+        "legal_safety_score_hint",
+        "review_summary",
     }
     assert isinstance(result["legal_risks"], list)
     assert isinstance(result["safe_points"], list)
     assert isinstance(result["revision_advice"], list)
     assert isinstance(result["public_opinion_suggestions"], list)
     assert isinstance(result["integrated_revision_tasks"], list)
-    assert all(isinstance(item, str) for item in result["legal_risks"])
-    assert all(isinstance(item, str) for item in result["safe_points"])
-    assert all(isinstance(item, str) for item in result["revision_advice"])
-    assert all(isinstance(item, str) for item in result["public_opinion_suggestions"])
-    assert all(isinstance(item, str) for item in result["integrated_revision_tasks"])
+    assert rag_info == {
+        "enabled": False,
+        "hit": False,
+        "sources": [],
+        "count": 0,
+    }
 
 
-def test_legal_agent_llm_mode_success(monkeypatch):
+def test_legal_agent_llm_mode_injects_legal_context_into_prompt(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "llm")
     monkeypatch.setenv("LLM_API_KEY", "test-key")
     monkeypatch.setenv("LLM_BASE_URL", "https://example.com/v1")
     monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
 
+    captured_prompt = {}
+
     monkeypatch.setattr(
         legal_agent,
-        "call_llm",
-        lambda prompt: """
+        "retrieve",
+        lambda query, top_k=3: {
+            "context": "[legal_risk_rules.md]\n避免提前定责，使用条件式责任表达。",
+            "sources": [{"source": "legal_risk_rules.md", "score": 1.0}],
+        },
+    )
+
+    def fake_call_llm(prompt):
+        captured_prompt["value"] = prompt
+        return """
         ```json
         {
           "legal_risks": ["避免提前认定全部事实。"],
@@ -62,31 +81,75 @@ def test_legal_agent_llm_mode_success(monkeypatch):
           "public_opinion_suggestions": ["更明确回应消费者担忧。"],
           "integrated_revision_tasks": ["补充核查范围并避免绝对化表述。"],
           "legal_safety_score_hint": 8,
-          "review_summary": "整体较稳妥，但仍需增强法律审慎性。"
+          "review_summary": "已参考提供的合规知识。"
         }
         ```
-        """,
-    )
+        """
+
+    monkeypatch.setattr(legal_agent, "call_llm", fake_call_llm)
 
     result = legal_agent.run(TEST_PAYLOAD)
 
+    assert "避免提前定责，使用条件式责任表达。" in captured_prompt["value"]
     assert result["legal_risks"] == ["避免提前认定全部事实。"]
-    assert result["safe_points"] == ["保留了配合监管的表述。"]
-    assert result["revision_advice"] == ["责任表述应加上调查结果前提。"]
-    assert result["public_opinion_suggestions"] == ["更明确回应消费者担忧。"]
-    assert result["integrated_revision_tasks"] == ["补充核查范围并避免绝对化表述。"]
+    assert result["review_summary"] == "已参考提供的合规知识。"
 
 
-def test_legal_agent_llm_failure_falls_back_to_mock(monkeypatch):
+def test_legal_agent_rag_failure_continues_llm(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "llm")
     monkeypatch.setenv("LLM_API_KEY", "test-key")
     monkeypatch.setenv("LLM_BASE_URL", "https://example.com/v1")
     monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
 
+    captured_prompt = {}
+
+    def failing_retrieve(query, top_k=3):
+        raise RuntimeError("rag unavailable")
+
+    def fake_call_llm(prompt):
+        captured_prompt["value"] = prompt
+        return """
+        {
+          "legal_risks": ["知识不足时保持审慎。"],
+          "safe_points": ["未直接承认事实。"],
+          "revision_advice": ["继续使用条件式表达。"],
+          "public_opinion_suggestions": ["回应公众担忧。"],
+          "integrated_revision_tasks": ["补充核查动作。"],
+          "legal_safety_score_hint": 8,
+          "review_summary": "RAG不可用，基于当前输入进行保守审查。"
+        }
+        """
+
+    monkeypatch.setattr(legal_agent, "retrieve", failing_retrieve)
+    monkeypatch.setattr(legal_agent, "call_llm", fake_call_llm)
+
+    result = legal_agent.run(TEST_PAYLOAD)
+
+    assert "legal_context:" in captured_prompt["value"]
+    assert result["legal_risks"] == ["知识不足时保持审慎。"]
+    assert result["review_summary"] == "RAG不可用，基于当前输入进行保守审查。"
+
+
+def test_legal_agent_llm_failure_still_falls_back_to_mock(monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "llm")
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.com/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    get_config.cache_clear()
+
+    monkeypatch.setattr(
+        legal_agent,
+        "retrieve",
+        lambda query, top_k=3: {
+            "context": "[legal_risk_rules.md]\n避免提前定责。",
+            "sources": [{"source": "legal_risk_rules.md", "score": 1.0}],
+        },
+    )
     monkeypatch.setattr(legal_agent, "call_llm", lambda prompt: '{"legal_risks": ["only one field"]}')
 
     result = legal_agent.run(TEST_PAYLOAD)
+    rag_info = legal_agent.get_last_rag_info()
 
     assert set(result.keys()) >= {
         "legal_risks",
@@ -94,6 +157,96 @@ def test_legal_agent_llm_failure_falls_back_to_mock(monkeypatch):
         "revision_advice",
         "public_opinion_suggestions",
         "integrated_revision_tasks",
+        "legal_safety_score_hint",
+        "review_summary",
     }
     assert isinstance(result["legal_risks"], list)
     assert isinstance(result["safe_points"], list)
+    assert rag_info == {
+        "enabled": True,
+        "hit": True,
+        "sources": ["legal_risk_rules.md"],
+        "count": 1,
+    }
+
+
+def test_legal_agent_records_rag_info_on_llm_success(monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "llm")
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.com/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    get_config.cache_clear()
+
+    monkeypatch.setattr(
+        legal_agent,
+        "retrieve",
+        lambda query, top_k=3: {
+            "context": "[food_safety.md]\ncontext",
+            "sources": [
+                {"source": "food_safety.md", "score": 1.0},
+                {"source": "legal_risk_rules.md", "score": 0.8},
+            ],
+        },
+    )
+    monkeypatch.setattr(
+        legal_agent,
+        "call_llm",
+        lambda prompt: """
+        {
+          "legal_risks": ["risk"],
+          "safe_points": ["safe"],
+          "revision_advice": ["advice"],
+          "public_opinion_suggestions": ["suggestion"],
+          "integrated_revision_tasks": ["task"],
+          "legal_safety_score_hint": 8,
+          "review_summary": "summary"
+        }
+        """,
+    )
+
+    legal_agent.run(TEST_PAYLOAD)
+
+    assert legal_agent.get_last_rag_info() == {
+        "enabled": True,
+        "hit": True,
+        "sources": ["food_safety.md", "legal_risk_rules.md"],
+        "count": 2,
+    }
+
+
+def test_legal_agent_records_rag_miss_when_retriever_fails(monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "llm")
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.com/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    get_config.cache_clear()
+
+    monkeypatch.setattr(
+        legal_agent,
+        "retrieve",
+        lambda query, top_k=3: (_ for _ in ()).throw(RuntimeError("rag unavailable")),
+    )
+    monkeypatch.setattr(
+        legal_agent,
+        "call_llm",
+        lambda prompt: """
+        {
+          "legal_risks": ["risk"],
+          "safe_points": ["safe"],
+          "revision_advice": ["advice"],
+          "public_opinion_suggestions": ["suggestion"],
+          "integrated_revision_tasks": ["task"],
+          "legal_safety_score_hint": 8,
+          "review_summary": "summary"
+        }
+        """,
+    )
+
+    legal_agent.run(TEST_PAYLOAD)
+
+    assert legal_agent.get_last_rag_info() == {
+        "enabled": True,
+        "hit": False,
+        "sources": [],
+        "count": 0,
+    }

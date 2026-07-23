@@ -28,6 +28,32 @@ def calculate_average_duration_ms(case_results: list[dict]) -> float:
     return round(total_duration / total_cases, 2)
 
 
+def calculate_rag_hit_rate(case_results: list[dict]) -> float:
+    rag_cases = [item for item in case_results if item.get("rag_enabled")]
+    if not rag_cases:
+        return 0.0
+
+    hits = sum(1 for item in rag_cases if item.get("rag_hit"))
+    return round(hits / len(rag_cases), 4)
+
+
+def calculate_average_retrieved_sources(case_results: list[dict]) -> float:
+    rag_cases = [item for item in case_results if item.get("rag_enabled")]
+    if not rag_cases:
+        return 0.0
+
+    total_sources = sum(item.get("rag_source_count", 0) for item in rag_cases)
+    return round(total_sources / len(rag_cases), 2)
+
+
+def calculate_source_distribution(case_results: list[dict]) -> dict:
+    distribution: dict[str, int] = {}
+    for item in case_results:
+        for source in item.get("rag_sources", []):
+            distribution[source] = distribution.get(source, 0) + 1
+    return dict(sorted(distribution.items()))
+
+
 def calculate_trace_duration_ms(agent_trace: list[dict]) -> int:
     if not agent_trace:
         return 0
@@ -96,6 +122,8 @@ def summarize_category_metrics(case_results: list[dict]) -> dict:
             "tone_accuracy": calculate_accuracy(items, "tone_match"),
             "fallback_rate": calculate_fallback_rate(items),
             "average_duration_ms": calculate_average_duration_ms(items),
+            "rag_hit_rate": calculate_rag_hit_rate(items),
+            "average_retrieved_sources": calculate_average_retrieved_sources(items),
         }
 
     return summary

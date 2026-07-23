@@ -7,28 +7,37 @@
 - Emotion accuracy: 0.8333
 - Tone accuracy: 1.0
 - Fallback rate: 1.0
-- Average duration: 10536.17 ms
+- Average duration: 10404.0 ms
+- RAG hit rate: 1.0
+- Average retrieved sources: 2.0
+
+## RAG Source Distribution
+
+| Source | Count |
+| --- | ---: |
+| crisis_response.md | 6 |
+| food_safety.md | 6 |
 
 ## Agent Metrics
 
 | Agent | Name | Avg Duration (ms) | Fallback Count | Fallback Rate | Total Runs |
 | --- | --- | ---: | ---: | ---: | ---: |
-| Agent A | 舆情分析 Agent | 2135.83 | 6 | 1.0 | 6 |
-| Agent C | 策略文案 Agent（第一版） | 1049.75 | 6 | 0.5 | 12 |
-| Agent D | 红队攻击 Agent | 2098.0 | 6 | 1.0 | 6 |
-| Agent B | 合规审查 Agent | 2095.33 | 6 | 1.0 | 6 |
-| Agent E | 最终决策 Agent | 2105.33 | 6 | 1.0 | 6 |
+| Agent A | 舆情分析 Agent | 2102.17 | 6 | 1.0 | 6 |
+| Agent C | 策略文案 Agent（第一版） | 1037.75 | 6 | 0.5 | 12 |
+| Agent D | 红队攻击 Agent | 2075.17 | 6 | 1.0 | 6 |
+| Agent B | 合规审查 Agent | 2079.17 | 6 | 1.0 | 6 |
+| Agent E | 最终决策 Agent | 2069.33 | 6 | 1.0 | 6 |
 
 ## Category Metrics
 
-| Category | Total Cases | Risk Accuracy | Emotion Accuracy | Tone Accuracy | Fallback Rate | Avg Duration (ms) |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| food_safety | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 10808.0 |
-| service_outage | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 10534.0 |
-| data_security | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 10463.0 |
-| brand_reputation | 1 | 1.0 | 0.0 | 1.0 | 1.0 | 10480.0 |
-| product_quality | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 10443.0 |
-| executive_misconduct | 1 | 0.0 | 1.0 | 1.0 | 1.0 | 10489.0 |
+| Category | Total Cases | Risk Accuracy | Emotion Accuracy | Tone Accuracy | Fallback Rate | Avg Duration (ms) | RAG Hit Rate | Avg Sources |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| food_safety | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 10544.0 | 1.0 | 2.0 |
+| service_outage | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 10378.0 | 1.0 | 2.0 |
+| data_security | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 10377.0 | 1.0 | 2.0 |
+| brand_reputation | 1 | 1.0 | 0.0 | 1.0 | 1.0 | 10355.0 | 1.0 | 2.0 |
+| product_quality | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 10388.0 | 1.0 | 2.0 |
+| executive_misconduct | 1 | 0.0 | 1.0 | 1.0 | 1.0 | 10382.0 | 1.0 | 2.0 |
 
 ## Case Details
 
@@ -43,9 +52,12 @@
 - Actual emotion: `angry`
 - Expected tone: `先共情、再回应行动、避免抢先定性`
 - Actual tone: `先共情、再回应行动、避免抢先定性`
+- Expected sources: `food_safety.md, legal_risk_rules.md`
+- RAG hit: `True`
+- RAG sources: `food_safety.md, crisis_response.md`
 - Result: PASS
 - Fallback: `True`
-- Trace duration: `10808 ms`
+- Trace duration: `10544 ms`
 - Final scores: `{"legal_safety": 8, "empathy": 8, "robustness": 8}`
 
 ### service-outage-001
@@ -59,9 +71,12 @@
 - Actual emotion: `worried`
 - Expected tone: `先共情、再回应行动、避免抢先定性`
 - Actual tone: `先共情、再回应行动、避免抢先定性`
+- Expected sources: `crisis_response.md`
+- RAG hit: `True`
+- RAG sources: `crisis_response.md, food_safety.md`
 - Result: PASS
 - Fallback: `True`
-- Trace duration: `10534 ms`
+- Trace duration: `10378 ms`
 - Final scores: `{"legal_safety": 8, "empathy": 8, "robustness": 7}`
 
 ### data-leak-001
@@ -75,9 +90,12 @@
 - Actual emotion: `angry`
 - Expected tone: `先共情、再回应行动、避免抢先定性`
 - Actual tone: `先共情、再回应行动、避免抢先定性`
+- Expected sources: `legal_risk_rules.md, crisis_response.md`
+- RAG hit: `True`
+- RAG sources: `crisis_response.md, food_safety.md`
 - Result: PASS
 - Fallback: `True`
-- Trace duration: `10463 ms`
+- Trace duration: `10377 ms`
 - Final scores: `{"legal_safety": 8, "empathy": 8, "robustness": 8}`
 
 ### charity-positive-001
@@ -91,9 +109,12 @@
 - Actual emotion: `worried`
 - Expected tone: `先共情、再回应行动、避免抢先定性`
 - Actual tone: `先共情、再回应行动、避免抢先定性`
+- Expected sources: `crisis_response.md`
+- RAG hit: `True`
+- RAG sources: `crisis_response.md, food_safety.md`
 - Result: FAIL
 - Fallback: `True`
-- Trace duration: `10480 ms`
+- Trace duration: `10355 ms`
 - Final scores: `{"legal_safety": 8, "empathy": 8, "robustness": 7}`
 
 ### product-quality-001
@@ -107,9 +128,12 @@
 - Actual emotion: `worried`
 - Expected tone: `先共情、再回应行动、避免抢先定性`
 - Actual tone: `先共情、再回应行动、避免抢先定性`
+- Expected sources: `legal_risk_rules.md, crisis_response.md`
+- RAG hit: `True`
+- RAG sources: `crisis_response.md, food_safety.md`
 - Result: PASS
 - Fallback: `True`
-- Trace duration: `10443 ms`
+- Trace duration: `10388 ms`
 - Final scores: `{"legal_safety": 8, "empathy": 8, "robustness": 7}`
 
 ### executive-misconduct-001
@@ -123,7 +147,10 @@
 - Actual emotion: `angry`
 - Expected tone: `先共情、再回应行动、避免抢先定性`
 - Actual tone: `先共情、再回应行动、避免抢先定性`
+- Expected sources: `crisis_response.md`
+- RAG hit: `True`
+- RAG sources: `crisis_response.md, food_safety.md`
 - Result: FAIL
 - Fallback: `True`
-- Trace duration: `10489 ms`
+- Trace duration: `10382 ms`
 - Final scores: `{"legal_safety": 8, "empathy": 8, "robustness": 7}`

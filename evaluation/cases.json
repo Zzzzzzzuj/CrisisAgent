@@ -6,7 +6,8 @@
     "expected_emotion": "angry",
     "expected_tone": "先共情、再回应行动、避免抢先定性",
     "category": "food_safety",
-    "tags": ["食品安全", "视频曝光", "监管风险"]
+    "tags": ["食品安全", "视频曝光", "监管风险"],
+    "expected_sources": ["food_safety.md", "legal_risk_rules.md"]
   },
   {
     "id": "service-outage-001",
@@ -15,7 +16,8 @@
     "expected_emotion": "worried",
     "expected_tone": "先共情、再回应行动、避免抢先定性",
     "category": "service_outage",
-    "tags": ["服务中断", "投诉", "大促"]
+    "tags": ["服务中断", "投诉", "大促"],
+    "expected_sources": ["crisis_response.md"]
   },
   {
     "id": "data-leak-001",
@@ -24,7 +26,8 @@
     "expected_emotion": "angry",
     "expected_tone": "先共情、再回应行动、避免抢先定性",
     "category": "data_security",
-    "tags": ["数据泄露", "隐私", "信任危机"]
+    "tags": ["数据泄露", "隐私", "信任危机"],
+    "expected_sources": ["legal_risk_rules.md", "crisis_response.md"]
   },
   {
     "id": "charity-positive-001",
@@ -33,7 +36,8 @@
     "expected_emotion": "positive",
     "expected_tone": "先共情、再回应行动、避免抢先定性",
     "category": "brand_reputation",
-    "tags": ["公益", "捐赠", "正向舆情"]
+    "tags": ["公益", "捐赠", "正向舆情"],
+    "expected_sources": ["crisis_response.md"]
   },
   {
     "id": "product-quality-001",
@@ -42,7 +46,8 @@
     "expected_emotion": "worried",
     "expected_tone": "先共情、再回应行动、避免抢先定性",
     "category": "product_quality",
-    "tags": ["产品质量", "电池安全", "维权"]
+    "tags": ["产品质量", "电池安全", "维权"],
+    "expected_sources": ["legal_risk_rules.md", "crisis_response.md"]
   },
   {
     "id": "executive-misconduct-001",
@@ -51,6 +56,7 @@
     "expected_emotion": "angry",
     "expected_tone": "先共情、再回应行动、避免抢先定性",
     "category": "executive_misconduct",
-    "tags": ["高管失言", "抵制", "品牌道歉"]
+    "tags": ["高管失言", "抵制", "品牌道歉"],
+    "expected_sources": ["crisis_response.md"]
   }
 ]

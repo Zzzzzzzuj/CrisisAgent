@@ -2,11 +2,18 @@ from backend.config import get_config
 from backend.llm_client import call_llm
 from backend.logger import get_logger
 from backend.prompt_loader import load_prompt
+from backend.rag.retriever import retrieve
 from backend.utils.json_parser import parse_llm_json
 
 
 logger = get_logger(__name__)
 AGENT_NAME = "Agent B"
+_LAST_RAG_INFO = {
+    "enabled": False,
+    "hit": False,
+    "sources": [],
+    "count": 0,
+}
 REQUIRED_FIELDS = (
     "legal_risks",
     "safe_points",
@@ -20,6 +27,7 @@ def run(payload: dict) -> dict:
     config = get_config()
 
     if config.agent_mode == "llm":
+        _set_rag_info(enabled=True, hit=False, sources=[])
         try:
             return _run_llm(payload)
         except Exception as exc:
@@ -29,8 +37,30 @@ def run(payload: dict) -> dict:
                 exc.__class__.__name__,
                 str(exc),
             )
+            return _run_mock(payload)
 
+    _set_rag_info(enabled=False, hit=False, sources=[])
     return _run_mock(payload)
+
+
+def get_last_rag_info() -> dict:
+    return {
+        "enabled": _LAST_RAG_INFO["enabled"],
+        "hit": _LAST_RAG_INFO["hit"],
+        "sources": list(_LAST_RAG_INFO["sources"]),
+        "count": _LAST_RAG_INFO["count"],
+    }
+
+
+def _set_rag_info(enabled: bool, hit: bool, sources: list[str]) -> None:
+    _LAST_RAG_INFO.update(
+        {
+            "enabled": enabled,
+            "hit": hit,
+            "sources": sources,
+            "count": len(sources),
+        }
+    )
 
 
 def _run_mock(payload: dict) -> dict:
@@ -84,12 +114,14 @@ def _run_mock(payload: dict) -> dict:
 
 
 def _run_llm(payload: dict) -> dict:
+    legal_context = _retrieve_legal_context(payload)
     prompt = load_prompt(
         "legal_agent",
         {
             "event": payload["event"],
             "draft": payload["draft"],
             "redteam_review": payload["redteam_review"],
+            "legal_context": legal_context,
         },
     )
     raw_text = call_llm(prompt)
@@ -118,6 +150,45 @@ def _run_llm(payload: dict) -> dict:
     normalized_output = _normalize_output(mapped_output)
     logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
     return normalized_output
+
+
+def _retrieve_legal_context(payload: dict) -> str:
+    query = _build_retrieval_query(payload)
+    try:
+        retrieval_result = retrieve(query, top_k=3)
+    except Exception as exc:
+        logger.warning(
+            "%s RAG retrieval failed: %s | %s",
+            AGENT_NAME,
+            exc.__class__.__name__,
+            str(exc),
+        )
+        _set_rag_info(enabled=True, hit=False, sources=[])
+        return ""
+
+    sources = retrieval_result.get("sources", [])
+    source_names = []
+    for source in sources:
+        if not isinstance(source, dict) or not source.get("source"):
+            continue
+        source_name = str(source["source"])
+        if source_name not in source_names:
+            source_names.append(source_name)
+    _set_rag_info(enabled=True, hit=bool(source_names), sources=source_names)
+    logger.info("%s RAG retrieved %s sources: %s", AGENT_NAME, len(sources), sources)
+    return retrieval_result.get("context", "")
+
+
+def _build_retrieval_query(payload: dict) -> str:
+    redteam_review = payload["redteam_review"]
+    return "\n".join(
+        [
+            f"事件：{payload['event']}",
+            f"声明草稿：{payload['draft']}",
+            f"红队问题：{redteam_review.get('issues', [])}",
+            f"红队建议：{redteam_review.get('suggestions', [])}",
+        ]
+    )
 
 
 def _validate_output(payload: dict) -> dict:

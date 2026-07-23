@@ -32,6 +32,7 @@ def _append_trace(
     mode: str,
     fallback: bool,
     status: str,
+    rag: dict | None = None,
 ) -> None:
     trace.append(
         AgentTraceItem(
@@ -44,6 +45,7 @@ def _append_trace(
             status=status,
             mode=mode,
             fallback=fallback,
+            rag=rag,
         )
     )
 
@@ -66,6 +68,7 @@ def _record_step(
         fallback_candidate = output == mock_runner(deepcopy(agent_input))
 
     mode, fallback, status = _resolve_mode_and_fallback(requested_mode, fallback_candidate)
+    rag = legal_agent.get_last_rag_info() if agent == "Agent B" else None
     _append_trace(
         trace,
         agent,
@@ -77,6 +80,7 @@ def _record_step(
         mode,
         fallback,
         status,
+        rag,
     )
     return output
 
