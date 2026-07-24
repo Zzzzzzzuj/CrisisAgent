@@ -44,6 +44,40 @@ def test_rag_metrics():
     }
 
 
+def test_retrieval_evaluation_metrics():
+    case_results = [
+        {
+            "expected_sources": ["food_safety.md", "legal_risk_rules.md"],
+            "rag_sources": ["food_safety.md", "crisis_response.md"],
+            "rerank_gain": 1,
+        },
+        {
+            "expected_sources": ["legal_risk_rules.md"],
+            "rag_sources": ["crisis_response.md", "legal_risk_rules.md"],
+            "rerank_gain": -1,
+        },
+    ]
+
+    assert metrics.calculate_recall_at_k(case_results) == 0.75
+    assert metrics.calculate_mrr(case_results) == 0.75
+    assert metrics.calculate_average_rerank_gain(case_results) == 0.0
+
+
+def test_rerank_rank_change():
+    chunks = [
+        {"source": "crisis_response.md", "score": 0.9, "rerank_score": 0.5},
+        {"source": "legal_risk_rules.md", "score": 0.7, "rerank_score": 0.95},
+    ]
+
+    result = metrics.calculate_rerank_rank_change(["legal_risk_rules.md"], chunks)
+
+    assert result == {
+        "before_rank": 2,
+        "after_rank": 1,
+        "rerank_gain": 1,
+    }
+
+
 def test_category_metrics_summary():
     case_results = [
         {
@@ -55,7 +89,10 @@ def test_category_metrics_summary():
             "trace_duration_ms": 100,
             "rag_enabled": True,
             "rag_hit": True,
+            "expected_sources": ["food_safety.md"],
+            "rag_sources": ["food_safety.md"],
             "rag_source_count": 2,
+            "rerank_gain": 1,
         },
         {
             "category": "food_safety",
@@ -66,7 +103,10 @@ def test_category_metrics_summary():
             "trace_duration_ms": 300,
             "rag_enabled": True,
             "rag_hit": False,
+            "expected_sources": ["food_safety.md"],
+            "rag_sources": [],
             "rag_source_count": 0,
+            "rerank_gain": 0,
         },
         {
             "category": "service_outage",
@@ -77,7 +117,10 @@ def test_category_metrics_summary():
             "trace_duration_ms": 200,
             "rag_enabled": False,
             "rag_hit": False,
+            "expected_sources": ["crisis_response.md"],
+            "rag_sources": [],
             "rag_source_count": 0,
+            "rerank_gain": 0,
         },
     ]
 
@@ -90,6 +133,9 @@ def test_category_metrics_summary():
     assert summary["food_safety"]["fallback_rate"] == 0.5
     assert summary["food_safety"]["average_duration_ms"] == 200.0
     assert summary["food_safety"]["rag_hit_rate"] == 0.5
+    assert summary["food_safety"]["recall_at_k"] == 0.5
+    assert summary["food_safety"]["mrr"] == 0.5
+    assert summary["food_safety"]["average_rerank_gain"] == 0.5
     assert summary["food_safety"]["average_retrieved_sources"] == 1.0
     assert summary["service_outage"]["total_cases"] == 1
     assert summary["service_outage"]["risk_accuracy"] == 1.0

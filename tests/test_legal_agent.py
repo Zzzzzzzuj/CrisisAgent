@@ -44,12 +44,10 @@ def test_legal_agent_mock_mode_returns_expected_schema(monkeypatch):
     assert isinstance(result["revision_advice"], list)
     assert isinstance(result["public_opinion_suggestions"], list)
     assert isinstance(result["integrated_revision_tasks"], list)
-    assert rag_info == {
-        "enabled": False,
-        "hit": False,
-        "sources": [],
-        "count": 0,
-    }
+    assert rag_info["enabled"] is False
+    assert rag_info["hit"] is False
+    assert rag_info["sources"] == []
+    assert rag_info["count"] == 0
 
 
 def test_legal_agent_llm_mode_injects_legal_context_into_prompt(monkeypatch):
@@ -162,12 +160,10 @@ def test_legal_agent_llm_failure_still_falls_back_to_mock(monkeypatch):
     }
     assert isinstance(result["legal_risks"], list)
     assert isinstance(result["safe_points"], list)
-    assert rag_info == {
-        "enabled": True,
-        "hit": True,
-        "sources": ["legal_risk_rules.md"],
-        "count": 1,
-    }
+    assert rag_info["enabled"] is True
+    assert rag_info["hit"] is True
+    assert rag_info["sources"] == ["legal_risk_rules.md"]
+    assert rag_info["count"] == 1
 
 
 def test_legal_agent_records_rag_info_on_llm_success(monkeypatch):
@@ -206,12 +202,11 @@ def test_legal_agent_records_rag_info_on_llm_success(monkeypatch):
 
     legal_agent.run(TEST_PAYLOAD)
 
-    assert legal_agent.get_last_rag_info() == {
-        "enabled": True,
-        "hit": True,
-        "sources": ["food_safety.md", "legal_risk_rules.md"],
-        "count": 2,
-    }
+    rag_info = legal_agent.get_last_rag_info()
+    assert rag_info["enabled"] is True
+    assert rag_info["hit"] is True
+    assert rag_info["sources"] == ["food_safety.md", "legal_risk_rules.md"]
+    assert rag_info["count"] == 2
 
 
 def test_legal_agent_records_rag_miss_when_retriever_fails(monkeypatch):
@@ -244,9 +239,8 @@ def test_legal_agent_records_rag_miss_when_retriever_fails(monkeypatch):
 
     legal_agent.run(TEST_PAYLOAD)
 
-    assert legal_agent.get_last_rag_info() == {
-        "enabled": True,
-        "hit": False,
-        "sources": [],
-        "count": 0,
-    }
+    rag_info = legal_agent.get_last_rag_info()
+    assert rag_info["enabled"] is True
+    assert rag_info["hit"] is False
+    assert rag_info["sources"] == []
+    assert rag_info["count"] == 0

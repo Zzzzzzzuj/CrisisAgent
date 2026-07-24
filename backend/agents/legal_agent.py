@@ -11,7 +11,13 @@ AGENT_NAME = "Agent B"
 _LAST_RAG_INFO = {
     "enabled": False,
     "hit": False,
+    "retrieval_type": None,
+    "rerank_enabled": False,
+    "query": "",
     "sources": [],
+    "chunks": [],
+    "scores": [],
+    "rerank_scores": [],
     "count": 0,
 }
 REQUIRED_FIELDS = (
@@ -47,17 +53,38 @@ def get_last_rag_info() -> dict:
     return {
         "enabled": _LAST_RAG_INFO["enabled"],
         "hit": _LAST_RAG_INFO["hit"],
+        "retrieval_type": _LAST_RAG_INFO["retrieval_type"],
+        "rerank_enabled": _LAST_RAG_INFO["rerank_enabled"],
+        "query": _LAST_RAG_INFO["query"],
         "sources": list(_LAST_RAG_INFO["sources"]),
+        "chunks": list(_LAST_RAG_INFO["chunks"]),
+        "scores": list(_LAST_RAG_INFO["scores"]),
+        "rerank_scores": list(_LAST_RAG_INFO["rerank_scores"]),
         "count": _LAST_RAG_INFO["count"],
     }
 
 
-def _set_rag_info(enabled: bool, hit: bool, sources: list[str]) -> None:
+def _set_rag_info(
+    enabled: bool,
+    hit: bool,
+    sources: list[str],
+    query: str = "",
+    chunks: list[dict] | None = None,
+    retrieval_type: str | None = None,
+    rerank_enabled: bool = False,
+) -> None:
+    chunks = chunks or []
     _LAST_RAG_INFO.update(
         {
             "enabled": enabled,
             "hit": hit,
+            "retrieval_type": retrieval_type,
+            "rerank_enabled": rerank_enabled,
+            "query": query,
             "sources": sources,
+            "chunks": chunks,
+            "scores": [chunk.get("score") for chunk in chunks],
+            "rerank_scores": [chunk.get("rerank_score") for chunk in chunks],
             "count": len(sources),
         }
     )
@@ -167,6 +194,7 @@ def _retrieve_legal_context(payload: dict) -> str:
         return ""
 
     sources = retrieval_result.get("sources", [])
+    chunks = _normalize_rag_chunks(retrieval_result.get("chunks", []))
     source_names = []
     for source in sources:
         if not isinstance(source, dict) or not source.get("source"):
@@ -174,9 +202,57 @@ def _retrieve_legal_context(payload: dict) -> str:
         source_name = str(source["source"])
         if source_name not in source_names:
             source_names.append(source_name)
-    _set_rag_info(enabled=True, hit=bool(source_names), sources=source_names)
+    _set_rag_info(
+        enabled=True,
+        hit=bool(source_names),
+        sources=source_names,
+        query=query,
+        chunks=chunks,
+        retrieval_type=_resolve_retrieval_type(retrieval_result),
+        rerank_enabled=_resolve_rerank_enabled(retrieval_result),
+    )
     logger.info("%s RAG retrieved %s sources: %s", AGENT_NAME, len(sources), sources)
     return retrieval_result.get("context", "")
+
+
+def _normalize_rag_chunks(chunks: list[dict]) -> list[dict]:
+    normalized_chunks = []
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            continue
+        normalized_chunks.append(
+            {
+                "chunk_id": chunk.get("chunk_id"),
+                "source": chunk.get("source"),
+                "title": chunk.get("title"),
+                "score": chunk.get("score"),
+                "rerank_score": chunk.get("rerank_score"),
+                "text_preview": str(chunk.get("text", ""))[:120],
+            }
+        )
+    return normalized_chunks
+
+
+def _resolve_retrieval_type(retrieval_result: dict) -> str | None:
+    for chunk in retrieval_result.get("chunks", []):
+        metadata = chunk.get("metadata", {}) if isinstance(chunk, dict) else {}
+        if metadata.get("retrieval_type"):
+            return metadata["retrieval_type"]
+    for source in retrieval_result.get("sources", []):
+        if isinstance(source, dict) and source.get("retrieval_type"):
+            return source["retrieval_type"]
+    return None
+
+
+def _resolve_rerank_enabled(retrieval_result: dict) -> bool:
+    for chunk in retrieval_result.get("chunks", []):
+        metadata = chunk.get("metadata", {}) if isinstance(chunk, dict) else {}
+        if metadata.get("rerank_enabled"):
+            return True
+    return any(
+        isinstance(source, dict) and source.get("rerank_enabled")
+        for source in retrieval_result.get("sources", [])
+    )
 
 
 def _build_retrieval_query(payload: dict) -> str:

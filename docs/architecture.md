@@ -1,215 +1,206 @@
-# CrisisAgent Architecture
+# Architecture
 
 ## 项目解决的问题
 
-CrisisAgent 面向企业危机公关场景，目标是把“收到危机事件 -> 形成可发布声明 -> 做风险校验 -> 输出最终决策”这条链路工程化。
+CrisisAgent 面向企业危机公关场景，目标是帮助企业在突发负面事件中快速完成舆情判断、回应草稿、风险攻击、合规审查、最终决策和人工审核。
 
-它解决的不是单点文案生成问题，而是一个更接近真实业务流程的问题：
-
-- 先判断舆情风险和公众情绪
-- 再生成第一版回应
-- 再做对抗性检查和合规审查
-- 再修订文案
-- 最后给出最终声明和评分
+传统“一个 Prompt 生成最终声明”的方式很难满足真实业务需要，因为危机公关不是单点生成任务，而是一条风险控制链路。CrisisAgent 将这条链路工程化，使每个步骤都能被测试、观察、替换和评估。
 
 ## 为什么采用多 Agent 架构
 
-如果只用一个大模型一步生成最终声明，会有几个问题：
+多 Agent 的核心价值是职责拆分：
 
-- 角色混在一起，不容易控制输出质量
-- 很难定位到底是哪一步出了问题
-- 很难做局部替换、局部优化
-- 不利于后续接入不同数据源和能力，比如法务知识库
+- Agent A 负责舆情分析，判断风险、情绪和回应语气。
+- Agent C 负责策略文案，生成第一版和第二版声明。
+- Agent D 负责红队攻击，模拟公众质疑和媒体追问。
+- Agent B 负责合规审查，结合 RAG 知识库降低法律表达风险。
+- Agent E 负责最终决策，输出最终声明和评分。
 
-多 Agent 的好处是把复杂任务拆成可解释的子任务：
+如果只用一个 LLM，所有能力会混在同一个 Prompt 里，很难定位错误，也很难单独增强合规、评测、工具调用或人工审核。
 
-- Agent A 负责“看懂舆情”
-- Agent C 负责“写文案”
-- Agent D 负责“挑刺”
-- Agent B 负责“法务与合规”
-- Agent E 负责“拍板和评分”
+## 总体架构图
 
-这样每一步都可以单测、替换、观察、评估。
-
-## 整体技术栈
-
-- Python
-- FastAPI
-- Pydantic
-- 规则函数 + mock Agent
-- OpenAI-compatible HTTP LLM Client
-- pytest
-- JSON / Markdown evaluation reports
-
-## FastAPI 后端结构
-
-当前后端入口比较克制，结构很清晰：
-
-- `backend/main.py`
-  - API 入口
-  - 暴露 `/api/crisis/run`
-  - 暴露 session 查询接口
-- `backend/workflow.py`
-  - 唯一 workflow 编排入口
-  - 串联多 Agent
-  - 记录 trace
-- `backend/agents/`
-  - 每个 Agent 一个文件
-  - 每个文件内部支持 `mock / llm` 双模式
-- `backend/config.py`
-  - 统一读取 `AGENT_MODE` 和 LLM 配置
-- `backend/llm_client.py`
-  - 统一封装模型调用
-- `backend/prompt_loader.py`
-  - 统一读取 Prompt 模板
-- `backend/utils/json_parser.py`
-  - 统一解析模型 JSON 输出
-- `backend/storage.py`
-  - 内存级 session 保存与查询
-
-## Workflow 编排方式
-
-核心编排在 `backend/workflow.py`，顺序固定，不在 Agent 内部串调用，避免职责混乱。
-
-文字流程图如下：
-
-用户输入事件
- ↓
+```text
+User Event
+  ↓
 FastAPI
- ↓
-workflow
- ↓
+  ↓
+Dynamic Runtime
+  ↓
+Planner
+  ↓
+Plan Validator
+  ↓
+Executor
+  ↓
+AgentState
+  ↓
+Agent Adapter
+  ↓
+Agents
+  ↓
+RAG / Memory / Tools / Context
+  ↓
+Runtime Evaluator
+  ↓
+Human Gate
+  ↓
+Checkpoint
+  ↓
+Resume
+  ↓
+Dashboard / Evaluation
+```
+
+固定 workflow 仍然保留：
+
+```text
+用户输入事件
+  ↓
+FastAPI
+  ↓
+workflow.py
+  ↓
 Agent A 舆情分析
- ↓
-Agent C 策略文案（第一版）
- ↓
+  ↓
+Agent C 第一版文案
+  ↓
 Agent D 红队攻击
- ↓
+  ↓
 Agent B 合规审查
- ↓
-Agent C 策略文案（第二版）
- ↓
+  ↓
+Agent C 第二版文案
+  ↓
 Agent E 最终决策
- ↓
-Trace + Evaluation
+  ↓
+agent_trace
+```
 
-## Agent 调用关系
+## 后端结构
 
-workflow 内部的输入传递关系是显式 dict 传递，不搞隐式共享状态。
+```text
+backend/
+  main.py
+  workflow.py
+  schemas.py
+  storage.py
+  agents/
+  core/
+  rag/
+  memory/
+  tools/
+  context/
+  prompts/
+  llm_client.py
+  prompt_loader.py
+  config.py
+  logger.py
+```
 
-- Agent A 输入：`event`
-- Agent C 第一版输入：`event + sentiment_analysis`
-- Agent D 输入：`event + first_draft.statement`
-- Agent B 输入：`event + first_draft.statement + redteam_review`
-- Agent C 第二版输入：`event + first_draft + redteam_review + legal_review`
-- Agent E 输入：`event + second_draft + sentiment_analysis + redteam_review + legal_review`
+关键职责：
 
-这种写法的优点是：
+- `backend/main.py`: FastAPI API 层，负责接收请求和返回响应。
+- `backend/workflow.py`: 固定 A/C/D/B/C/E workflow 编排入口。
+- `backend/agents/`: 每个 Agent 的 mock/llm 双模式逻辑。
+- `backend/core/`: Dynamic Runtime，包括 Planner、Executor、AgentState、Human Gate、Checkpoint、Resume。
+- `backend/rag/`: RAG 检索基础设施，包括 keyword、vector、hybrid 和 reranker。
+- `backend/memory/`: 企业历史危机经验记忆。
+- `backend/tools/`: Tool 抽象和 Tool Registry。
+- `backend/context/`: ContextManager，用于上下文优先级和 token 控制。
+- `evaluation/`: 离线评测体系。
+- `frontend/`: Vue Dashboard。
 
-- 数据流清楚
-- 调试容易
-- trace 容易记录
-- 后续改 Agent 不容易破坏整体
+## LLM / Mock 双模式
 
-## LLM / Mock 双模式设计
+每个 Agent 保持稳定接口，例如：
 
-项目目前已经把主链路上的关键 Agent 做成了双模式：
+```python
+run(payload) -> dict
+```
 
-- `mock`
-  - 默认模式
-  - 不依赖任何模型配置
-  - 用规则或固定模板稳定跑通
-- `llm`
-  - 通过 Prompt + LLM Client + JSON Parser 工作
-  - 对外接口不变
+内部根据 `AGENT_MODE` 选择：
 
-统一路径是：
+```text
+mock:
+  rule/mock function
 
-输入
- ↓
-load_prompt(...)
- ↓
-call_llm(...)
- ↓
-parse_llm_json(...)
- ↓
-字段校验
- ↓
-normalize 输出
+llm:
+  load_prompt
+  ↓
+  call_llm
+  ↓
+  parse_llm_json
+  ↓
+  validate
+  ↓
+  normalize
+```
+
+这样做的好处是 API 和 workflow 不需要因为模型接入而改变。
 
 ## Fallback 机制
 
-这是这个项目工程化里很关键的一点。
+LLM 模式下，如果发生网络异常、超时、JSON 解析失败、字段缺失或类型错误，Agent 会 fallback 到 mock 逻辑。fallback 会记录日志和 trace，保证整体流程不中断。
 
-当 Agent 处于 `llm` 模式时，如果出现下面任一情况：
+## RAG / Memory / Tools
 
-- 网络失败
-- 模型超时
-- JSON 解析失败
-- 字段缺失
-- 类型错误
+RAG 主要服务 Agent B 合规审查：
 
-就会自动 fallback 到 mock。
+```text
+event + draft + redteam_review
+  ↓
+retrieval query
+  ↓
+HybridRetriever
+  ↓
+Reranker
+  ↓
+legal_context
+  ↓
+Legal Agent Prompt
+```
 
-这样带来的价值是：
+Memory 主要服务 Agent C 文案生成，让它参考历史危机经验，但不直接复制历史声明。
 
-- workflow 不会因为单个 Agent 出错而整体崩掉
-- API 结构保持稳定
-- 测试和评测可以继续跑
-- 方便逐个 Agent 渐进式接入真实模型
+Tools 用于给 Agent 提供外部能力，目前包括舆情分析工具和法规检索工具。
 
-## Trace 可观测设计
+## Trace 和 Metrics
 
-每一步 Agent 都会记录到 `agent_trace`，现在的 trace 字段包括：
+Dynamic Runtime 的 trace 记录：
 
-- `agent`
-- `name`
-- `input`
-- `output`
-- `start_time`
-- `end_time`
-- `status`
-- `mode`
-- `fallback`
+- agent
+- status
+- start_time
+- end_time
+- duration_ms
+- input_summary
+- output_summary
+- error
 
-这让我们可以回答很多工程问题：
+Metrics 接口统计：
 
-- 哪一步慢
-- 哪一步经常 fallback
-- 当前运行到底走的是 mock 还是 llm
-- 某个 case 是在哪一步开始偏的
+- total_duration
+- agent_count
+- failed_agents
+- rag_hits
+- memory_hits
+- tool_calls
+- human_status
+
+这些信息支撑 Dashboard 展示和故障排查。
 
 ## Evaluation 体系
 
-项目现在已经有独立的 `evaluation/` 模块。
+Evaluation 模块不依赖前端，也不改变业务 API。它通过离线 case 调用 workflow/runtime，生成 JSON 和 Markdown 报告。
 
-它做的事情是：
+当前评测覆盖：
 
-- 读取测试案例
-- 调用真实 workflow
-- 收集 Agent A 输出、最终 scores、trace
-- 统计 accuracy、fallback、耗时
-- 输出 JSON 报告和 Markdown 报告
-
-目前 evaluation 关注的核心指标包括：
-
-- `risk_accuracy`
-- `emotion_accuracy`
-- `tone_accuracy`
-- `fallback_rate`
-- `average_duration_ms`
-- `agent_metrics`
-- `category_metrics`
-
-## 当前架构的特点
-
-这个项目的特点不是“模型有多强”，而是“结构已经很适合继续长大”：
-
-- API 层很薄
-- workflow 入口唯一
-- Agent 边界清楚
-- 输出结构稳定
-- fallback 机制完整
-- trace 和 evaluation 都已经接上
-
-这也是它比较适合面试讲解的地方：不是 demo，而是一个已经有明显工程边界感的 Agent 系统。
+- 风险识别准确率
+- 情绪识别准确率
+- tone accuracy
+- RAG recall@k
+- MRR
+- rerank gain
+- memory hit rate
+- response quality
+- hallucination risk

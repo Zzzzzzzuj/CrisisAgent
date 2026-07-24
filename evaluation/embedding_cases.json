@@ -1,0 +1,20 @@
+[
+  {
+    "id": "embedding_food_safety_001",
+    "query": "食品企业使用过期原料，监管介入调查",
+    "expected_sources": ["food_safety.md"],
+    "top_k": 3
+  },
+  {
+    "id": "embedding_legal_risk_001",
+    "query": "危机声明需要避免提前定责和绝对化承诺",
+    "expected_sources": ["legal_risk_rules.md"],
+    "top_k": 3
+  },
+  {
+    "id": "embedding_crisis_response_001",
+    "query": "企业初次回应要表达公众担忧并持续同步进展",
+    "expected_sources": ["crisis_response.md"],
+    "top_k": 3
+  }
+]

@@ -1,6 +1,8 @@
+from backend.context import ContextManager
 from backend.config import get_config
 from backend.llm_client import call_llm
 from backend.logger import get_logger
+from backend.memory.retriever import retrieve_memories
 from backend.prompt_loader import load_prompt
 from backend.utils.json_parser import parse_llm_json
 
@@ -8,12 +10,26 @@ from backend.utils.json_parser import parse_llm_json
 logger = get_logger(__name__)
 AGENT_NAME = "Agent C"
 FIRST_DRAFT_REQUIRED_FIELDS = ("statement", "strategy", "tone", "notes")
+CONTEXT_MAX_TOKENS = 300
+_LAST_MEMORY_INFO = {
+    "enabled": False,
+    "hit": False,
+    "categories": [],
+    "memory_ids": [],
+}
+_LAST_CONTEXT_INFO = {
+    "before_tokens": 0,
+    "after_tokens": 0,
+    "sources": [],
+}
 
 
 def run(payload: dict) -> dict:
     config = get_config()
 
     if config.agent_mode == "llm":
+        _set_memory_info(enabled=True, hit=False, memories=[])
+        _set_context_info(before_tokens=0, after_tokens=0, sources=[])
         try:
             return _run_llm(payload)
         except Exception as exc:
@@ -23,12 +39,63 @@ def run(payload: dict) -> dict:
                 exc.__class__.__name__,
                 str(exc),
             )
+            return _run_mock(payload)
 
+    _set_memory_info(enabled=False, hit=False, memories=[])
+    _set_context_info(before_tokens=0, after_tokens=0, sources=[])
     return _run_mock(payload)
 
 
 def generate_first_draft(payload: dict) -> dict:
     return run(payload)
+
+
+def get_last_memory_info() -> dict:
+    return {
+        "enabled": _LAST_MEMORY_INFO["enabled"],
+        "hit": _LAST_MEMORY_INFO["hit"],
+        "categories": list(_LAST_MEMORY_INFO["categories"]),
+        "memory_ids": list(_LAST_MEMORY_INFO["memory_ids"]),
+    }
+
+
+def get_last_context_info() -> dict:
+    return {
+        "before_tokens": _LAST_CONTEXT_INFO["before_tokens"],
+        "after_tokens": _LAST_CONTEXT_INFO["after_tokens"],
+        "sources": list(_LAST_CONTEXT_INFO["sources"]),
+    }
+
+
+def _set_context_info(before_tokens: int, after_tokens: int, sources: list[str]) -> None:
+    _LAST_CONTEXT_INFO.update(
+        {
+            "before_tokens": before_tokens,
+            "after_tokens": after_tokens,
+            "sources": list(sources),
+        }
+    )
+
+
+def _set_memory_info(enabled: bool, hit: bool, memories: list[dict]) -> None:
+    categories = []
+    memory_ids = []
+    for memory in memories:
+        category = memory.get("category")
+        memory_id = memory.get("memory_id")
+        if category and category not in categories:
+            categories.append(category)
+        if memory_id and memory_id not in memory_ids:
+            memory_ids.append(memory_id)
+
+    _LAST_MEMORY_INFO.update(
+        {
+            "enabled": enabled,
+            "hit": hit,
+            "categories": categories,
+            "memory_ids": memory_ids,
+        }
+    )
 
 
 def _run_mock(payload: dict) -> dict:
@@ -53,6 +120,8 @@ def _run_mock(payload: dict) -> dict:
 
 
 def _run_llm(payload: dict) -> dict:
+    memory_context = _retrieve_memory_context(payload)
+    context = _build_context(payload, memory_context)
     prompt = load_prompt(
         "writer_agent",
         {
@@ -60,6 +129,8 @@ def _run_llm(payload: dict) -> dict:
             "sentiment_analysis": payload["sentiment_analysis"],
             "redteam_review": "",
             "legal_review": "",
+            "memory_context": memory_context,
+            "context": context,
         },
     )
     raw_text = call_llm(prompt)
@@ -82,6 +153,65 @@ def _run_llm(payload: dict) -> dict:
     normalized_output = _normalize_first_draft_output(mapped_output)
     logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
     return normalized_output
+
+
+def _build_context(payload: dict, memory_context: str) -> str:
+    manager = ContextManager()
+    manager.add_context(
+        source="event",
+        content=str(payload.get("event", "")),
+        priority=100,
+    )
+    manager.add_context(
+        source="sentiment_analysis",
+        content=str(payload.get("sentiment_analysis", {})),
+        priority=80,
+    )
+    if memory_context:
+        manager.add_context(
+            source="memory_context",
+            content=memory_context,
+            priority=60,
+        )
+
+    sorted_items = manager.sort_by_priority()
+    before_tokens = sum(item.token_size for item in sorted_items)
+    context = manager.build_context(max_tokens=CONTEXT_MAX_TOKENS)
+    sources = [item.source for item in sorted_items if f"[{item.source}]" in context]
+    after_tokens = sum(item.token_size for item in sorted_items if item.source in sources)
+    _set_context_info(before_tokens=before_tokens, after_tokens=after_tokens, sources=sources)
+    return context
+
+
+def _retrieve_memory_context(payload: dict) -> str:
+    query = _build_memory_query(payload)
+    try:
+        retrieval_result = retrieve_memories(query, top_k=3)
+    except Exception as exc:
+        logger.warning(
+            "%s memory retrieval failed: %s | %s",
+            AGENT_NAME,
+            exc.__class__.__name__,
+            str(exc),
+        )
+        _set_memory_info(enabled=True, hit=False, memories=[])
+        return ""
+
+    memories = retrieval_result.get("memories", [])
+    _set_memory_info(enabled=True, hit=bool(memories), memories=memories)
+    return retrieval_result.get("context", "")
+
+
+def _build_memory_query(payload: dict) -> str:
+    sentiment = payload.get("sentiment_analysis", {})
+    return "\n".join(
+        [
+            f"event: {payload.get('event', '')}",
+            f"risk_level: {sentiment.get('risk_level', '')}",
+            f"public_emotion: {sentiment.get('public_emotion', '')}",
+            f"keywords: {sentiment.get('keywords', [])}",
+        ]
+    )
 
 
 def _validate_first_draft_output(payload: dict) -> dict:

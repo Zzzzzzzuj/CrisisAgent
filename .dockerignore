@@ -1,0 +1,11 @@
+.git
+.pytest_cache
+.venv
+__pycache__
+*.pyc
+frontend/node_modules
+frontend/dist
+backend/core/data/checkpoints.json
+backend/memory/data/memories.json
+evaluation/outputs
+evaluation/reports

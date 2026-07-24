@@ -54,6 +54,93 @@ def calculate_source_distribution(case_results: list[dict]) -> dict:
     return dict(sorted(distribution.items()))
 
 
+def calculate_recall_at_k(case_results: list[dict]) -> float:
+    scored_cases = [item for item in case_results if item.get("expected_sources")]
+    if not scored_cases:
+        return 0.0
+
+    total_recall = 0.0
+    for item in scored_cases:
+        expected_sources = set(item.get("expected_sources", []))
+        retrieved_sources = set(item.get("rag_sources", []))
+        hits = expected_sources & retrieved_sources
+        total_recall += len(hits) / len(expected_sources)
+
+    return round(total_recall / len(scored_cases), 4)
+
+
+def calculate_mrr(case_results: list[dict]) -> float:
+    scored_cases = [item for item in case_results if item.get("expected_sources")]
+    if not scored_cases:
+        return 0.0
+
+    total_rr = 0.0
+    for item in scored_cases:
+        expected_sources = set(item.get("expected_sources", []))
+        reciprocal_rank = 0.0
+        for index, source in enumerate(item.get("rag_sources", []), start=1):
+            if source in expected_sources:
+                reciprocal_rank = 1 / index
+                break
+        total_rr += reciprocal_rank
+
+    return round(total_rr / len(scored_cases), 4)
+
+
+def calculate_average_rerank_gain(case_results: list[dict]) -> float:
+    gains = [
+        item["rerank_gain"]
+        for item in case_results
+        if isinstance(item.get("rerank_gain"), int | float)
+    ]
+    if not gains:
+        return 0.0
+    return round(sum(gains) / len(gains), 2)
+
+
+def calculate_rerank_rank_change(expected_sources: list[str], chunks: list[dict]) -> dict:
+    if not expected_sources or not chunks:
+        return {
+            "before_rank": None,
+            "after_rank": None,
+            "rerank_gain": 0,
+        }
+
+    score_ranked = sorted(
+        chunks,
+        key=lambda chunk: chunk.get("score") if chunk.get("score") is not None else -1,
+        reverse=True,
+    )
+    rerank_score_ranked = sorted(
+        chunks,
+        key=lambda chunk: chunk.get("rerank_score") if chunk.get("rerank_score") is not None else -1,
+        reverse=True,
+    )
+
+    before_rank = _find_first_expected_source_rank(expected_sources, score_ranked)
+    after_rank = _find_first_expected_source_rank(expected_sources, rerank_score_ranked)
+    if before_rank is None or after_rank is None:
+        return {
+            "before_rank": before_rank,
+            "after_rank": after_rank,
+            "rerank_gain": 0,
+        }
+
+    return {
+        "before_rank": before_rank,
+        "after_rank": after_rank,
+        "rerank_gain": before_rank - after_rank,
+    }
+
+
+def _find_first_expected_source_rank(expected_sources: list[str], chunks: list[dict]) -> int | None:
+    expected = set(expected_sources)
+    for index, chunk in enumerate(chunks, start=1):
+        if chunk.get("source") in expected:
+            return index
+    return None
+
+
 def calculate_trace_duration_ms(agent_trace: list[dict]) -> int:
     if not agent_trace:
         return 0
@@ -124,6 +211,9 @@ def summarize_category_metrics(case_results: list[dict]) -> dict:
             "average_duration_ms": calculate_average_duration_ms(items),
             "rag_hit_rate": calculate_rag_hit_rate(items),
             "average_retrieved_sources": calculate_average_retrieved_sources(items),
+            "recall_at_k": calculate_recall_at_k(items),
+            "mrr": calculate_mrr(items),
+            "average_rerank_gain": calculate_average_rerank_gain(items),
         }
 
     return summary

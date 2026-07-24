@@ -1,0 +1,29 @@
+[
+  {
+    "id": "response_food_safety_001",
+    "category": "food_safety",
+    "event": "某食品品牌被爆使用过期原料，偷拍视频在网上传播，网友要求监管介入。",
+    "must_include": ["核查", "配合监管", "消费者", "持续"],
+    "must_avoid": ["确认违法", "全部属实", "一定赔偿", "恶意造谣"],
+    "expected_actions": ["调查", "整改", "配合监管", "后续更新"],
+    "supported_facts": ["食品品牌", "过期原料", "偷拍视频", "网上传播", "网友", "监管介入"]
+  },
+  {
+    "id": "response_service_outage_001",
+    "category": "service_outage",
+    "event": "某在线服务大面积无法登录，用户投诉客服无响应，社交平台出现大量质疑。",
+    "must_include": ["排查", "用户", "进展", "恢复"],
+    "must_avoid": ["完全没有问题", "用户误操作", "永久补偿", "攻击"],
+    "expected_actions": ["调查", "整改", "后续更新"],
+    "supported_facts": ["在线服务", "无法登录", "用户投诉", "客服无响应", "社交平台", "质疑"]
+  },
+  {
+    "id": "response_data_privacy_001",
+    "category": "data_privacy",
+    "event": "某App被质疑过度收集用户信息，相关截图在网络传播，用户担心隐私泄露。",
+    "must_include": ["核查", "用户", "隐私", "整改"],
+    "must_avoid": ["绝不存在", "所有数据安全", "用户造谣", "无需担心"],
+    "expected_actions": ["调查", "整改", "后续更新"],
+    "supported_facts": ["App", "过度收集", "用户信息", "截图", "网络传播", "隐私泄露"]
+  }
+]

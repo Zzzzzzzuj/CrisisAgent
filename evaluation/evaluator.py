@@ -17,6 +17,10 @@ from evaluation.metrics import (
     calculate_average_retrieved_sources,
     calculate_fallback_rate,
     calculate_rag_hit_rate,
+    calculate_mrr,
+    calculate_recall_at_k,
+    calculate_rerank_rank_change,
+    calculate_average_rerank_gain,
     calculate_source_distribution,
     calculate_trace_duration_ms,
     summarize_agent_metrics,
@@ -67,6 +71,11 @@ def evaluate_case(case: dict) -> dict:
     agent_b_rag = _extract_agent_b_rag(agent_trace)
     trace_duration_ms = calculate_trace_duration_ms(agent_trace)
     fallback_count = sum(1 for item in agent_trace if item["fallback"])
+    expected_sources = case.get("expected_sources", [])
+    rerank_rank_change = calculate_rerank_rank_change(
+        expected_sources,
+        agent_b_rag.get("chunks", []),
+    )
 
     return {
         "id": case["id"],
@@ -76,7 +85,7 @@ def evaluate_case(case: dict) -> dict:
         "expected_risk": case["expected_risk"],
         "expected_emotion": case["expected_emotion"],
         "expected_tone": case["expected_tone"],
-        "expected_sources": case.get("expected_sources", []),
+        "expected_sources": expected_sources,
         "predicted_risk": agent_a_output["risk_level"],
         "predicted_emotion": agent_a_output["public_emotion"],
         "predicted_tone": agent_a_output["recommended_tone"],
@@ -93,7 +102,35 @@ def evaluate_case(case: dict) -> dict:
         "rag_hit": agent_b_rag.get("hit", False),
         "rag_sources": agent_b_rag.get("sources", []),
         "rag_source_count": agent_b_rag.get("count", 0),
+        "rag_retrieval_type": agent_b_rag.get("retrieval_type"),
+        "rag_query": agent_b_rag.get("query", ""),
+        "rag_chunks": agent_b_rag.get("chunks", []),
+        "rag_scores": agent_b_rag.get("scores", []),
+        "rag_rerank_scores": agent_b_rag.get("rerank_scores", []),
+        "rerank_enabled": agent_b_rag.get("rerank_enabled", False),
+        "recall_at_k": _calculate_case_recall_at_k(expected_sources, agent_b_rag.get("sources", [])),
+        "reciprocal_rank": _calculate_case_reciprocal_rank(expected_sources, agent_b_rag.get("sources", [])),
+        "before_rank": rerank_rank_change["before_rank"],
+        "after_rank": rerank_rank_change["after_rank"],
+        "rerank_gain": rerank_rank_change["rerank_gain"],
     }
+
+
+def _calculate_case_recall_at_k(expected_sources: list[str], retrieved_sources: list[str]) -> float:
+    if not expected_sources:
+        return 0.0
+    hits = set(expected_sources) & set(retrieved_sources)
+    return round(len(hits) / len(expected_sources), 4)
+
+
+def _calculate_case_reciprocal_rank(expected_sources: list[str], retrieved_sources: list[str]) -> float:
+    if not expected_sources:
+        return 0.0
+    expected = set(expected_sources)
+    for index, source in enumerate(retrieved_sources, start=1):
+        if source in expected:
+            return round(1 / index, 4)
+    return 0.0
 
 
 def summarize_results(case_results: list[dict]) -> dict:
@@ -107,6 +144,9 @@ def summarize_results(case_results: list[dict]) -> dict:
             "fallback_rate": 0.0,
             "average_duration_ms": 0.0,
             "rag_hit_rate": 0.0,
+            "recall_at_k": 0.0,
+            "mrr": 0.0,
+            "average_rerank_gain": 0.0,
             "average_retrieved_sources": 0.0,
             "source_distribution": {},
             "agent_metrics": {},
@@ -122,6 +162,9 @@ def summarize_results(case_results: list[dict]) -> dict:
         "fallback_rate": calculate_fallback_rate(case_results),
         "average_duration_ms": calculate_average_duration_ms(case_results),
         "rag_hit_rate": calculate_rag_hit_rate(case_results),
+        "recall_at_k": calculate_recall_at_k(case_results),
+        "mrr": calculate_mrr(case_results),
+        "average_rerank_gain": calculate_average_rerank_gain(case_results),
         "average_retrieved_sources": calculate_average_retrieved_sources(case_results),
         "source_distribution": calculate_source_distribution(case_results),
         "agent_metrics": summarize_agent_metrics(case_results),
@@ -143,7 +186,20 @@ def _build_markdown_report(summary: dict) -> str:
         f"- Fallback rate: {summary['fallback_rate']}",
         f"- Average duration: {summary['average_duration_ms']} ms",
         f"- RAG hit rate: {summary['rag_hit_rate']}",
+        f"- Recall@K: {summary['recall_at_k']}",
+        f"- MRR: {summary['mrr']}",
+        f"- Average rerank gain: {summary['average_rerank_gain']}",
         f"- Average retrieved sources: {summary['average_retrieved_sources']}",
+        "",
+        "## RAG Evaluation",
+        "",
+        "| Metric | Value |",
+        "| --- | ---: |",
+        f"| RAG Hit Rate | {summary['rag_hit_rate']} |",
+        f"| Recall@K | {summary['recall_at_k']} |",
+        f"| MRR | {summary['mrr']} |",
+        f"| Average Rerank Gain | {summary['average_rerank_gain']} |",
+        f"| Average Retrieved Sources | {summary['average_retrieved_sources']} |",
         "",
         "## RAG Source Distribution",
         "",
@@ -175,8 +231,8 @@ def _build_markdown_report(summary: dict) -> str:
             "",
             "## Category Metrics",
             "",
-            "| Category | Total Cases | Risk Accuracy | Emotion Accuracy | Tone Accuracy | Fallback Rate | Avg Duration (ms) | RAG Hit Rate | Avg Sources |",
-            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Category | Total Cases | Risk Accuracy | Emotion Accuracy | Tone Accuracy | Fallback Rate | Avg Duration (ms) | RAG Hit Rate | Recall@K | MRR | Avg Rerank Gain | Avg Sources |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
 
@@ -185,7 +241,8 @@ def _build_markdown_report(summary: dict) -> str:
             f"| {category} | {metrics['total_cases']} | {metrics['risk_accuracy']} | "
             f"{metrics['emotion_accuracy']} | {metrics['tone_accuracy']} | "
             f"{metrics['fallback_rate']} | {metrics['average_duration_ms']} | "
-            f"{metrics['rag_hit_rate']} | {metrics['average_retrieved_sources']} |"
+            f"{metrics['rag_hit_rate']} | {metrics['recall_at_k']} | {metrics['mrr']} | "
+            f"{metrics['average_rerank_gain']} | {metrics['average_retrieved_sources']} |"
         )
 
     lines.extend(["", "## Case Details", ""])
@@ -207,7 +264,13 @@ def _build_markdown_report(summary: dict) -> str:
                 f"- Actual tone: `{case['predicted_tone']}`",
                 f"- Expected sources: `{', '.join(case.get('expected_sources', []))}`",
                 f"- RAG hit: `{case.get('rag_hit', False)}`",
+                f"- Retrieval type: `{case.get('rag_retrieval_type')}`",
                 f"- RAG sources: `{', '.join(case.get('rag_sources', []))}`",
+                f"- Recall@K: `{case.get('recall_at_k', 0.0)}`",
+                f"- Reciprocal rank: `{case.get('reciprocal_rank', 0.0)}`",
+                f"- Rerank before rank: `{case.get('before_rank')}`",
+                f"- Rerank after rank: `{case.get('after_rank')}`",
+                f"- Rerank gain: `{case.get('rerank_gain', 0)}`",
                 f"- Result: {'PASS' if overall_pass else 'FAIL'}",
                 f"- Fallback: `{case['fallback']}`",
                 f"- Trace duration: `{case['trace_duration_ms']} ms`",

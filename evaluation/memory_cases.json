@@ -1,0 +1,22 @@
+[
+  {
+    "id": "memory-food-safety-001",
+    "event": "某食品企业被曝使用过期原料，消费者要求监管介入。",
+    "expected_category": "food_safety"
+  },
+  {
+    "id": "memory-data-security-001",
+    "event": "某互联网平台疑似发生用户数据泄露，引发隐私安全担忧。",
+    "expected_category": "data_security"
+  },
+  {
+    "id": "memory-service-outage-001",
+    "event": "某在线服务在大促期间宕机，付费用户集中投诉。",
+    "expected_category": "service_outage"
+  },
+  {
+    "id": "memory-executive-misconduct-001",
+    "event": "某公司高管公开发言不当，引发网友抵制并要求道歉。",
+    "expected_category": "executive_misconduct"
+  }
+]

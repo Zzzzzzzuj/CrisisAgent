@@ -49,6 +49,10 @@ def test_summarize_results_includes_rag_and_category_metrics():
                 "rag_hit": True,
                 "rag_sources": ["food_safety.md"],
                 "rag_source_count": 1,
+                "expected_sources": ["food_safety.md"],
+                "recall_at_k": 1.0,
+                "reciprocal_rank": 1.0,
+                "rerank_gain": 1,
                 "trace": [
                     {
                         "agent": "Agent A",
@@ -71,6 +75,10 @@ def test_summarize_results_includes_rag_and_category_metrics():
                 "rag_hit": False,
                 "rag_sources": [],
                 "rag_source_count": 0,
+                "expected_sources": ["food_safety.md"],
+                "recall_at_k": 0.0,
+                "reciprocal_rank": 0.0,
+                "rerank_gain": 0,
                 "trace": [
                     {
                         "agent": "Agent A",
@@ -89,6 +97,9 @@ def test_summarize_results_includes_rag_and_category_metrics():
     assert summary["emotion_accuracy"] == 0.5
     assert summary["tone_accuracy"] == 0.5
     assert summary["rag_hit_rate"] == 0.5
+    assert summary["recall_at_k"] == 0.5
+    assert summary["mrr"] == 0.5
+    assert summary["average_rerank_gain"] == 0.5
     assert summary["average_retrieved_sources"] == 0.5
     assert summary["source_distribution"] == {"food_safety.md": 1}
     assert summary["category_metrics"]["food_safety"]["total_cases"] == 2
@@ -134,7 +145,30 @@ def test_evaluate_case_collects_rag_trace_fields(monkeypatch):
                 "rag": {
                     "enabled": True,
                     "hit": True,
+                    "retrieval_type": "hybrid",
+                    "rerank_enabled": True,
+                    "query": "event A legal query",
                     "sources": ["food_safety.md", "legal_risk_rules.md"],
+                    "chunks": [
+                        {
+                            "chunk_id": "legal-1",
+                            "source": "legal_risk_rules.md",
+                            "title": "Legal",
+                            "score": 0.9,
+                            "rerank_score": 0.8,
+                            "text_preview": "avoid premature liability",
+                        },
+                        {
+                            "chunk_id": "food-1",
+                            "source": "food_safety.md",
+                            "title": "Food",
+                            "score": 0.7,
+                            "rerank_score": 0.95,
+                            "text_preview": "food safety",
+                        },
+                    ],
+                    "scores": [0.9, 0.7],
+                    "rerank_scores": [0.8, 0.95],
                     "count": 2,
                 },
             },
@@ -170,6 +204,14 @@ def test_evaluate_case_collects_rag_trace_fields(monkeypatch):
     assert result["rag_hit"] is True
     assert result["rag_sources"] == ["food_safety.md", "legal_risk_rules.md"]
     assert result["rag_source_count"] == 2
+    assert result["rag_retrieval_type"] == "hybrid"
+    assert result["rag_query"] == "event A legal query"
+    assert result["rerank_enabled"] is True
+    assert result["recall_at_k"] == 1.0
+    assert result["reciprocal_rank"] == 1.0
+    assert result["before_rank"] == 2
+    assert result["after_rank"] == 1
+    assert result["rerank_gain"] == 1
 
 
 def test_save_results_generates_json_and_markdown_reports_with_rag(tmp_path: Path):
@@ -181,6 +223,9 @@ def test_save_results_generates_json_and_markdown_reports_with_rag(tmp_path: Pat
         "fallback_rate": 0.0,
         "average_duration_ms": 120.0,
         "rag_hit_rate": 1.0,
+        "recall_at_k": 1.0,
+        "mrr": 1.0,
+        "average_rerank_gain": 1.0,
         "average_retrieved_sources": 1.0,
         "source_distribution": {"food_safety.md": 1},
         "agent_metrics": {
@@ -202,6 +247,9 @@ def test_save_results_generates_json_and_markdown_reports_with_rag(tmp_path: Pat
                 "fallback_rate": 0.0,
                 "average_duration_ms": 120.0,
                 "rag_hit_rate": 1.0,
+                "recall_at_k": 1.0,
+                "mrr": 1.0,
+                "average_rerank_gain": 1.0,
                 "average_retrieved_sources": 1.0,
             }
         },
@@ -231,6 +279,17 @@ def test_save_results_generates_json_and_markdown_reports_with_rag(tmp_path: Pat
                 "rag_hit": True,
                 "rag_sources": ["food_safety.md"],
                 "rag_source_count": 1,
+                "rag_retrieval_type": "hybrid",
+                "rag_query": "event A legal query",
+                "rag_chunks": [],
+                "rag_scores": [0.8],
+                "rag_rerank_scores": [0.9],
+                "rerank_enabled": True,
+                "recall_at_k": 1.0,
+                "reciprocal_rank": 1.0,
+                "before_rank": 1,
+                "after_rank": 1,
+                "rerank_gain": 0,
             }
         ],
     }
@@ -252,6 +311,10 @@ def test_save_results_generates_json_and_markdown_reports_with_rag(tmp_path: Pat
 
     assert saved_json["tone_accuracy"] == 1.0
     assert saved_json["rag_hit_rate"] == 1.0
+    assert saved_json["recall_at_k"] == 1.0
+    assert "## RAG Evaluation" in saved_markdown
+    assert "Recall@K" in saved_markdown
+    assert "MRR" in saved_markdown
     assert "## RAG Source Distribution" in saved_markdown
     assert "## Category Metrics" in saved_markdown
     assert "food_safety" in saved_markdown

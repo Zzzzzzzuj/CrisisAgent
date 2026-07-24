@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from backend.agents import decision_agent, legal_agent, redteam_agent, sentiment_agent, writer_agent
 from backend.config import get_config
-from backend.schemas import AgentTraceItem, CrisisRunRequest, CrisisRunResponse, ScoreBundle
+from backend.schemas import AgentTraceItem, CrisisRunRequest, CrisisRunResponse, ScoreBundle, ToolTraceItem
 from backend.storage import save_session
 
 
@@ -33,6 +33,9 @@ def _append_trace(
     fallback: bool,
     status: str,
     rag: dict | None = None,
+    memory: dict | None = None,
+    context: dict | None = None,
+    tools: list[ToolTraceItem] | None = None,
 ) -> None:
     trace.append(
         AgentTraceItem(
@@ -46,8 +49,30 @@ def _append_trace(
             mode=mode,
             fallback=fallback,
             rag=rag,
+            memory=memory,
+            context=context,
+            tools=tools or [],
         )
     )
+
+
+def _get_agent_tools(agent: str) -> list[ToolTraceItem]:
+    if agent != "Agent A":
+        return []
+
+    tool_info = sentiment_agent.get_last_tool_info()
+    if not tool_info.get("name"):
+        return []
+
+    return [
+        ToolTraceItem(
+            name=tool_info["name"],
+            input=tool_info.get("input"),
+            output=tool_info.get("output"),
+            success=bool(tool_info.get("success")),
+            duration_ms=float(tool_info.get("duration_ms", 0.0)),
+        )
+    ]
 
 
 def _record_step(
@@ -69,6 +94,9 @@ def _record_step(
 
     mode, fallback, status = _resolve_mode_and_fallback(requested_mode, fallback_candidate)
     rag = legal_agent.get_last_rag_info() if agent == "Agent B" else None
+    memory = writer_agent.get_last_memory_info() if agent == "Agent C" and requested_mode == "llm" else None
+    context = writer_agent.get_last_context_info() if agent == "Agent C" and requested_mode == "llm" else None
+    tools = _get_agent_tools(agent)
     _append_trace(
         trace,
         agent,
@@ -81,6 +109,9 @@ def _record_step(
         fallback,
         status,
         rag,
+        memory,
+        context,
+        tools,
     )
     return output
 
