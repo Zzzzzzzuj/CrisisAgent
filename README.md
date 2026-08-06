@@ -1,13 +1,70 @@
 # CrisisAgent
 
-CrisisAgent 是一个基于多智能体架构的企业危机公关决策系统。它不是单纯的“生成一段公关稿”，而是把真实危机处理流程拆成可编排、可观测、可评测、可恢复的 Agent Runtime。
+CrisisAgent 是一个面向企业危机公关场景的多智能体决策系统。它不是简单生成一段公关稿，而是把“事件研判、声明生成、合规审查、人工审核、过程追踪、离线评测”组织成一套可演示、可解释、可扩展的 Agent Platform。
 
-当前项目覆盖了从固定多 Agent workflow 到 Dynamic Agent Runtime 的完整演进：包括 Planner、Executor、AgentState、RAG、Memory、Tool Calling、Context Engineering、Evaluation、Human Gate、Checkpoint Resume，以及 Vue Dashboard。
+当前版本已完成 FastAPI 后端、Dynamic Agent Runtime、Hybrid RAG、Memory、Tool Calling、Evaluation、Human-in-the-loop、Checkpoint Resume 和 Vue Dashboard。
 
-## 技术架构
+## Product Preview
+
+> 截图建议：启动前端后截取“危机案例管理中心”和“案例详情页”，保存到 `docs/images/dashboard-home.png` 和 `docs/images/case-detail.png`。
 
 ```text
-User Event
+Crisis Case 管理中心
+  - 危机标题
+  - 风险等级
+  - AI 生成声明
+  - 审核状态
+
+案例详情页
+  - 舆情分析
+  - AI 声明
+  - Human Review
+  - 高级分析：Agent Trace / RAG / Memory
+```
+
+## Demo Flow
+
+项目内置 3 个面试展示案例：
+
+- 食品安全：过期原料偷拍视频传播，公众要求监管介入。
+- 数据泄露：APP 用户信息疑似泄露，引发投诉。
+- 普通投诉：门店排队时间过长，在本地社群传播。
+
+命令行 Demo：
+
+```bash
+python scripts/run_demo_cases.py
+```
+
+Dashboard Demo：
+
+```bash
+uvicorn backend.main:app --reload
+```
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+访问：
+
+```text
+http://localhost:5173
+```
+
+推荐演示顺序：
+
+1. 打开首页，说明系统以 Crisis Case 为核心，而不是技术 session。
+2. 新建食品安全案例，展示 AI 如何生成声明和审核状态。
+3. 进入详情页，讲解风险等级、舆情分析、AI 声明和 Human Review。
+4. 展开高级分析，展示 Agent Trace、RAG、Memory 和 Metrics。
+
+## Architecture
+
+```text
+User Crisis Event
   ↓
 Planner
   ↓
@@ -17,9 +74,11 @@ Executor
   ↓
 AgentState
   ↓
+Agent Adapter
+  ↓
 Agents
   ↓
-RAG / Memory / Tools
+RAG / Memory / Tools / Context
   ↓
 Evaluation
   ↓
@@ -28,52 +87,50 @@ Human Gate
 Checkpoint
   ↓
 Resume
+  ↓
+Dashboard
 ```
 
-技术栈：
+更多架构图见 [docs/architecture-diagram.md](docs/architecture-diagram.md)。
+
+## Core Capabilities
+
+- Dynamic Agent Runtime: Planner 生成执行计划，Validator 修正依赖，Executor 执行 Agent。
+- Multi Agent Collaboration: 舆情分析、文案生成、红队攻击、合规审查、最终决策分工明确。
+- Hybrid RAG: Agent B 合规审查可检索本地法规与危机回应知识库。
+- Memory System: 从历史 session 抽取企业危机经验，支持后续复用。
+- Tool Calling: 统一 Tool 抽象，让 Agent 可调用外部能力。
+- Context Engineering: Writer Agent 使用 ContextManager 管理上下文优先级。
+- Evaluation System: 覆盖 workflow、RAG、Memory、Response Quality 和 LLM-as-Judge。
+- Human-in-the-loop: 高风险或低质量结果进入人工审核。
+- Checkpoint Resume: 审核后可从 checkpoint 恢复 Agent Loop。
+- Observability Dashboard: 前端展示案例、声明、审核、Trace、Metrics。
+
+## Tech Stack
 
 - Backend: Python, FastAPI, Pydantic, pytest
-- Agent Runtime: Planner, Plan Validator, Executor, AgentState, Adapter, Human Gate, Checkpoint Resume
-- LLM Infrastructure: OpenAI-compatible HTTP client, Prompt Loader, JSON Parser, mock/llm dual mode
-- RAG: Markdown knowledge base, keyword retrieval, vector retrieval, hybrid retrieval, rule-based reranker
-- Memory: Local JSON memory storage, memory retrieval, session-to-memory extraction
-- Evaluation: workflow evaluation, RAG evaluation, memory evaluation, response evaluation, optional LLM-as-Judge
+- Runtime: Planner, Executor, AgentState, Adapter, Human Gate, Checkpoint Resume
+- LLM Infra: OpenAI-compatible HTTP client, Prompt Loader, JSON Parser, mock/llm dual mode
+- RAG: Keyword Retriever, Vector Retriever, Hybrid Retriever, Rule-based Reranker
+- Memory: Local JSON storage and keyword retrieval
 - Frontend: Vue3, Vite, Axios
+- Deployment: Dockerfile, environment-based CORS, Vite API base URL
 
-## 核心能力
+## Quick Start
 
-- Dynamic Agent Runtime: 根据事件动态生成执行计划，并由 Executor 按计划运行 Agent。
-- Multi Agent Collaboration: 将舆情分析、文案生成、红队攻击、合规审查、最终决策拆成独立 Agent。
-- Hybrid RAG: Agent B 合规审查可检索本地法规与危机回应知识库。
-- Memory System: 支持从历史 session 中抽取企业危机经验，并供 Writer Agent 参考。
-- Tool Calling: 提供统一 Tool 抽象，并让 Agent A 在 LLM 模式下使用舆情分析工具。
-- Context Engineering: Writer Agent 使用 ContextManager 控制 event、sentiment、memory 等上下文。
-- Evaluation System: 离线评估风险识别、情绪识别、RAG 召回、Memory 检索和最终声明质量。
-- Human-in-the-loop: 高风险或质量不达标时进入人工审核。
-- Checkpoint Resume: AgentState 可持久化，人工审核后可从 checkpoint 恢复运行。
-- Observability Dashboard: 前端展示 session、trace、metrics、Human Gate 和最终结果。
-
-## 运行方式
-
-安装后端依赖：
+Install backend dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-启动后端：
+Start backend:
 
 ```bash
 uvicorn backend.main:app --reload
 ```
 
-Swagger:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-启动前端：
+Start frontend:
 
 ```bash
 cd frontend
@@ -81,200 +138,28 @@ npm install
 npm run dev
 ```
 
-Dashboard:
-
-```text
-http://localhost:5173
-```
-
-运行测试：
+Run tests:
 
 ```bash
 python -m pytest tests
 ```
 
-前端构建：
+Build frontend:
 
 ```bash
 cd frontend
 npm run build
 ```
 
-## Deployment
+## API
 
-部署说明详见 [docs/deployment.md](docs/deployment.md)。
-
-### Deployment URLs
-
-本地开发地址：
-
-```text
-Backend URL: http://127.0.0.1:8000
-Frontend URL: http://localhost:5173
-```
-
-线上部署时建议替换为：
-
-```text
-Backend URL: https://api.your-domain.com
-Frontend URL: https://crisis-agent.your-domain.com
-```
-
-### Backend
-
-安装依赖：
-
-```bash
-pip install -r requirements.txt
-```
-
-本地或服务器直接启动：
-
-```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
-```
-
-Docker 构建：
-
-```bash
-docker build -t crisis-agent-backend .
-```
-
-Docker 运行：
-
-```bash
-docker run -p 8000:8000 --env-file .env crisis-agent-backend
-```
-
-后端环境变量示例见 `.env.example`：
-
-```env
-AGENT_MODE=mock
-LLM_API_KEY=
-LLM_BASE_URL=
-LLM_MODEL=
-LLM_TIMEOUT_SECONDS=30
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-```
-
-生产环境建议设置：
-
-```env
-CORS_ORIGINS=https://your-frontend-domain.com
-```
-
-### Environment Variables
-
-Backend:
-
-```env
-AGENT_MODE=mock
-LLM_API_KEY=
-LLM_BASE_URL=
-LLM_MODEL=
-LLM_TIMEOUT_SECONDS=30
-CORS_ORIGINS=https://your-frontend-domain.com
-```
-
-Frontend:
-
-```env
-VITE_API_BASE_URL=https://api.your-domain.com
-```
-
-### Frontend
-
-进入前端目录：
-
-```bash
-cd frontend
-```
-
-安装依赖：
-
-```bash
-npm install
-```
-
-本地开发：
-
-```bash
-npm run dev
-```
-
-生产构建：
-
-```bash
-npm run build
-```
-
-前端环境变量示例见 `frontend/.env.example`：
-
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
-```
-
-本地开发时可以不配置 `VITE_API_BASE_URL`，Vite 会通过 proxy 转发 `/api` 到后端。生产部署时建议配置为后端 API 域名，例如：
-
-```env
-VITE_API_BASE_URL=https://your-backend-domain.com
-```
-
-### Demo Usage
-
-运行面试 Demo：
-
-```bash
-python scripts/run_demo_cases.py
-```
-
-Demo 默认使用 mock 模式，保证输出稳定。如果需要展示真实 LLM：
-
-```bash
-AGENT_MODE=llm python scripts/run_demo_cases.py
-```
-
-## Demo Cases
-
-项目内置了 3 个固定展示案例，适合 GitHub 演示和面试讲解：
-
-- `food_safety`: 食品品牌被爆使用过期原料。
-- `data_privacy`: APP 用户信息泄露。
-- `service_failure`: 互联网平台大面积服务故障。
-
-案例文件：
-
-```text
-demo/cases.json
-```
-
-运行 Demo：
-
-```bash
-python scripts/run_demo_cases.py
-```
-
-脚本会依次输出：
-
-- case 名称
-- dynamic runtime 结果
-- plan
-- agent trace
-- RAG 命中
-- memory 命中
-- evaluation
-- human gate 状态
-- final statement
-
-## API 简要说明
-
-固定危机 workflow：
+Fixed workflow:
 
 - `POST /api/crisis/run`
 - `GET /api/crisis/sessions`
 - `GET /api/crisis/sessions/{session_id}`
 
-Dynamic Runtime：
+Dynamic Runtime:
 
 - `POST /api/dynamic/run`
 - `GET /api/dynamic/sessions`
@@ -283,25 +168,42 @@ Dynamic Runtime：
 - `POST /api/dynamic/{session_id}/reject`
 - `GET /api/dynamic/{session_id}/metrics`
 
-示例：
+## Deployment
 
-```json
-{
-  "event": "某食品品牌被爆使用过期原料，偷拍视频在网上传播，网友要求监管介入。"
-}
+Deployment guide: [docs/deployment.md](docs/deployment.md)
+
+Backend:
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
-## 项目亮点
+Frontend:
 
-面试时可以这样概括：
+```bash
+cd frontend
+npm run build
+```
 
-CrisisAgent 的亮点不在于简单调用一个大模型，而是把企业危机公关拆成一个工程化 Agent 系统。它有动态规划、执行器、共享状态、RAG 合规知识、历史经验 Memory、工具调用、上下文管理、离线评测、人工审核和 checkpoint resume。每一步都有 trace 和 metrics，因此不仅能生成结果，还能解释结果是怎么来的、哪里失败了、是否需要人工介入，以及如何从中断状态恢复。
+Docker:
 
-这让项目从 demo 更接近真实生产系统：可替换模型、可观察、可评估、可恢复、可逐步扩展。
+```bash
+docker build -t crisis-agent-backend .
+docker run -p 8000:8000 --env-file .env crisis-agent-backend
+```
 
-## 文档
+## Interview Highlights
 
+面试时可以这样介绍：
+
+CrisisAgent 的核心不是“调用一个大模型生成公关稿”，而是把企业危机响应拆成一个工程化 Agent 系统。它有动态规划、执行器、共享状态、RAG 合规知识、历史经验 Memory、工具调用、上下文管理、离线评测、人工审核和 checkpoint resume。每一步都有 trace 和 metrics，因此不仅能生成结果，还能解释结果是怎么来的、哪里失败了、是否需要人工介入，以及如何从中断状态恢复。
+
+## Docs
+
+- [Architecture Diagram](docs/architecture-diagram.md)
+- [Demo Guide](docs/demo-guide.md)
 - [Architecture](docs/architecture.md)
 - [API](docs/api.md)
 - [Agent Runtime](docs/agent-runtime.md)
+- [Deployment](docs/deployment.md)
 - [Interview Notes](docs/interview-notes.md)
