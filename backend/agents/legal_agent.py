@@ -18,6 +18,7 @@ _LAST_RAG_INFO = {
     "scores": [],
     "rerank_scores": [],
     "count": 0,
+    "fallback_used": False,
 }
 REQUIRED_FIELDS = (
     "legal_risks",
@@ -60,6 +61,7 @@ def get_last_rag_info() -> dict:
         "scores": list(_LAST_RAG_INFO["scores"]),
         "rerank_scores": list(_LAST_RAG_INFO["rerank_scores"]),
         "count": _LAST_RAG_INFO["count"],
+        "fallback_used": _LAST_RAG_INFO["fallback_used"],
     }
 
 
@@ -71,8 +73,10 @@ def _set_rag_info(
     chunks: list[dict] | None = None,
     retrieval_type: str | None = None,
     rerank_enabled: bool = False,
+    fallback_used: bool = False,
 ) -> None:
     chunks = chunks or []
+    # sources/count describe unique source files; scores describe final retrieved chunks.
     _LAST_RAG_INFO.update(
         {
             "enabled": enabled,
@@ -85,6 +89,7 @@ def _set_rag_info(
             "scores": [chunk.get("score") for chunk in chunks],
             "rerank_scores": [chunk.get("rerank_score") for chunk in chunks],
             "count": len(sources),
+            "fallback_used": fallback_used,
         }
     )
 
@@ -254,6 +259,7 @@ def _retrieve_legal_context(payload: dict) -> str:
         chunks=chunks,
         retrieval_type=_resolve_retrieval_type(retrieval_result),
         rerank_enabled=_resolve_rerank_enabled(retrieval_result),
+        fallback_used=_resolve_retrieval_fallback(retrieval_result),
     )
     logger.info("%s RAG retrieved %s sources: %s", AGENT_NAME, len(sources), sources)
     return retrieval_result.get("context", "")
@@ -295,6 +301,17 @@ def _resolve_rerank_enabled(retrieval_result: dict) -> bool:
             return True
     return any(
         isinstance(source, dict) and source.get("rerank_enabled")
+        for source in retrieval_result.get("sources", [])
+    )
+
+
+def _resolve_retrieval_fallback(retrieval_result: dict) -> bool:
+    for chunk in retrieval_result.get("chunks", []):
+        metadata = chunk.get("metadata", {}) if isinstance(chunk, dict) else {}
+        if metadata.get("retrieval_fallback"):
+            return True
+    return any(
+        isinstance(source, dict) and source.get("retrieval_fallback")
         for source in retrieval_result.get("sources", [])
     )
 
