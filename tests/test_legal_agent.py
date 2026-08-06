@@ -244,3 +244,49 @@ def test_legal_agent_records_rag_miss_when_retriever_fails(monkeypatch):
     assert rag_info["hit"] is False
     assert rag_info["sources"] == []
     assert rag_info["count"] == 0
+
+
+def test_legal_agent_continues_with_empty_legal_context_when_rag_returns_no_results(monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "llm")
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.com/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    get_config.cache_clear()
+
+    captured_prompt = {}
+    monkeypatch.setattr(
+        legal_agent,
+        "retrieve",
+        lambda query, top_k=3: {
+            "context": "",
+            "chunks": [],
+            "sources": [],
+        },
+    )
+
+    def fake_call_llm(prompt):
+        captured_prompt["value"] = prompt
+        return """
+        {
+          "legal_risks": ["risk"],
+          "safe_points": ["safe"],
+          "revision_advice": ["advice"],
+          "public_opinion_suggestions": ["suggestion"],
+          "integrated_revision_tasks": ["task"],
+          "legal_safety_score_hint": 8,
+          "review_summary": "summary"
+        }
+        """
+
+    monkeypatch.setattr(legal_agent, "call_llm", fake_call_llm)
+
+    result = legal_agent.run(TEST_PAYLOAD)
+    rag_info = legal_agent.get_last_rag_info()
+
+    assert "legal_context:" in captured_prompt["value"]
+    assert result["legal_risks"] == ["risk"]
+    assert rag_info["enabled"] is True
+    assert rag_info["hit"] is False
+    assert rag_info["sources"] == []
+    assert rag_info["chunks"] == []
+    assert rag_info["count"] == 0
