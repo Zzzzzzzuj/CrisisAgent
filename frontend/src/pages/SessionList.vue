@@ -1,54 +1,106 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
-import { listDynamicSessions } from "../api";
+import { getDynamicSession, listDynamicSessions } from "../api";
+import CaseCard from "../components/CaseCard.vue";
 
-const sessions = ref([]);
+const cases = ref([]);
 const loading = ref(false);
 const error = ref("");
 
-async function loadSessions() {
+const totalCases = computed(() => cases.value.length);
+const highRiskCases = computed(
+  () => cases.value.filter((item) => ["high", "critical"].includes(String(item.risk_level || "").toLowerCase())).length,
+);
+const pendingReview = computed(() => cases.value.filter((item) => item.status === "WAITING_HUMAN").length);
+const completedCases = computed(() => cases.value.filter((item) => item.status === "COMPLETED").length);
+const recentCases = computed(() => cases.value.slice(0, 6));
+
+async function loadCases() {
   loading.value = true;
   error.value = "";
   try {
-    sessions.value = await listDynamicSessions();
+    const sessions = await listDynamicSessions();
+    cases.value = await Promise.all(sessions.map(enrichCase));
   } catch (err) {
-    error.value = err.response?.data?.detail || err.message || "加载 Session 失败";
+    error.value = err.response?.data?.detail || err.message || "加载危机案例失败";
   } finally {
     loading.value = false;
   }
 }
 
-onMounted(loadSessions);
+async function enrichCase(item) {
+  try {
+    const detail = await getDynamicSession(item.session_id);
+    return {
+      ...item,
+      risk_level:
+        detail.results?.sentiment?.risk_level ||
+        detail.metadata?.planner_input?.risk_level ||
+        "待分析",
+      status: detail.status || item.status,
+    };
+  } catch {
+    return {
+      ...item,
+      risk_level: "待分析",
+    };
+  }
+}
+
+onMounted(loadCases);
 </script>
 
 <template>
-  <section class="page-card">
-    <div class="page-header">
+  <section class="case-home">
+    <div class="product-hero dashboard-hero">
       <div>
-        <p class="eyebrow">Runtime Sessions</p>
-        <h2>Session 列表</h2>
+        <p class="eyebrow">Crisis Dashboard</p>
+        <h2>企业危机响应平台</h2>
+        <p class="muted">
+          统一管理危机案例、风险等级、AI 声明和人工审核状态，让团队快速判断优先级并推进响应。
+        </p>
       </div>
-      <button class="ghost-button" @click="loadSessions">刷新</button>
+      <RouterLink class="primary-button hero-action" to="/new">新建危机案例</RouterLink>
     </div>
 
-    <p v-if="loading" class="muted">加载中...</p>
+    <div class="stats-grid">
+      <article class="stat-card">
+        <span>Total Cases</span>
+        <strong>{{ totalCases }}</strong>
+      </article>
+      <article class="stat-card alert">
+        <span>High Risk Cases</span>
+        <strong>{{ highRiskCases }}</strong>
+      </article>
+      <article class="stat-card pending">
+        <span>Pending Review</span>
+        <strong>{{ pendingReview }}</strong>
+      </article>
+      <article class="stat-card complete">
+        <span>Completed Cases</span>
+        <strong>{{ completedCases }}</strong>
+      </article>
+    </div>
+
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Recent Cases</p>
+        <h3>最近危机案例</h3>
+      </div>
+      <button class="ghost-button" @click="loadCases">刷新</button>
+    </div>
+
+    <p v-if="loading" class="muted">正在加载案例...</p>
     <p v-if="error" class="error">{{ error }}</p>
 
-    <div v-if="!loading && sessions.length === 0" class="empty-state">暂无动态任务，先创建一个。</div>
+    <div v-if="!loading && cases.length === 0" class="empty-state">
+      暂无危机案例。创建一个案例后，这里会展示风险等级、审核状态和响应进展。
+    </div>
 
-    <div v-for="session in sessions" :key="session.session_id" class="session-row">
-      <div>
-        <RouterLink class="session-link" :to="`/sessions/${session.session_id}`">
-          {{ session.session_id }}
-        </RouterLink>
-        <p class="muted">{{ session.event || "无事件摘要" }}</p>
-      </div>
-      <div class="row-meta">
-        <span class="status-pill">{{ session.status || "UNKNOWN" }}</span>
-        <small>{{ session.created_time || "created_time 未记录" }}</small>
-      </div>
+    <div class="case-grid">
+      <CaseCard v-for="caseItem in recentCases" :key="caseItem.session_id" :case-item="caseItem" />
     </div>
   </section>
 </template>
