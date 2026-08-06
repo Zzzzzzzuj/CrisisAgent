@@ -1,8 +1,8 @@
 from uuid import uuid4
 
 
-AVAILABLE_AGENTS = {"sentiment", "legal", "writer", "decision"}
-EXECUTION_ORDER = ("sentiment", "legal", "writer", "decision")
+AVAILABLE_AGENTS = {"sentiment", "writer", "redteam", "legal", "writer_v2", "decision"}
+EXECUTION_ORDER = ("sentiment", "writer", "redteam", "legal", "writer_v2", "decision")
 NEGATIVE_PUBLIC_OPINION_TERMS = (
     "爆",
     "质疑",
@@ -59,6 +59,18 @@ def run(payload: dict) -> dict:
         planned_agents,
         agent="writer",
         reason="所有危机事件都需要生成对外回应文案。",
+        confidence=1.0,
+    )
+    _add_plan_item(
+        planned_agents,
+        agent="redteam",
+        reason="Run adversarial review before compliance and revision.",
+        confidence=0.9,
+    )
+    _add_plan_item(
+        planned_agents,
+        agent="writer_v2",
+        reason="Revise the first draft after redteam and legal review.",
         confidence=1.0,
     )
     _add_plan_item(

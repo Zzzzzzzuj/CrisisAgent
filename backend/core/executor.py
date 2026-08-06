@@ -10,6 +10,7 @@ AgentRunner = Callable[[dict], dict]
 AGENT_REGISTRY: dict[str, AgentRunner] = {
     "sentiment": sentiment_agent.run,
     "writer": writer_agent.run,
+    "writer_v2": writer_agent.generate_second_draft,
     "redteam": redteam_agent.run,
     "legal": legal_agent.run,
     "decision": decision_agent.run,

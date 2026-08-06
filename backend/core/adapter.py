@@ -6,15 +6,14 @@ def build_agent_input(agent_name: str, state: AgentState) -> dict:
         return {"event": state.event}
     if agent_name == "writer":
         return _build_writer_input(state)
+    if agent_name == "writer_v2":
+        return _build_writer_v2_input(state)
     if agent_name == "redteam":
         return _build_redteam_input(state)
     if agent_name == "legal":
         return _build_legal_input(state)
     if agent_name == "decision":
-        return {
-            "event": state.event,
-            "results": state.get_all_results(),
-        }
+        return _build_decision_input(state)
 
     raise ValueError(f"Unsupported agent for adapter: {agent_name}")
 
@@ -43,4 +42,25 @@ def _build_legal_input(state: AgentState) -> dict:
         "event": state.event,
         "draft": writer_result.get("statement", ""),
         "redteam_review": state.get_result("redteam") or {},
+    }
+
+
+def _build_writer_v2_input(state: AgentState) -> dict:
+    return {
+        "event": state.event,
+        "first_draft": state.get_result("writer") or {},
+        "redteam_review": state.get_result("redteam") or {},
+        "legal_review": state.get_result("legal") or {},
+    }
+
+
+def _build_decision_input(state: AgentState) -> dict:
+    writer_v2_result = state.get_result("writer_v2") or {}
+    return {
+        "event": state.event,
+        "second_draft": writer_v2_result.get("statement", ""),
+        "sentiment_analysis": state.get_result("sentiment") or {},
+        "redteam_review": state.get_result("redteam") or {},
+        "legal_review": state.get_result("legal") or {},
+        "results": state.get_all_results(),
     }
