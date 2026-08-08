@@ -9,6 +9,9 @@ from evaluation.rag_metrics_v2 import (
     evaluate_retrieval_case,
     summarize_rag_results,
 )
+from backend.rag.document_loader import load_documents
+from backend.rag.retriever import retrieve
+from backend.rag.text_splitter import split_documents
 
 
 def test_recall_at_k_uses_unique_source_documents():
@@ -133,6 +136,34 @@ def test_rag_cases_v2_dataset_shape():
     assert len(category_counts) == 6
     assert len(ids) == len(set(ids))
     assert any(case["expected_hit"] is False for case in cases)
+
+
+def test_new_domain_knowledge_documents_load_and_split_with_source_metadata():
+    documents = load_documents()
+    sources = {document["source"] for document in documents}
+    expected_sources = {
+        "data_privacy.md",
+        "service_outage.md",
+        "product_quality.md",
+        "executive_misconduct.md",
+    }
+
+    assert expected_sources <= sources
+
+    chunks = split_documents(documents)
+    for source in expected_sources:
+        source_chunks = [chunk for chunk in chunks if chunk["source"] == source]
+        assert len(source_chunks) >= 3
+        assert all(chunk["title"] for chunk in source_chunks)
+        assert all(chunk["metadata"]["document_title"] for chunk in source_chunks)
+
+
+def test_unrelated_query_still_returns_no_hit_after_knowledge_expansion():
+    result = retrieve("会员积分多久到账 客服查询", top_k=5)
+
+    assert result["sources"] == []
+    assert result["chunks"] == []
+    assert result["context"] == ""
 
 
 def _result_case(
