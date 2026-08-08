@@ -1,0 +1,302 @@
+[
+  {
+    "id": "rag_food_safety_dev_001",
+    "split": "development",
+    "category": "food_safety",
+    "query": "过期原料 食品安全 监管介入",
+    "acceptable_sources": ["food_safety.md", "legal_risk_rules.md"],
+    "expected_hit": true,
+    "forbidden_sources": [],
+    "forbidden_categories": ["unrelated"]
+  },
+  {
+    "id": "rag_food_safety_dev_002",
+    "split": "development",
+    "category": "food_safety",
+    "query": "餐饮后厨卫生混乱 视频曝光 消费者担忧",
+    "acceptable_sources": ["food_safety.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": [],
+    "forbidden_categories": ["data_privacy", "service_outage"]
+  },
+  {
+    "id": "rag_food_safety_dev_003",
+    "split": "development",
+    "category": "food_safety",
+    "query": "食品品牌疑似使用不合格食材，公众要求调查并公开处理结果",
+    "acceptable_sources": ["food_safety.md", "crisis_response.md", "legal_risk_rules.md"],
+    "expected_hit": true,
+    "forbidden_sources": [],
+    "forbidden_categories": ["data_privacy"]
+  },
+  {
+    "id": "rag_food_safety_final_001",
+    "split": "final",
+    "category": "food_safety",
+    "query": "门店标签日期和实际制作日期不一致，网友质疑食安风险",
+    "acceptable_sources": ["food_safety.md", "legal_risk_rules.md"],
+    "expected_hit": true,
+    "forbidden_sources": [],
+    "forbidden_categories": ["data_privacy", "service_outage"]
+  },
+  {
+    "id": "rag_food_safety_final_002",
+    "split": "final",
+    "category": "food_safety",
+    "query": "冷链异常 包装破损 预制菜消费者担心食用安全",
+    "acceptable_sources": ["food_safety.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": [],
+    "forbidden_categories": ["data_privacy"]
+  },
+  {
+    "id": "rag_data_privacy_dev_001",
+    "split": "development",
+    "category": "data_privacy",
+    "query": "用户手机号 身份证信息 泄露 黑客论坛 数据样本",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_data_privacy_dev_002",
+    "split": "development",
+    "category": "data_privacy",
+    "query": "个人信息安全 隐私保护 用户数据外泄 平台说明",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_data_privacy_dev_003",
+    "split": "development",
+    "category": "data_privacy",
+    "query": "APP 过度收集通讯录权限 用户担心资料被滥用",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_data_privacy_final_001",
+    "split": "final",
+    "category": "data_privacy",
+    "query": "儿童人脸信息采集 未说明用途 家长质疑隐私合规",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_data_privacy_final_002",
+    "split": "final",
+    "category": "data_privacy",
+    "query": "订单地址 电话 被陌生人获取 信息安全 排查",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_service_outage_dev_001",
+    "split": "development",
+    "category": "service_outage",
+    "query": "在线服务大面积无法登录 用户投诉客服无响应",
+    "acceptable_sources": ["crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_service_outage_dev_002",
+    "split": "development",
+    "category": "service_outage",
+    "query": "系统宕机 服务恢复 故障排查 进展更新",
+    "acceptable_sources": ["crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_service_outage_dev_003",
+    "split": "development",
+    "category": "service_outage",
+    "query": "支付系统交易失败 商户订单异常 用户需要补偿",
+    "acceptable_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_service_outage_final_001",
+    "split": "final",
+    "category": "service_outage",
+    "query": "云服务区域访问失败 企业客户业务受影响",
+    "acceptable_sources": ["crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_service_outage_final_002",
+    "split": "final",
+    "category": "service_outage",
+    "query": "票务平台页面崩溃 付款后无法查看订单",
+    "acceptable_sources": ["crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_product_quality_dev_001",
+    "split": "development",
+    "category": "product_quality",
+    "query": "新机电池鼓包 产品质量 投诉 售后检测",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_product_quality_dev_002",
+    "split": "development",
+    "category": "product_quality",
+    "query": "母婴用品安全隐患 儿童使用后不适 家长要求召回",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_product_quality_dev_003",
+    "split": "development",
+    "category": "product_quality",
+    "query": "洗衣机漏水 相关型号集中投诉 售后维修方案",
+    "acceptable_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_product_quality_final_001",
+    "split": "final",
+    "category": "product_quality",
+    "query": "运动器材刹车部件松动 消费者担心使用安全",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_product_quality_final_002",
+    "split": "final",
+    "category": "product_quality",
+    "query": "玩具零件易脱落 儿童误吞风险 召回评估",
+    "acceptable_sources": ["legal_risk_rules.md", "crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_executive_misconduct_dev_001",
+    "split": "development",
+    "category": "executive_misconduct",
+    "query": "高管公开场合不当言论 网友抵制 品牌致歉",
+    "acceptable_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_executive_misconduct_dev_002",
+    "split": "development",
+    "category": "executive_misconduct",
+    "query": "负责人直播嘲讽消费者 舆论抵制 管理层道歉",
+    "acceptable_sources": ["crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_executive_misconduct_dev_003",
+    "split": "development",
+    "category": "executive_misconduct",
+    "query": "区域经理歧视性发言 员工消费者要求公司回应",
+    "acceptable_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_executive_misconduct_final_001",
+    "split": "final",
+    "category": "executive_misconduct",
+    "query": "创始人采访争议言论 被质疑不尊重普通员工",
+    "acceptable_sources": ["crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_executive_misconduct_final_002",
+    "split": "final",
+    "category": "executive_misconduct",
+    "query": "高级管理人员内部群侮辱性言论 截图流出 舆论批评",
+    "acceptable_sources": ["crisis_response.md"],
+    "expected_hit": true,
+    "forbidden_sources": ["food_safety.md"],
+    "forbidden_categories": ["food_safety"]
+  },
+  {
+    "id": "rag_unrelated_dev_001",
+    "split": "development",
+    "category": "unrelated",
+    "query": "会员积分多久到账 客服查询",
+    "acceptable_sources": [],
+    "expected_hit": false,
+    "forbidden_sources": ["food_safety.md", "legal_risk_rules.md", "crisis_response.md"],
+    "forbidden_categories": ["food_safety", "legal", "crisis_response"]
+  },
+  {
+    "id": "rag_unrelated_dev_002",
+    "split": "development",
+    "category": "unrelated",
+    "query": "门店春节营业时间 安排 查询",
+    "acceptable_sources": [],
+    "expected_hit": false,
+    "forbidden_sources": ["food_safety.md", "legal_risk_rules.md", "crisis_response.md"],
+    "forbidden_categories": ["food_safety", "legal", "crisis_response"]
+  },
+  {
+    "id": "rag_unrelated_dev_003",
+    "split": "development",
+    "category": "unrelated",
+    "query": "APP 首页深色模式入口 产品建议",
+    "acceptable_sources": [],
+    "expected_hit": false,
+    "forbidden_sources": ["food_safety.md", "legal_risk_rules.md", "crisis_response.md"],
+    "forbidden_categories": ["food_safety", "legal", "crisis_response"]
+  },
+  {
+    "id": "rag_unrelated_final_001",
+    "split": "final",
+    "category": "unrelated",
+    "query": "快递晚到一天 帮忙查询物流",
+    "acceptable_sources": [],
+    "expected_hit": false,
+    "forbidden_sources": ["food_safety.md", "legal_risk_rules.md", "crisis_response.md"],
+    "forbidden_categories": ["food_safety", "legal", "crisis_response"]
+  },
+  {
+    "id": "rag_unrelated_final_002",
+    "split": "final",
+    "category": "unrelated",
+    "query": "发票抬头填写错误 想要重新开票",
+    "acceptable_sources": [],
+    "expected_hit": false,
+    "forbidden_sources": ["food_safety.md", "legal_risk_rules.md", "crisis_response.md"],
+    "forbidden_categories": ["food_safety", "legal", "crisis_response"]
+  }
+]
