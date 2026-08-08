@@ -32,33 +32,44 @@ function outputSummary(output) {
 function summary(item) {
   return item.output_summary || outputSummary(item.output);
 }
+
+function formatJson(value) {
+  return JSON.stringify(value || {}, null, 2);
+}
+
+function isFailed(item) {
+  return item.status && !["success", "approved", "completed"].includes(item.status);
+}
 </script>
 
 <template>
-  <article class="timeline-card">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">Execution Timeline</p>
-        <h3>Agent 执行时间线</h3>
-      </div>
-      <span class="status-pill">{{ trace.length }} steps</span>
-    </div>
+  <div class="timeline-compact-list">
+    <div v-if="trace.length === 0" class="empty-state">暂无执行记录。</div>
 
-    <div v-if="trace.length === 0" class="empty-state">暂无 trace。</div>
+    <details
+      v-for="(item, index) in trace"
+      :key="`${item.agent}-${index}`"
+      class="timeline-compact-item"
+      :class="{ failed: isFailed(item) }"
+    >
+      <summary>
+        <span class="timeline-agent">{{ item.agent || item.name || "unknown" }}</span>
+        <span class="status-pill">{{ item.status || "unknown" }}</span>
+        <span class="timeline-duration">{{ durationMs(item) }}</span>
+      </summary>
 
-    <div v-for="(item, index) in trace" :key="`${item.agent}-${index}`" class="timeline-item">
-      <div class="timeline-dot" :class="{ failed: item.status !== 'success' && item.status !== 'approved' }"></div>
-      <div class="timeline-body">
-        <div class="timeline-head">
-          <strong>{{ item.agent || "unknown" }}</strong>
-          <span class="status-pill">{{ item.status }}</span>
-        </div>
-        <p class="muted">{{ item.reason || "无说明" }}</p>
-        <p><strong>duration:</strong> {{ durationMs(item) }}</p>
-        <p v-if="item.input_summary"><strong>input:</strong> {{ item.input_summary }}</p>
-        <p class="summary"><strong>output:</strong> {{ summary(item) }}</p>
-        <p v-if="item.error" class="error"><strong>error:</strong> {{ item.error }}</p>
+      <div class="timeline-details">
+        <p v-if="item.name" class="muted">{{ item.name }}</p>
+        <p v-if="item.reason"><strong>说明：</strong>{{ item.reason }}</p>
+        <p v-if="item.input_summary"><strong>输入摘要：</strong>{{ item.input_summary }}</p>
+        <p class="summary"><strong>输出摘要：</strong>{{ summary(item) }}</p>
+        <p v-if="item.error" class="error"><strong>失败原因：</strong>{{ item.error }}</p>
+
+        <details class="nested-json">
+          <summary>查看 input / output 原始内容</summary>
+          <pre>{{ formatJson({ input: item.input, output: item.output, error: item.error }) }}</pre>
+        </details>
       </div>
-    </div>
-  </article>
+    </details>
+  </div>
 </template>

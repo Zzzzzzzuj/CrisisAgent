@@ -14,12 +14,14 @@ def test_planner_food_safety_high_risk_event_generates_full_plan():
 
     assert [item["agent"] for item in result["plan"]] == [
         "sentiment",
-        "legal",
         "writer",
+        "redteam",
+        "legal",
+        "writer_v2",
         "decision",
     ]
     assert result["plan"][0]["confidence"] == 0.9
-    assert result["plan"][1]["confidence"] == 0.9
+    assert result["plan"][3]["confidence"] == 0.9
 
 
 def test_planner_general_low_risk_event_generates_basic_plan():
@@ -31,7 +33,7 @@ def test_planner_general_low_risk_event_generates_basic_plan():
         }
     )
 
-    assert [item["agent"] for item in result["plan"]] == ["writer", "decision"]
+    assert [item["agent"] for item in result["plan"]] == ["writer", "redteam", "writer_v2", "decision"]
 
 
 def test_planner_output_schema_is_stable():
@@ -57,7 +59,11 @@ def test_planner_output_schema_is_stable():
 
 
 def test_planner_never_generates_agent_outside_available_agents(monkeypatch):
-    monkeypatch.setattr(planner_agent, "EXECUTION_ORDER", ("sentiment", "unknown", "legal", "writer", "decision"))
+    monkeypatch.setattr(
+        planner_agent,
+        "EXECUTION_ORDER",
+        ("sentiment", "unknown", "writer", "redteam", "legal", "writer_v2", "decision"),
+    )
 
     result = planner_agent.run(
         {

@@ -16,10 +16,12 @@ class RagPipelineRetriever(BaseRetriever):
         hybrid_retriever: BaseRetriever | None = None,
         reranker: RuleBasedReranker | None = None,
         fallback_retriever: BaseRetriever | None = None,
+        min_rerank_score: float = 0.1,
     ):
         self.hybrid_retriever = hybrid_retriever or HybridRetriever()
         self.reranker = reranker or RuleBasedReranker()
         self.fallback_retriever = fallback_retriever or KeywordRetriever()
+        self.min_rerank_score = min_rerank_score
 
     def retrieve(self, query: str, top_k: int = 3) -> RetrievalResult:
         try:
@@ -34,8 +36,9 @@ class RagPipelineRetriever(BaseRetriever):
 
             merged_chunks = _merge_rewritten_chunks(hybrid_chunks)
             reranked_result = self.reranker.rerank(query, merged_chunks, top_k=top_k)
+            filtered_result = _filter_by_min_relevance(reranked_result, self.min_rerank_score)
             return _with_pipeline_metadata(
-                reranked_result,
+                filtered_result,
                 retrieval_type="hybrid",
                 rerank_enabled=True,
                 fallback=False,
@@ -80,6 +83,35 @@ def _with_pipeline_metadata(
     )
 
 
+def _filter_by_min_relevance(result: RetrievalResult, min_score: float) -> RetrievalResult:
+    kept_chunks = [
+        chunk for chunk in result.chunks
+        if _final_relevance_score(chunk) >= min_score
+    ]
+    return RetrievalResult(
+        context=_format_context(kept_chunks),
+        chunks=kept_chunks,
+        sources=[
+            {
+                "chunk_id": chunk.chunk_id,
+                "source": chunk.source,
+                "title": chunk.title,
+                "score": chunk.score,
+                "rerank_score": chunk.rerank_score,
+            }
+            for chunk in kept_chunks
+        ],
+    )
+
+
+def _final_relevance_score(chunk: RetrievedChunk) -> float:
+    metadata = chunk.metadata or {}
+    score = metadata.get("rerank_score", chunk.rerank_score)
+    if score is None:
+        score = chunk.score
+    return float(score or 0.0)
+
+
 def _copy_chunk_with_query_metadata(
     chunk: RetrievedChunk,
     matched_query: str,
@@ -103,6 +135,15 @@ def _copy_chunk_with_query_metadata(
         embedding_score=chunk.embedding_score,
         rerank_score=chunk.rerank_score,
     )
+
+
+def _format_context(chunks: list[RetrievedChunk]) -> str:
+    context_parts = []
+    for chunk in chunks:
+        context_parts.append(
+            f"[{chunk.source} | score={chunk.score} | rerank_score={chunk.rerank_score}]\n{chunk.text}"
+        )
+    return "\n\n".join(context_parts)
 
 
 def _merge_rewritten_chunks(chunks: list[RetrievedChunk]) -> list[RetrievedChunk]:

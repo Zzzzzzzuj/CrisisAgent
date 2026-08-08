@@ -10,10 +10,20 @@ import "./styles.css";
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", redirect: "/new" },
+    { path: "/", component: SessionList },
+    { path: "/cases", component: SessionList },
     { path: "/new", component: CreateTask },
     { path: "/sessions", component: SessionList },
-    { path: "/sessions/:sessionId", component: SessionDetail, props: true },
+    {
+      path: "/cases/:sessionId",
+      component: SessionDetail,
+      props: (route) => ({ sessionId: String(route.params.sessionId || "") }),
+    },
+    {
+      path: "/sessions/:sessionId",
+      component: SessionDetail,
+      props: (route) => ({ sessionId: String(route.params.sessionId || "") }),
+    },
   ],
 });
 

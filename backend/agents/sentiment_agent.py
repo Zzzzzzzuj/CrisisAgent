@@ -1,12 +1,12 @@
 from time import perf_counter
 
-from backend.config import get_config
-from backend.llm_client import call_llm
+import os
+
+from backend.llm import LLMClient
+from backend.llm.parser import LLMParseError, parse_json_response, validate_required_fields
 from backend.logger import get_logger
-from backend.prompt_loader import load_prompt
 from backend.tools.registry import tool_registry
 from backend.tools.sentiment_tool import SentimentAnalysisTool
-from backend.utils.json_parser import parse_llm_json
 
 
 logger = get_logger(__name__)
@@ -30,9 +30,7 @@ _LAST_TOOL_INFO = {
 
 
 def run(event: str) -> dict:
-    config = get_config()
-
-    if config.agent_mode == "llm":
+    if _agent_mode() == "llm":
         _set_tool_info(
             name="sentiment_analysis",
             tool_input={"event": event},
@@ -104,20 +102,10 @@ def _run_mock(event: str) -> dict:
 
 def _run_llm(event: str) -> dict:
     tool_result = _run_sentiment_tool(event)
-    prompt = load_prompt(
-        "sentiment_agent",
-        {
-            "event": event,
-            "tool_result": tool_result,
-        },
-    )
+    prompt = _build_sentiment_prompt(event, tool_result)
     raw_text = call_llm(prompt)
-    parsed = parse_llm_json(raw_text)
-
-    if "error_type" in parsed:
-        raise ValueError(
-            f"JSON parsing failed: {parsed['error_type']} - {parsed['message']}"
-        )
+    parsed = parse_json_response(raw_text)
+    validate_required_fields(parsed, REQUIRED_FIELDS)
 
     validated = _validate_llm_output(parsed)
     logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
@@ -132,6 +120,60 @@ def _run_llm(event: str) -> dict:
     logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
     logger.debug("%s llm output: %s", AGENT_NAME, normalized_output)
     return normalized_output
+
+
+def call_llm(prompt: str) -> str:
+    client = LLMClient()
+    if client.config.mock_enabled:
+        raise RuntimeError("LLM_API_KEY is not configured; fallback to mock sentiment agent.")
+    return client.chat(
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a crisis public opinion analysis agent. Return JSON only.",
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+        temperature=0.2,
+    )
+
+
+def _build_sentiment_prompt(event: str, tool_result: dict) -> str:
+    return f"""
+你是 CrisisAgent 的舆情分析 Agent A，负责分析企业危机公关事件的风险等级和公众情绪。
+
+输入事件：
+{event}
+
+工具分析结果：
+{tool_result}
+tool_result: {tool_result}
+
+请根据事件内容和工具结果进行判断。不要直接复制工具结果，工具结果只作为辅助参考。
+
+风险判断要求：
+- risk_level 使用字符串，可取 low / medium / high / critical，优先识别食品安全、监管介入、偷拍视频、数据泄露等高风险信号。
+- public_emotion 必须使用固定枚举：angry / worried / neutral / positive。
+- keywords 必须是字符串数组，提取 3-5 个关键风险词。
+- recommended_tone 必须输出中文固定风格描述，建议优先使用：先共情、再回应行动、避免抢先定性。
+- analysis_summary 必须使用中文，简要解释为什么这样判断。
+
+只输出 JSON，不要输出 markdown，不要输出解释文字。JSON schema：
+{{
+  "risk_level": "high",
+  "public_emotion": "angry",
+  "keywords": ["食品安全", "监管介入"],
+  "recommended_tone": "先共情、再回应行动、避免抢先定性",
+  "analysis_summary": "..."
+}}
+""".strip()
+
+
+def _agent_mode() -> str:
+    return os.getenv("AGENT_MODE", "mock").strip().lower() or "mock"
 
 
 def _run_sentiment_tool(event: str) -> dict:

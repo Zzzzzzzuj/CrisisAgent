@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 import {
   approveDynamicSession,
@@ -7,54 +8,83 @@ import {
   getDynamicSession,
   rejectDynamicSession,
 } from "../api";
-import AgentTimeline from "../components/AgentTimeline.vue";
+import AdvancedAnalysis from "../components/AdvancedAnalysis.vue";
+import CaseStepper from "../components/CaseStepper.vue";
+import HumanReviewPanel from "../components/HumanReviewPanel.vue";
 
 const props = defineProps({
   sessionId: {
     type: String,
-    required: true,
+    default: "",
   },
 });
 
+const route = useRoute();
 const session = ref(null);
 const metrics = ref(null);
 const loading = ref(false);
 const actionLoading = ref(false);
 const error = ref("");
-const reviewer = ref("human");
-const comment = ref("");
 
-const finalResult = computed(() => session.value?.results?.decision || {});
+const activeSessionId = computed(() => props.sessionId || String(route.params.sessionId || ""));
+const sentiment = computed(() => session.value?.results?.sentiment || {});
+const decision = computed(() => session.value?.results?.decision || {});
 const approval = computed(() => session.value?.approval || {});
-const isWaitingHuman = computed(() => session.value?.status === "WAITING_HUMAN");
+const finalStatement = computed(() => decision.value.final_statement || "暂无 AI 生成声明。");
+const riskLevel = computed(
+  () => sentiment.value.risk_level || session.value?.metadata?.planner_input?.risk_level || "待分析",
+);
+const auditStatus = computed(() => formatStatus(session.value?.status));
+const crisisTitle = computed(() => buildTitle(session.value?.event || ""));
+const keywordsText = computed(() => {
+  const keywords = sentiment.value.keywords || [];
+  return keywords.length > 0 ? keywords.join(" / ") : "暂无关键词";
+});
 
-async function loadSession() {
+async function loadCase() {
+  const sessionId = activeSessionId.value;
+  if (!sessionId) {
+    error.value = "缺少案例 ID，无法加载详情。";
+    return;
+  }
+
   loading.value = true;
   error.value = "";
+  session.value = null;
+  metrics.value = null;
+
   try {
-    const [sessionData, metricsData] = await Promise.all([
-      getDynamicSession(props.sessionId),
-      getDynamicMetrics(props.sessionId),
-    ]);
-    session.value = sessionData;
-    metrics.value = metricsData;
+    session.value = await getDynamicSession(sessionId);
   } catch (err) {
-    error.value = err.response?.data?.detail || err.message || "加载详情失败";
+    error.value = err.response?.data?.detail || err.message || "加载危机案例失败";
+    loading.value = false;
+    return;
+  }
+
+  try {
+    metrics.value = await getDynamicMetrics(sessionId);
+  } catch {
+    metrics.value = null;
   } finally {
     loading.value = false;
   }
 }
 
-async function review(decision) {
+async function submitReview(decisionType, payload) {
+  const sessionId = activeSessionId.value;
+  if (!sessionId) {
+    error.value = "缺少案例 ID，无法提交审核。";
+    return;
+  }
+
   actionLoading.value = true;
   error.value = "";
   try {
-    const payload = { reviewer: reviewer.value, comment: comment.value };
     const result =
-      decision === "approve"
-        ? await approveDynamicSession(props.sessionId, payload)
-        : await rejectDynamicSession(props.sessionId, payload);
-    await loadSession();
+      decisionType === "approve"
+        ? await approveDynamicSession(sessionId, payload)
+        : await rejectDynamicSession(sessionId, payload);
+    await loadCase();
     if (result?.status === "error") {
       error.value = result.error;
     }
@@ -65,73 +95,92 @@ async function review(decision) {
   }
 }
 
-onMounted(loadSession);
+function buildTitle(text) {
+  if (!text) {
+    return "危机案例详情";
+  }
+  return text.length > 34 ? `${text.slice(0, 34)}...` : text;
+}
+
+function formatStatus(status) {
+  const map = {
+    WAITING_HUMAN: "待人工审核",
+    COMPLETED: "已完成",
+    FAILED: "已终止",
+    RUNNING: "处理中",
+    INIT: "待处理",
+  };
+  return map[status] || status || "未知";
+}
+
+onMounted(loadCase);
+watch(activeSessionId, loadCase);
 </script>
 
 <template>
-  <section class="page-card">
-    <p class="eyebrow">Runtime Detail</p>
-    <h2>Session 详情</h2>
-    <p class="muted">{{ sessionId }}</p>
-
-    <p v-if="loading" class="muted">加载中...</p>
+  <section class="case-detail dashboard-detail">
+    <p v-if="loading" class="muted">正在加载案例...</p>
     <p v-if="error" class="error">{{ error }}</p>
 
     <template v-if="session">
-      <div class="detail-grid">
-        <article class="info-card">
-          <h3>AgentState</h3>
-          <p><strong>status:</strong> <span class="status-pill">{{ session.status }}</span></p>
-          <p><strong>plan_id:</strong> {{ session.plan_id }}</p>
-          <p><strong>event:</strong> {{ session.event }}</p>
-        </article>
+      <div class="case-brief compact-case-brief">
+        <div class="case-title-block">
+          <p class="eyebrow">Crisis Case</p>
+          <h2>{{ crisisTitle }}</h2>
+          <p class="muted compact-event">{{ session.event }}</p>
+        </div>
+        <div class="brief-badges compact-badges">
+          <span class="risk-badge">{{ riskLevel }}</span>
+          <span class="status-pill">{{ auditStatus }}</span>
+        </div>
+      </div>
 
-        <article class="info-card">
-          <h3>Approval</h3>
-          <pre>{{ JSON.stringify(approval, null, 2) }}</pre>
+      <CaseStepper :status="session.status" />
+
+      <div class="detail-main-grid">
+        <div class="insight-column">
+          <article class="page-card compact-card">
+            <p class="eyebrow">Risk Analysis</p>
+            <h3>风险分析</h3>
+            <strong class="large-risk">{{ riskLevel }}</strong>
+            <div class="compact-facts">
+              <span>情绪：{{ sentiment.public_emotion || "待分析" }}</span>
+              <span>语气：{{ sentiment.recommended_tone || "待建议" }}</span>
+              <span>关键词：{{ keywordsText }}</span>
+            </div>
+            <p class="muted">{{ sentiment.analysis_summary || "系统已完成初步事件分析。" }}</p>
+          </article>
+
+          <article class="page-card compact-card">
+            <p class="eyebrow">Current State</p>
+            <h3>当前状态</h3>
+            <strong class="large-status">{{ auditStatus }}</strong>
+            <p class="muted">{{ approval.reason || decision.decision_summary || "当前案例可继续查看声明和审核记录。" }}</p>
+          </article>
+        </div>
+
+        <article class="page-card statement-card dashboard-statement">
+          <div class="page-header compact-page-header">
+            <div>
+              <p class="eyebrow">AI Statement</p>
+              <h3>AI 生成声明</h3>
+            </div>
+            <span class="status-pill">{{ auditStatus }}</span>
+          </div>
+          <p class="statement">{{ finalStatement }}</p>
         </article>
       </div>
 
-      <article v-if="metrics" class="info-card">
-        <h3>Observability Metrics</h3>
-        <div class="metric-grid">
-          <span>total_duration: {{ metrics.total_duration }} ms</span>
-          <span>agent_count: {{ metrics.agent_count }}</span>
-          <span>failed_agents: {{ metrics.failed_agents?.length || 0 }}</span>
-          <span>rag_hits: {{ metrics.rag_hits }}</span>
-          <span>memory_hits: {{ metrics.memory_hits }}</span>
-          <span>tool_calls: {{ metrics.tool_calls }}</span>
-        </div>
-      </article>
+      <HumanReviewPanel
+        :approval="approval"
+        :final-statement="finalStatement"
+        :status="session.status"
+        :loading="actionLoading"
+        @approve="submitReview('approve', $event)"
+        @reject="submitReview('reject', $event)"
+      />
 
-      <article v-if="isWaitingHuman" class="human-gate">
-        <p class="eyebrow">Human Gate</p>
-        <h3>需要人工审核</h3>
-        <p><strong>审核原因：</strong>{{ approval.reason || "未提供原因" }}</p>
-        <div class="review-form">
-          <input v-model="reviewer" placeholder="reviewer" />
-          <input v-model="comment" placeholder="comment" />
-          <button class="primary-button" :disabled="actionLoading" @click="review('approve')">Approve</button>
-          <button class="danger-button" :disabled="actionLoading" @click="review('reject')">Reject</button>
-        </div>
-      </article>
-
-      <AgentTimeline :trace="session.trace || []" />
-
-      <article class="info-card">
-        <h3>Final Result</h3>
-        <p class="statement">{{ finalResult.final_statement || "暂无最终声明" }}</p>
-        <div class="score-grid">
-          <span>legal_safety: {{ finalResult.scores?.legal_safety ?? "-" }}</span>
-          <span>empathy: {{ finalResult.scores?.empathy ?? "-" }}</span>
-          <span>robustness: {{ finalResult.scores?.robustness ?? "-" }}</span>
-        </div>
-      </article>
-
-      <article class="info-card">
-        <h3>Results JSON</h3>
-        <pre>{{ JSON.stringify(session.results, null, 2) }}</pre>
-      </article>
+      <AdvancedAnalysis :session="session" :metrics="metrics" />
     </template>
   </section>
 </template>

@@ -48,10 +48,10 @@ def _build_runtime_registry() -> dict:
 
 def _run_decision_from_dynamic_results(payload: dict) -> dict:
     results = payload.get("results", {})
-    writer_result = results.get("writer", {})
+    writer_v2_result = results.get("writer_v2", {})
     decision_payload = {
         "event": payload.get("event", ""),
-        "second_draft": writer_result.get("statement", ""),
+        "second_draft": payload.get("second_draft") or writer_v2_result.get("statement", ""),
         "sentiment_analysis": results.get("sentiment", {}),
         "redteam_review": results.get("redteam", {}),
         "legal_review": results.get("legal", {}),

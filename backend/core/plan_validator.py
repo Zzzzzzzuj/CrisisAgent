@@ -3,9 +3,10 @@ AGENT_DEPENDENCIES = {
     "writer": ["sentiment"],
     "redteam": ["writer"],
     "legal": ["writer", "redteam"],
-    "decision": ["writer", "legal"],
+    "writer_v2": ["writer", "redteam", "legal"],
+    "decision": ["writer_v2"],
 }
-AGENT_ORDER = ("sentiment", "writer", "redteam", "legal", "decision")
+AGENT_ORDER = ("sentiment", "writer", "redteam", "legal", "writer_v2", "decision")
 
 
 def validate_plan(plan: dict) -> dict:

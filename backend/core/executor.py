@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Callable
 
@@ -10,6 +11,7 @@ AgentRunner = Callable[[dict], dict]
 AGENT_REGISTRY: dict[str, AgentRunner] = {
     "sentiment": sentiment_agent.run,
     "writer": writer_agent.run,
+    "writer_v2": writer_agent.generate_second_draft,
     "redteam": redteam_agent.run,
     "legal": legal_agent.run,
     "decision": decision_agent.run,
@@ -49,9 +51,9 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
 
         executed_agents.append(agent_name)
         agent_state.set_result(agent_name, output)
-        agent_state.add_trace(
-            _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", output, None)
-        )
+        trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", output, None)
+        trace_item.update(_collect_agent_metadata(agent_name))
+        agent_state.add_trace(trace_item)
 
     agent_state.current_agent = None
     return {
@@ -102,6 +104,18 @@ def _build_trace_item(
         "output": output,
         "error": error,
     }
+
+
+def _collect_agent_metadata(agent_name: str | None) -> dict:
+    if agent_name != "legal":
+        return {}
+
+    try:
+        rag_info = legal_agent.get_last_rag_info()
+    except Exception:
+        return {}
+
+    return {"rag": deepcopy(rag_info)}
 
 
 def _now_iso() -> str:

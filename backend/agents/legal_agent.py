@@ -1,9 +1,8 @@
 from backend.config import get_config
-from backend.llm_client import call_llm
+from backend.llm import LLMClient
+from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
-from backend.prompt_loader import load_prompt
 from backend.rag.retriever import retrieve
-from backend.utils.json_parser import parse_llm_json
 
 
 logger = get_logger(__name__)
@@ -19,6 +18,7 @@ _LAST_RAG_INFO = {
     "scores": [],
     "rerank_scores": [],
     "count": 0,
+    "fallback_used": False,
 }
 REQUIRED_FIELDS = (
     "legal_risks",
@@ -61,6 +61,7 @@ def get_last_rag_info() -> dict:
         "scores": list(_LAST_RAG_INFO["scores"]),
         "rerank_scores": list(_LAST_RAG_INFO["rerank_scores"]),
         "count": _LAST_RAG_INFO["count"],
+        "fallback_used": _LAST_RAG_INFO["fallback_used"],
     }
 
 
@@ -72,8 +73,10 @@ def _set_rag_info(
     chunks: list[dict] | None = None,
     retrieval_type: str | None = None,
     rerank_enabled: bool = False,
+    fallback_used: bool = False,
 ) -> None:
     chunks = chunks or []
+    # sources/count describe unique source files; scores describe final retrieved chunks.
     _LAST_RAG_INFO.update(
         {
             "enabled": enabled,
@@ -86,6 +89,7 @@ def _set_rag_info(
             "scores": [chunk.get("score") for chunk in chunks],
             "rerank_scores": [chunk.get("rerank_score") for chunk in chunks],
             "count": len(sources),
+            "fallback_used": fallback_used,
         }
     )
 
@@ -142,22 +146,10 @@ def _run_mock(payload: dict) -> dict:
 
 def _run_llm(payload: dict) -> dict:
     legal_context = _retrieve_legal_context(payload)
-    prompt = load_prompt(
-        "legal_agent",
-        {
-            "event": payload["event"],
-            "draft": payload["draft"],
-            "redteam_review": payload["redteam_review"],
-            "legal_context": legal_context,
-        },
-    )
+    prompt = _build_legal_prompt(payload, legal_context)
     raw_text = call_llm(prompt)
-    parsed = parse_llm_json(raw_text)
-
-    if "error_type" in parsed:
-        raise ValueError(
-            f"JSON parsing failed: {parsed['error_type']} - {parsed['message']}"
-        )
+    parsed = parse_json_response(raw_text)
+    validate_required_fields(parsed, REQUIRED_FIELDS)
 
     validated = _validate_output(parsed)
     logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
@@ -177,6 +169,63 @@ def _run_llm(payload: dict) -> dict:
     normalized_output = _normalize_output(mapped_output)
     logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
     return normalized_output
+
+
+def call_llm(prompt: str) -> str:
+    client = LLMClient()
+    if client.config.mock_enabled:
+        raise RuntimeError("LLM_API_KEY is not configured; fallback to mock legal agent.")
+    return client.chat(
+        messages=[
+            {
+                "role": "system",
+                "content": "You are CrisisAgent Legal Agent B. Return JSON only.",
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+        temperature=0.2,
+    )
+
+
+def _build_legal_prompt(payload: dict, legal_context: str) -> str:
+    return f"""
+你是 CrisisAgent 的合规审查 Agent B，角色是企业危机公关合规审核专家。
+
+输入事件 event：
+{payload["event"]}
+
+待审核声明 draft：
+{payload["draft"]}
+
+红队反馈 redteam_review：
+{payload["redteam_review"]}
+
+检索到的合规知识 retrieved_context：
+{legal_context}
+legal_context: {legal_context}
+
+审查要求：
+- 优先参考 retrieved_context / legal_context 中的法律风险规范、企业危机回应规范和历史案例经验。
+- 不要编造不存在的法律条文；如果知识不足，请在建议中保持审慎表达。
+- 检查是否提前确认事实、提前定责、使用绝对化承诺或过度承诺。
+- 检查是否包含调查/核查、整改、监管配合、后续更新等安全表达。
+- 结合 redteam_review，把公众质疑建议整理进 public_opinion_suggestions。
+- integrated_revision_tasks 必须是给 Writer Agent 第二版修改使用的任务清单。
+
+只输出 JSON，不要输出 markdown，不要输出额外解释。JSON schema：
+{{
+  "legal_risks": [],
+  "safe_points": [],
+  "revision_advice": [],
+  "public_opinion_suggestions": [],
+  "integrated_revision_tasks": [],
+  "legal_safety_score_hint": 8,
+  "review_summary": ""
+}}
+""".strip()
 
 
 def _retrieve_legal_context(payload: dict) -> str:
@@ -210,6 +259,7 @@ def _retrieve_legal_context(payload: dict) -> str:
         chunks=chunks,
         retrieval_type=_resolve_retrieval_type(retrieval_result),
         rerank_enabled=_resolve_rerank_enabled(retrieval_result),
+        fallback_used=_resolve_retrieval_fallback(retrieval_result),
     )
     logger.info("%s RAG retrieved %s sources: %s", AGENT_NAME, len(sources), sources)
     return retrieval_result.get("context", "")
@@ -251,6 +301,17 @@ def _resolve_rerank_enabled(retrieval_result: dict) -> bool:
             return True
     return any(
         isinstance(source, dict) and source.get("rerank_enabled")
+        for source in retrieval_result.get("sources", [])
+    )
+
+
+def _resolve_retrieval_fallback(retrieval_result: dict) -> bool:
+    for chunk in retrieval_result.get("chunks", []):
+        metadata = chunk.get("metadata", {}) if isinstance(chunk, dict) else {}
+        if metadata.get("retrieval_fallback"):
+            return True
+    return any(
+        isinstance(source, dict) and source.get("retrieval_fallback")
         for source in retrieval_result.get("sources", [])
     )
 

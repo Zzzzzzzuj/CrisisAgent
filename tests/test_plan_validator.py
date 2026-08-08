@@ -60,10 +60,11 @@ def test_validate_plan_writer_to_decision_keeps_dependency_order():
         "writer",
         "redteam",
         "legal",
+        "writer_v2",
         "decision",
     ]
     assert result["plan"][1]["reason"] == "write"
-    assert result["plan"][4]["reason"] == "decide"
+    assert result["plan"][5]["reason"] == "decide"
 
 
 def test_validate_plan_rejects_invalid_agent():
