@@ -1,0 +1,170 @@
+[
+  {
+    "id": "neg_unrelated_001",
+    "type": "unrelated",
+    "query": "世界杯决赛比分和球队阵容分析",
+    "expected_hit": false,
+    "notes": "体育赛事信息查询，与企业危机响应无关。"
+  },
+  {
+    "id": "neg_unrelated_002",
+    "type": "unrelated",
+    "query": "暑假去云南旅游路线和酒店推荐",
+    "expected_hit": false,
+    "notes": "旅游规划查询，与危机知识库无关。"
+  },
+  {
+    "id": "neg_unrelated_003",
+    "type": "unrelated",
+    "query": "Python 列表推导式语法示例",
+    "expected_hit": false,
+    "notes": "编程语法查询，不应召回危机处置文档。"
+  },
+  {
+    "id": "neg_unrelated_004",
+    "type": "unrelated",
+    "query": "明天上海天气和空气质量",
+    "expected_hit": false,
+    "notes": "天气查询，与企业危机场景无关。"
+  },
+  {
+    "id": "neg_unrelated_005",
+    "type": "unrelated",
+    "query": "最近上映的电影评分和剧情介绍",
+    "expected_hit": false,
+    "notes": "影视内容查询，与危机知识库无关。"
+  },
+  {
+    "id": "neg_unrelated_006",
+    "type": "unrelated",
+    "query": "二次函数求根公式推导",
+    "expected_hit": false,
+    "notes": "数学学习查询，不应召回企业危机上下文。"
+  },
+  {
+    "id": "neg_unrelated_007",
+    "type": "unrelated",
+    "query": "把这段英文翻译成中文",
+    "expected_hit": false,
+    "notes": "翻译任务，与 RAG 知识库无关。"
+  },
+  {
+    "id": "neg_unrelated_008",
+    "type": "unrelated",
+    "query": "开放世界游戏新手攻略和装备选择",
+    "expected_hit": false,
+    "notes": "游戏攻略查询，与危机响应无关。"
+  },
+  {
+    "id": "neg_business_non_crisis_001",
+    "type": "business_non_crisis",
+    "query": "公司年度财报收入结构和利润率解读",
+    "expected_hit": false,
+    "notes": "企业财务信息分析，但不是危机处置知识需求。"
+  },
+  {
+    "id": "neg_business_non_crisis_002",
+    "type": "business_non_crisis",
+    "query": "新产品发布会亮点和市场卖点整理",
+    "expected_hit": false,
+    "notes": "正常营销活动，不应强制召回危机处理 context。"
+  },
+  {
+    "id": "neg_business_non_crisis_003",
+    "type": "business_non_crisis",
+    "query": "公司招聘计划和岗位要求说明",
+    "expected_hit": false,
+    "notes": "招聘相关查询，与危机知识库无关。"
+  },
+  {
+    "id": "neg_business_non_crisis_004",
+    "type": "business_non_crisis",
+    "query": "会员价格调整后的权益说明",
+    "expected_hit": false,
+    "notes": "会员运营问题，不属于危机响应。"
+  },
+  {
+    "id": "neg_business_non_crisis_005",
+    "type": "business_non_crisis",
+    "query": "公司办公室搬迁地址和交通指南",
+    "expected_hit": false,
+    "notes": "行政通知类查询，不需要危机处置知识。"
+  },
+  {
+    "id": "neg_business_non_crisis_006",
+    "type": "business_non_crisis",
+    "query": "行业展会参展计划和展台安排",
+    "expected_hit": false,
+    "notes": "展会活动信息，不属于危机场景。"
+  },
+  {
+    "id": "neg_business_non_crisis_007",
+    "type": "business_non_crisis",
+    "query": "双十一促销活动规则和优惠券说明",
+    "expected_hit": false,
+    "notes": "正常促销规则，不应召回危机知识。"
+  },
+  {
+    "id": "neg_business_non_crisis_008",
+    "type": "business_non_crisis",
+    "query": "公司融资轮次和投资机构介绍",
+    "expected_hit": false,
+    "notes": "融资新闻查询，不属于危机处理。"
+  },
+  {
+    "id": "neg_hard_negative_001",
+    "type": "hard_negative",
+    "query": "用户想查询隐私政策入口在哪里",
+    "expected_hit": false,
+    "notes": "包含隐私词，但只是入口查询，不是数据泄露危机。"
+  },
+  {
+    "id": "neg_hard_negative_002",
+    "type": "hard_negative",
+    "query": "消费者咨询产品保修期限和维修网点",
+    "expected_hit": false,
+    "notes": "包含产品和售后词，但不是产品质量危机。"
+  },
+  {
+    "id": "neg_hard_negative_003",
+    "type": "hard_negative",
+    "query": "网友讨论三年前的历史投诉案例",
+    "expected_hit": false,
+    "notes": "舆论相关但不是当前危机响应。"
+  },
+  {
+    "id": "neg_hard_negative_004",
+    "type": "hard_negative",
+    "query": "用户查询客服热线和工作时间",
+    "expected_hit": false,
+    "notes": "客服查询不应触发危机知识召回。"
+  },
+  {
+    "id": "neg_hard_negative_005",
+    "type": "hard_negative",
+    "query": "媒体询问公司是否有产品召回计划",
+    "expected_hit": false,
+    "notes": "接近召回语义，但没有具体质量危机事实。"
+  },
+  {
+    "id": "neg_hard_negative_006",
+    "type": "hard_negative",
+    "query": "监管政策讨论和行业合规趋势分析",
+    "expected_hit": false,
+    "notes": "包含监管合规词，但只是政策讨论。"
+  },
+  {
+    "id": "neg_hard_negative_007",
+    "type": "hard_negative",
+    "query": "高管普通公开演讲的发言稿润色",
+    "expected_hit": false,
+    "notes": "包含高管和公开表达，但不是高管失当危机。"
+  },
+  {
+    "id": "neg_hard_negative_008",
+    "type": "hard_negative",
+    "query": "猜测平台未来可能出现宕机风险",
+    "expected_hit": false,
+    "notes": "包含宕机风险，但不是已发生服务故障危机。"
+  }
+]
