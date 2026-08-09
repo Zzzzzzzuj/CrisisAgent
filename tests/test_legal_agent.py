@@ -2,6 +2,21 @@ from backend.agents import legal_agent
 from backend.config import get_config
 
 
+def _gate_result(need_rag: bool) -> dict:
+    return {
+        "need_rag": need_rag,
+        "intent": "crisis_response_needed" if need_rag else "information_lookup",
+        "decision_score": 5 if need_rag else -3,
+        "reason": "test gate result",
+        "matched_signals": ["current_response_need"] if need_rag else [],
+        "negative_signals": [] if need_rag else ["information_lookup"],
+        "current_incident": need_rag,
+        "current_incident_signals": ["current_response_need"] if need_rag else [],
+        "task_intent": "ambiguous_enterprise_risk" if need_rag else "information_lookup",
+        "decision_path": "current_incident_override" if need_rag else "non_current_task_reject",
+    }
+
+
 TEST_PAYLOAD = {
     "event": "某食品品牌被爆使用过期原料，偷拍视频在网上传播，网友要求监管介入。",
     "draft": (
@@ -22,9 +37,13 @@ def test_legal_agent_mock_mode_returns_expected_schema(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "mock")
     get_config.cache_clear()
 
+    def fail_gate_if_called(*args, **kwargs):
+        raise AssertionError("gate should not be called in mock mode")
+
     def fail_if_called(*args, **kwargs):
         raise AssertionError("retriever should not be called in mock mode")
 
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", fail_gate_if_called)
     monkeypatch.setattr(legal_agent, "retrieve", fail_if_called)
 
     result = legal_agent.run(TEST_PAYLOAD)
@@ -48,6 +67,137 @@ def test_legal_agent_mock_mode_returns_expected_schema(monkeypatch):
     assert rag_info["hit"] is False
     assert rag_info["sources"] == []
     assert rag_info["count"] == 0
+    assert rag_info["gate"] == {}
+    assert rag_info["retrieval_skipped"] is False
+    assert rag_info["retrieval_executed"] is False
+
+
+def test_legal_agent_gate_skip_does_not_call_retriever(monkeypatch):
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(False))
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("retriever should not be called when gate rejects RAG")
+
+    monkeypatch.setattr(legal_agent, "retrieve", fail_if_called)
+
+    context = legal_agent._retrieve_legal_context(TEST_PAYLOAD)
+    rag_info = legal_agent.get_last_rag_info()
+
+    assert context == ""
+    assert rag_info["enabled"] is True
+    assert rag_info["hit"] is False
+    assert rag_info["sources"] == []
+    assert rag_info["scores"] == []
+    assert rag_info["rerank_scores"] == []
+    assert rag_info["count"] == 0
+    assert rag_info["fallback_used"] is False
+    assert rag_info["gate"]["need_rag"] is False
+    assert rag_info["retrieval_skipped"] is True
+    assert rag_info["retrieval_executed"] is False
+    assert rag_info["retrieval_status"] == "skipped_by_gate"
+
+
+def test_legal_agent_gate_allows_retriever_once_and_records_hit(monkeypatch):
+    call_count = {"retrieve": 0}
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
+
+    def fake_retrieve(query, top_k=3):
+        call_count["retrieve"] += 1
+        return {
+            "context": "[legal_risk_rules.md]\ncontext",
+            "sources": [{"source": "legal_risk_rules.md", "score": 0.9, "retrieval_type": "hybrid"}],
+            "chunks": [
+                {
+                    "chunk_id": "legal-1",
+                    "source": "legal_risk_rules.md",
+                    "title": "Legal Rules",
+                    "score": 0.9,
+                    "rerank_score": 0.95,
+                    "metadata": {"retrieval_type": "hybrid", "rerank_enabled": True},
+                    "text": "context",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(legal_agent, "retrieve", fake_retrieve)
+
+    context = legal_agent._retrieve_legal_context(TEST_PAYLOAD)
+    rag_info = legal_agent.get_last_rag_info()
+
+    assert call_count["retrieve"] == 1
+    assert context == "[legal_risk_rules.md]\ncontext"
+    assert rag_info["hit"] is True
+    assert rag_info["sources"] == ["legal_risk_rules.md"]
+    assert rag_info["scores"] == [0.9]
+    assert rag_info["rerank_scores"] == [0.95]
+    assert rag_info["gate"]["need_rag"] is True
+    assert rag_info["retrieval_skipped"] is False
+    assert rag_info["retrieval_executed"] is True
+    assert rag_info["retrieval_status"] == "executed_with_hits"
+
+
+def test_legal_agent_gate_allowed_empty_retrieval_is_distinct_from_gate_skip(monkeypatch):
+    call_count = {"retrieve": 0}
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
+
+    def fake_retrieve(query, top_k=3):
+        call_count["retrieve"] += 1
+        return {"context": "", "sources": [], "chunks": []}
+
+    monkeypatch.setattr(legal_agent, "retrieve", fake_retrieve)
+
+    context = legal_agent._retrieve_legal_context(TEST_PAYLOAD)
+    rag_info = legal_agent.get_last_rag_info()
+
+    assert call_count["retrieve"] == 1
+    assert context == ""
+    assert rag_info["hit"] is False
+    assert rag_info["sources"] == []
+    assert rag_info["gate"]["need_rag"] is True
+    assert rag_info["retrieval_skipped"] is False
+    assert rag_info["retrieval_executed"] is True
+    assert rag_info["retrieval_status"] == "executed_no_hit"
+
+
+def test_legal_agent_llm_gate_skip_continues_with_empty_context(monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "llm")
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.com/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    get_config.cache_clear()
+
+    captured_prompt = {}
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(False))
+    monkeypatch.setattr(
+        legal_agent,
+        "retrieve",
+        lambda query, top_k=3: (_ for _ in ()).throw(AssertionError("retriever should be skipped")),
+    )
+
+    def fake_call_llm(prompt):
+        captured_prompt["value"] = prompt
+        return """
+        {
+          "legal_risks": ["risk"],
+          "safe_points": ["safe"],
+          "revision_advice": ["advice"],
+          "public_opinion_suggestions": ["suggestion"],
+          "integrated_revision_tasks": ["task"],
+          "legal_safety_score_hint": 8,
+          "review_summary": "summary"
+        }
+        """
+
+    monkeypatch.setattr(legal_agent, "call_llm", fake_call_llm)
+
+    result = legal_agent.run(TEST_PAYLOAD)
+    rag_info = legal_agent.get_last_rag_info()
+
+    assert "legal_context:" in captured_prompt["value"]
+    assert result["legal_risks"] == ["risk"]
+    assert rag_info["gate"]["need_rag"] is False
+    assert rag_info["retrieval_skipped"] is True
+    assert rag_info["retrieval_executed"] is False
 
 
 def test_legal_agent_llm_mode_injects_legal_context_into_prompt(monkeypatch):
@@ -58,6 +208,7 @@ def test_legal_agent_llm_mode_injects_legal_context_into_prompt(monkeypatch):
     get_config.cache_clear()
 
     captured_prompt = {}
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
 
     monkeypatch.setattr(
         legal_agent,
@@ -101,6 +252,7 @@ def test_legal_agent_rag_failure_continues_llm(monkeypatch):
     get_config.cache_clear()
 
     captured_prompt = {}
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
 
     def failing_retrieve(query, top_k=3):
         raise RuntimeError("rag unavailable")
@@ -136,6 +288,7 @@ def test_legal_agent_llm_failure_still_falls_back_to_mock(monkeypatch):
     monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
 
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
     monkeypatch.setattr(
         legal_agent,
         "retrieve",
@@ -173,6 +326,7 @@ def test_legal_agent_records_rag_info_on_llm_success(monkeypatch):
     monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
 
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
     monkeypatch.setattr(
         legal_agent,
         "retrieve",
@@ -216,6 +370,7 @@ def test_legal_agent_records_rag_miss_when_retriever_fails(monkeypatch):
     monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
 
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
     monkeypatch.setattr(
         legal_agent,
         "retrieve",
@@ -254,6 +409,7 @@ def test_legal_agent_continues_with_empty_legal_context_when_rag_returns_no_resu
     get_config.cache_clear()
 
     captured_prompt = {}
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
     monkeypatch.setattr(
         legal_agent,
         "retrieve",
