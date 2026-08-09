@@ -73,7 +73,7 @@ def test_gate_summary_reports_confusion_matrix_and_rates():
     assert summary["hard_negative_reject_rate"] == 0.5
 
 
-def test_run_gate_evaluation_with_fake_retriever_keeps_false_negatives_visible(tmp_path):
+def test_run_gate_evaluation_with_fake_retriever_recovers_weak_positive_cases(tmp_path):
     positive_path = tmp_path / "positive_cases.json"
     negative_path = tmp_path / "negative_cases.json"
     positive_path.write_text(
@@ -119,8 +119,9 @@ def test_run_gate_evaluation_with_fake_retriever_keeps_false_negatives_visible(t
 
     result = run_gate_evaluation(positive_path, negative_path, retriever=_CountingRetriever())
 
-    assert result["gate"]["FN"] == 1
-    assert result["false_negatives"][0]["case_id"] == "pos_2"
+    assert result["gate"]["TP"] == 2
+    assert result["gate"]["FN"] == 0
+    assert result["false_negatives"] == []
     assert result["gate"]["hard_negative_reject_rate"] == 1.0
     assert result["with_gate"]["no_hit_accuracy"] == 1.0
 

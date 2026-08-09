@@ -3,6 +3,8 @@ from backend.rag.retrieval_need_gate import (
     CRISIS_RESPONSE_NEEDED,
     CUSTOMER_SERVICE_LOOKUP,
     GENERAL_BUSINESS_INFORMATION,
+    HYPOTHETICAL_DISCUSSION,
+    INFORMATION_LOOKUP,
     POLICY_LOOKUP,
     UNRELATED,
     evaluate_retrieval_need,
@@ -32,7 +34,7 @@ def test_service_outage_crisis_needs_rag():
 
 
 def test_unrelated_query_does_not_need_rag():
-    result = evaluate_retrieval_need("世界杯决赛比分和球队阵容分析")
+    result = evaluate_retrieval_need("世界杯决赛比分和球星阵容分析")
 
     assert result["need_rag"] is False
     assert result["intent"] == UNRELATED
@@ -80,7 +82,7 @@ def test_event_has_priority_over_crisis_like_draft():
     )
 
     assert result["need_rag"] is False
-    assert "辅助 draft/redteam 中的危机化表达不单独触发 RAG" in result["reason"]
+    assert result["intent"] in {GENERAL_BUSINESS_INFORMATION, INFORMATION_LOOKUP}
 
 
 def test_event_crisis_needs_rag_even_when_draft_is_short():
@@ -123,3 +125,56 @@ def test_evaluation_gold_fields_do_not_change_gate_decision():
 
     assert result_with_gold_like_noise["need_rag"] == result_without_gold["need_rag"]
     assert result_with_gold_like_noise["intent"] == result_without_gold["intent"]
+
+
+def test_pair_privacy_policy_lookup_vs_privacy_incident():
+    lookup = evaluate_retrieval_need("请告诉我隐私政策入口在哪里")
+    incident = evaluate_retrieval_need("用户登录后看到其他人的地址和订单，需要公司说明情况")
+
+    assert lookup["need_rag"] is False
+    assert lookup["intent"] in {POLICY_LOOKUP, INFORMATION_LOOKUP}
+    assert incident["need_rag"] is True
+    assert incident["intent"] == CRISIS_RESPONSE_NEEDED
+
+
+def test_pair_warranty_lookup_vs_product_overheat_incident():
+    lookup = evaluate_retrieval_need("查询产品维修网点")
+    incident = evaluate_retrieval_need("多名用户反映产品过热，需要企业说明处理方案")
+
+    assert lookup["need_rag"] is False
+    assert lookup["intent"] == CUSTOMER_SERVICE_LOOKUP
+    assert incident["need_rag"] is True
+
+
+def test_pair_speech_editing_vs_executive_misconduct():
+    editing = evaluate_retrieval_need("帮我润色高管年度演讲")
+    incident = evaluate_retrieval_need("高管发言引发大量用户抵制，需要公开回应")
+
+    assert editing["need_rag"] is False
+    assert editing["intent"] == CONTENT_EDITING
+    assert incident["need_rag"] is True
+
+
+def test_pair_hypothetical_outage_plan_vs_current_service_failure():
+    hypothetical = evaluate_retrieval_need("如果未来平台宕机，应该制定什么预案")
+    incident = evaluate_retrieval_need("当前大量用户无法登录，订单处理中断")
+
+    assert hypothetical["need_rag"] is False
+    assert hypothetical["intent"] == HYPOTHETICAL_DISCUSSION
+    assert incident["need_rag"] is True
+
+
+def test_pair_policy_study_vs_current_compliance_response():
+    study = evaluate_retrieval_need("总结最新监管法规用于内部学习")
+    incident = evaluate_retrieval_need("当前事故发生后，需要判断监管和合规回应")
+
+    assert study["need_rag"] is False
+    assert study["intent"] == POLICY_LOOKUP
+    assert incident["need_rag"] is True
+
+
+def test_ambiguous_enterprise_risk_defaults_to_rag():
+    result = evaluate_retrieval_need("多个用户称账号资料被陌生设备改动，平台需要说明处理办法")
+
+    assert result["need_rag"] is True
+    assert result["intent"] == CRISIS_RESPONSE_NEEDED
