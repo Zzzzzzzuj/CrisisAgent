@@ -399,6 +399,8 @@ def test_legal_agent_records_rag_miss_when_retriever_fails(monkeypatch):
     assert rag_info["hit"] is False
     assert rag_info["sources"] == []
     assert rag_info["count"] == 0
+    assert rag_info["fallback_used"] is True
+    assert rag_info["retrieval_status"] == "retrieval_error"
 
 
 def test_legal_agent_continues_with_empty_legal_context_when_rag_returns_no_results(monkeypatch):

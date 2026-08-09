@@ -285,6 +285,7 @@ def _retrieve_legal_context(payload: dict) -> str:
             gate=gate,
             retrieval_skipped=False,
             retrieval_executed=True,
+            fallback_used=True,
             retrieval_status="retrieval_error",
         )
         return ""
