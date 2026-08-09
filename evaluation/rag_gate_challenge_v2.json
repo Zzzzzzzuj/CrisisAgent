@@ -1,0 +1,354 @@
+[
+  {
+    "id": "gate_challenge_v2_food_safety_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "food_safety",
+    "event": "新品酸奶上市活动当天，多位家长反馈孩子饮用后腹部不适，社群里开始转发同一批次包装照片并要求品牌说明。",
+    "notes": "隐式用户伤害与同批次食品消费风险，未使用曝光、监管、召回等典型词。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_food_safety_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "food_safety",
+    "event": "连锁门店促销期间，有顾客称购买的便当打开后气味异常，短视频评论区聚集了大量询问门店处理办法的留言。",
+    "notes": "食品品质异常、公众传播和处理需求并存。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_food_safety_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "food_safety",
+    "event": "品牌直播间正在介绍新品零食配方时，后台客服陆续收到消费者反馈包装内有异物，主播评论区要求立即回应。",
+    "notes": "混杂营销直播上下文，但存在食品异物与公开回应压力。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_food_safety_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "food_safety",
+    "event": "社区团购配送的熟食被用户拍到外包装渗液，多个小区群担心运输温控问题，平台需要准备对外解释。",
+    "notes": "运输温控与食品消费安全风险，包含企业回应需求。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_v2_data_privacy_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "data_privacy",
+    "event": "用户更新APP后进入个人中心，发现页面短暂显示了其他人的收货地址和电话号码，截图已经在多个群里流传。",
+    "notes": "隐式数据风险，没有直接使用数据泄露一词，但存在个人信息越权可见。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_data_privacy_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "data_privacy",
+    "event": "平台会员日刚结束，不少用户收到包含真实订单金额的陌生短信，怀疑交易信息被第三方获取并要求平台解释。",
+    "notes": "用户交易信息疑似外流与公众解释需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_data_privacy_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "data_privacy",
+    "event": "企业正在发布新版本功能，同时客服收到反馈称账号资料被陌生设备改动，用户质疑登录保护机制失效。",
+    "notes": "混杂正常产品发布上下文，但存在账号安全异常。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_data_privacy_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "data_privacy",
+    "event": "有博主展示可批量获取平台用户昵称、头像和部分联系方式的操作录屏，用户开始追问影响范围和补救安排。",
+    "notes": "隐私与访问控制风险，包含传播和补救需求。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_v2_service_outage_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "service_outage",
+    "event": "晚高峰期间，用户付款后页面长时间停留在处理中，商户端订单不同步，客服排队人数快速上升。",
+    "notes": "隐式服务异常和交易影响，未直接写宕机。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_service_outage_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "service_outage",
+    "event": "平台会员活动页面打不开，部分用户重复扣费但权益未到账，社交平台开始集中询问恢复时间。",
+    "notes": "服务不可用、用户损失和恢复沟通需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_service_outage_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "service_outage",
+    "event": "企业正常发布季度运营数据的同一天，核心小程序连续出现白屏，门店无法核销优惠券并要求总部给出说明。",
+    "notes": "混杂普通经营信息，但存在当前服务故障和业务影响。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_service_outage_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "service_outage",
+    "event": "物流查询系统突然无法更新轨迹，用户担心生鲜订单延误变质，客服需要统一回应进展。",
+    "notes": "服务异常造成用户担忧和客服回应需求。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_v2_product_quality_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "product_quality",
+    "event": "同型号儿童座椅在多地用户家中出现卡扣松动，家长群里要求品牌说明是否影响继续使用。",
+    "notes": "产品安全异常与用户使用风险。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_product_quality_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "product_quality",
+    "event": "品牌正在做新品路演时，多名体验用户反馈设备充电后外壳发热并伴随异味，现场视频开始传播。",
+    "notes": "混杂营销场景，但存在产品过热和传播风险。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_product_quality_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "product_quality",
+    "event": "用户集中反映新批次护肤品使用后皮肤红肿，多个达人评论区要求品牌给出检测安排。",
+    "notes": "产品使用伤害和检测安排需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_product_quality_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "product_quality",
+    "event": "家电售后渠道一天内收到大量同款产品冒烟反馈，区域经理需要准备对外口径和用户处置方案。",
+    "notes": "产品安全异常、对外口径和用户处置需求。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_v2_executive_misconduct_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "executive_misconduct",
+    "event": "高管在行业圆桌中的一句评价被剪成短视频，用户认为其轻视消费者权益，品牌评论区出现大量抵制留言。",
+    "notes": "争议言论传播和用户抵制。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_executive_misconduct_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "executive_misconduct",
+    "event": "公司宣布合作项目后，负责人早年公开发言被重新翻出，合作方要求确认企业立场和后续处理。",
+    "notes": "混杂业务合作上下文，但存在言论争议和合作方压力。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_executive_misconduct_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "executive_misconduct",
+    "event": "直播采访中管理层回应用户问题时语气强硬，录屏在社交平台扩散，客服收到大量要求道歉的留言。",
+    "notes": "公开沟通失当、传播和道歉需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_v2_executive_misconduct_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "executive_misconduct",
+    "event": "门店员工称区域负责人在内部会上使用歧视性表述，相关录音被传到本地社区论坛并引发质疑。",
+    "notes": "管理层/负责人争议表达引发公众质疑。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_v2_unrelated_001",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "请帮我规划一条周末城市骑行路线，最好包含咖啡店和公园休息点。",
+    "notes": "完全无关生活规划，不需要企业危机响应知识。"
+  },
+  {
+    "id": "gate_challenge_v2_unrelated_002",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "我想写一篇关于古代山水画构图的读书笔记，请列出几个角度。",
+    "notes": "文化写作任务，与企业危机无关。"
+  },
+  {
+    "id": "gate_challenge_v2_unrelated_003",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "帮我比较几种家用咖啡豆研磨粗细对口感的影响。",
+    "notes": "普通消费知识问题，不需要危机 RAG。"
+  },
+  {
+    "id": "gate_challenge_v2_unrelated_004",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "请给大学社团设计一个新生破冰游戏流程，要求轻松一点。",
+    "notes": "活动设计任务，与企业风险处置无关。"
+  },
+  {
+    "id": "gate_challenge_v2_business_001",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "公司准备发布季度业绩摘要，希望整理收入结构、门店数量和会员增长亮点。",
+    "notes": "正常经营信息整理，没有危机响应意图。"
+  },
+  {
+    "id": "gate_challenge_v2_business_002",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "品牌计划参加行业展会，需要准备展台介绍、产品卖点和合作洽谈话术。",
+    "notes": "正常市场活动。"
+  },
+  {
+    "id": "gate_challenge_v2_business_003",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "人力部门想优化校园招聘页面，补充岗位要求、培养机制和员工福利。",
+    "notes": "招聘页面优化，不是危机处置。"
+  },
+  {
+    "id": "gate_challenge_v2_business_004",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "运营团队要设计会员积分兑换活动，讨论不同用户等级的权益说明。",
+    "notes": "常规运营活动，没有现实风险事件。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_001",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "historical_analysis",
+    "event": "研究团队想复盘去年食品类客诉案例，分析不同渠道的反馈话术和处理时长。",
+    "notes": "主题接近食品投诉，但只是历史分析。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_002",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "statistics_or_reporting",
+    "event": "客服负责人需要统计过去半年隐私相关咨询数量，并按问题类型做内部月报。",
+    "notes": "统计报表任务，不是当前危机响应。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_003",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "preparedness_drill",
+    "event": "技术团队计划做一次支付系统异常应急演练，想提前梳理各角色分工。",
+    "notes": "演练预案，没有现实服务故障。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_004",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "future_hypothetical",
+    "event": "产品负责人讨论如果未来出现同款设备过热传闻，客服脚本里应该准备哪些信息。",
+    "notes": "假设性讨论，不是当前已发生事件。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_005",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "policy_learning",
+    "event": "法务部门想为新人培训整理个人信息保护法规学习提纲和常见术语解释。",
+    "notes": "政策学习材料，不是危机处理。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_006",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "content_editing",
+    "event": "请把一份系统故障公告模板改得更清晰，但目前没有真实故障需要发布。",
+    "notes": "模板润色且明确无当前事故。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_007",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "lookup",
+    "event": "运营同事想查询三年前某批次产品召回名单的公开链接，方便归档。",
+    "notes": "历史资料查询，不是当前召回或危机响应。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_008",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "customer_service",
+    "event": "用户想知道家电产品保修期还有多久，以及最近的售后维修网点在哪里。",
+    "notes": "客服查询任务。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_009",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "template_writing",
+    "event": "市场部准备一个数据安全宣传日活动，需要写一版隐私保护倡议模板。",
+    "notes": "宣传模板写作，不是现实数据风险处置。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_010",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "trend_analysis",
+    "event": "战略部门想讨论近年监管对食品行业合规趋势的影响，用于年度规划。",
+    "notes": "行业趋势讨论，不是当前企业危机。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_011",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "statistics_or_reporting",
+    "event": "品牌舆情团队要统计过去一年高管相关讨论热度，区分媒体报道、用户评论和行业文章。",
+    "notes": "历史舆情统计，不是当前争议处置。"
+  },
+  {
+    "id": "gate_challenge_v2_hard_negative_012",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "intent_type": "policy_learning",
+    "event": "质量部门想整理产品检测流程的内部培训材料，说明抽检、留样和记录保存步骤。",
+    "notes": "内部培训材料，topic 相关但无当前危机。"
+  }
+]
