@@ -2,10 +2,14 @@ from backend.rag.retrieval_need_gate import (
     CONTENT_EDITING,
     CRISIS_RESPONSE_NEEDED,
     CUSTOMER_SERVICE_LOOKUP,
+    FUTURE_HYPOTHETICAL,
     GENERAL_BUSINESS_INFORMATION,
     HYPOTHETICAL_DISCUSSION,
     INFORMATION_LOOKUP,
     POLICY_LOOKUP,
+    PREPAREDNESS_DRILL,
+    STATISTICS_REPORTING,
+    TRAINING_LEARNING,
     UNRELATED,
     evaluate_retrieval_need,
 )
@@ -97,17 +101,25 @@ def test_event_crisis_needs_rag_even_when_draft_is_short():
 def test_output_schema_is_stable():
     result = evaluate_retrieval_need("用户查询客服热线和工作时间")
 
-    assert set(result) == {
+    assert {
         "need_rag",
         "intent",
         "decision_score",
         "reason",
         "matched_signals",
         "negative_signals",
-    }
+    } <= set(result)
+    assert {
+        "current_incident",
+        "current_incident_signals",
+        "task_intent",
+        "decision_path",
+    } <= set(result)
     assert isinstance(result["decision_score"], int)
     assert isinstance(result["matched_signals"], list)
     assert isinstance(result["negative_signals"], list)
+    assert isinstance(result["current_incident"], bool)
+    assert isinstance(result["current_incident_signals"], list)
 
 
 def test_evaluation_gold_fields_do_not_change_gate_decision():
@@ -160,7 +172,7 @@ def test_pair_hypothetical_outage_plan_vs_current_service_failure():
     incident = evaluate_retrieval_need("当前大量用户无法登录，订单处理中断")
 
     assert hypothetical["need_rag"] is False
-    assert hypothetical["intent"] == HYPOTHETICAL_DISCUSSION
+    assert hypothetical["intent"] in {HYPOTHETICAL_DISCUSSION, FUTURE_HYPOTHETICAL}
     assert incident["need_rag"] is True
 
 
@@ -169,7 +181,7 @@ def test_pair_policy_study_vs_current_compliance_response():
     incident = evaluate_retrieval_need("当前事故发生后，需要判断监管和合规回应")
 
     assert study["need_rag"] is False
-    assert study["intent"] == POLICY_LOOKUP
+    assert study["intent"] in {POLICY_LOOKUP, TRAINING_LEARNING}
     assert incident["need_rag"] is True
 
 
@@ -178,3 +190,65 @@ def test_ambiguous_enterprise_risk_defaults_to_rag():
 
     assert result["need_rag"] is True
     assert result["intent"] == CRISIS_RESPONSE_NEEDED
+
+
+def test_pair_no_current_failure_template_vs_current_failure_notice():
+    no_current = evaluate_retrieval_need("目前没有真实系统故障，帮我润色故障公告模板。")
+    current = evaluate_retrieval_need("当前大量用户无法登录，帮我整理对外故障公告。")
+
+    assert no_current["need_rag"] is False
+    assert no_current["task_intent"] == CONTENT_EDITING
+    assert no_current["current_incident"] is False
+    assert current["need_rag"] is True
+    assert current["current_incident"] is True
+    assert current["decision_path"] == "current_incident_override"
+
+
+def test_pair_future_overheat_script_vs_current_overheat_script():
+    no_current = evaluate_retrieval_need("如果以后设备出现过热问题，先准备客服回应脚本。")
+    current = evaluate_retrieval_need("已有多名用户反馈设备过热，现在客服需要准备回应脚本。")
+
+    assert no_current["need_rag"] is False
+    assert no_current["task_intent"] == FUTURE_HYPOTHETICAL
+    assert current["need_rag"] is True
+    assert current["current_incident"] is True
+
+
+def test_pair_historical_executive_statistics_vs_current_executive_spread_statistics():
+    no_current = evaluate_retrieval_need("统计过去一年高管相关舆情热度。")
+    current = evaluate_retrieval_need("高管今天的发言正在引发抵制，现在需要统计传播和用户反馈情况。")
+
+    assert no_current["need_rag"] is False
+    assert no_current["task_intent"] == STATISTICS_REPORTING
+    assert current["need_rag"] is True
+    assert current["current_incident"] is True
+
+
+def test_pair_product_testing_training_vs_current_product_testing_response():
+    no_current = evaluate_retrieval_need("整理产品检测流程作为内部培训材料。")
+    current = evaluate_retrieval_need("同型号产品近期集中出现异常，目前团队需要整理检测流程和处置说明。")
+
+    assert no_current["need_rag"] is False
+    assert no_current["task_intent"] == TRAINING_LEARNING
+    assert current["need_rag"] is True
+    assert current["current_incident"] is True
+
+
+def test_pair_data_policy_training_vs_current_data_compliance_response():
+    no_current = evaluate_retrieval_need("总结数据保护法规用于法务培训。")
+    current = evaluate_retrieval_need("当前用户出现跨账号看到他人信息的问题，法务需要整理合规要求。")
+
+    assert no_current["need_rag"] is False
+    assert no_current["task_intent"] in {POLICY_LOOKUP, TRAINING_LEARNING}
+    assert current["need_rag"] is True
+    assert current["current_incident"] is True
+
+
+def test_pair_future_outage_drill_vs_current_order_processing_failure():
+    no_current = evaluate_retrieval_need("做一次未来系统故障应急演练。")
+    current = evaluate_retrieval_need("系统当前无法正常处理订单，需要立即启动应急处置。")
+
+    assert no_current["need_rag"] is False
+    assert no_current["task_intent"] in {PREPAREDNESS_DRILL, FUTURE_HYPOTHETICAL}
+    assert current["need_rag"] is True
+    assert current["current_incident"] is True
