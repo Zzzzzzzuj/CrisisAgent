@@ -1,0 +1,342 @@
+[
+  {
+    "id": "gate_challenge_food_safety_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "food_safety",
+    "event": "多名顾客在食用同批冷藏便当后出现腹痛和呕吐，门店评论区要求品牌给出处理方案。",
+    "notes": "弱显式关键词危机：未直接使用食品安全、曝光、监管等词，但存在消费者健康影响和回应需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_food_safety_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "food_safety",
+    "event": "有顾客称奶茶中喝出异物并上传小票和照片，多个门店被追问同批原料是否存在问题。",
+    "notes": "食品消费风险，存在公众质疑和批次核查需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_food_safety_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "food_safety",
+    "event": "连锁餐厅被顾客拍到厨房操作台有虫害痕迹，短视频评论要求企业说明门店卫生管理情况。",
+    "notes": "食品门店卫生事件，需要公开回应和核查处置。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_food_safety_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "food_safety",
+    "event": "儿童餐产品被家长反映气味异常，已有家长表示孩子食用后不舒服并要求品牌尽快说明。",
+    "notes": "弱显式关键词危机：通过儿童、异常气味、不适和说明需求体现危机意图。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_data_privacy_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "data_privacy",
+    "event": "部分用户登录后能看到其他账号的订单、地址和联系方式，截图已在社交平台扩散。",
+    "notes": "弱显式关键词危机：未直接写数据泄露，但存在跨账号可见和传播风险。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_data_privacy_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "data_privacy",
+    "event": "用户收到陌生号码精准报出平台购买记录的骚扰电话，社群质疑平台保护个人信息不力。",
+    "notes": "个人信息风险和用户担忧，需要平台回应和核查。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_data_privacy_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "data_privacy",
+    "event": "某APP被曝存在接口漏洞，疑似可批量查询用户手机号，用户要求平台解释影响范围。",
+    "notes": "数据安全事件，包含影响范围和公开说明需求。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_data_privacy_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "data_privacy",
+    "event": "不少用户发现账号头像和昵称被陌生设备改动，怀疑平台登录保护失效并要求给出处理办法。",
+    "notes": "弱显式关键词危机：账号安全异常引发用户保护和处置需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_service_outage_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "service_outage",
+    "event": "晚高峰期间大量用户付款后页面一直卡住，商户端订单迟迟不同步，客服排队人数激增。",
+    "notes": "弱显式关键词危机：不直接写宕机，但存在大规模交易失败和用户影响。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_service_outage_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "service_outage",
+    "event": "企业云盘连续数小时无法上传合同文件，多个客户项目交付受到影响并要求平台说明恢复时间。",
+    "notes": "服务不可用造成客户影响，需要恢复说明和后续沟通。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_service_outage_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "service_outage",
+    "event": "在线教育平台直播课中断，家长集中投诉退费和补课安排，相关话题开始在社群发酵。",
+    "notes": "服务中断、集中投诉和补偿安排需求。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_service_outage_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "service_outage",
+    "event": "医院预约小程序早晨无法取号，患者在大厅排长队并要求运营方解释系统异常原因。",
+    "notes": "弱显式关键词危机：服务异常影响公共服务用户，需要说明和恢复。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_product_quality_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "product_quality",
+    "event": "同型号扫地机器人短期内多起充电底座发热，用户晒出照片并询问是否应停止使用。",
+    "notes": "产品安全风险和用户使用建议需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_product_quality_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "product_quality",
+    "event": "新上市耳机被大量用户反馈佩戴后皮肤红肿，消费者要求品牌说明材质检测情况。",
+    "notes": "弱显式关键词危机：用户健康影响和检测说明需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_product_quality_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "product_quality",
+    "event": "母婴床护栏被反映卡扣松动，家长担心儿童跌落风险并要求企业给出处理安排。",
+    "notes": "弱显式关键词危机：儿童用品安全隐患和处理需求。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_product_quality_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "product_quality",
+    "event": "电动牙刷某批次出现机身进水后冒烟投诉，用户要求品牌公布检测和退换方案。",
+    "notes": "产品质量与安全处置事件。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_executive_misconduct_001",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "executive_misconduct",
+    "event": "公司负责人在直播中嘲笑用户投诉，录屏在社交平台传播后大量用户表示抵制。",
+    "notes": "管理层表达引发公众抵制，需要组织回应。",
+    "weak_explicit_crisis": false
+  },
+  {
+    "id": "gate_challenge_executive_misconduct_002",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "executive_misconduct",
+    "event": "区域总监会议发言被员工转发，内容被认为贬低一线人员，内部群和外部评论区持续发酵。",
+    "notes": "弱显式关键词危机：高管言行伤害员工群体并外溢到公众舆论。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_executive_misconduct_003",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "executive_misconduct",
+    "event": "品牌高层公开评价竞争对手用户群体，引发合作方质疑企业价值观并要求正式说明。",
+    "notes": "弱显式关键词危机：公开发言引发合作方和公众信任问题。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_executive_misconduct_004",
+    "label": "need_rag",
+    "type": "positive_crisis",
+    "category": "executive_misconduct",
+    "event": "高管私人社交账号发布争议内容后被用户集中转发，多个渠道出现退款和取关声音。",
+    "notes": "弱显式关键词危机：个人发言外溢为品牌信任风险。",
+    "weak_explicit_crisis": true
+  },
+  {
+    "id": "gate_challenge_unrelated_001",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "请比较两款家用咖啡机的萃取压力、奶泡能力和日常清洁难度。",
+    "notes": "消费产品选购咨询，与企业危机响应无关。"
+  },
+  {
+    "id": "gate_challenge_unrelated_002",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "帮我规划从成都到拉萨的十天自驾路线，并估算每日住宿预算。",
+    "notes": "旅游规划任务，不需要危机 RAG。"
+  },
+  {
+    "id": "gate_challenge_unrelated_003",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "解释一下递归函数和动态规划的区别，并给一个简单代码示例。",
+    "notes": "编程学习问题，与企业危机知识库无关。"
+  },
+  {
+    "id": "gate_challenge_unrelated_004",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "我想了解宋代山水画的构图特点和代表画家。",
+    "notes": "艺术史学习查询，不属于企业危机响应。"
+  },
+  {
+    "id": "gate_challenge_unrelated_005",
+    "label": "no_rag",
+    "type": "unrelated",
+    "category": "unrelated",
+    "event": "健身新手如何安排一周三练的力量训练计划和拉伸动作？",
+    "notes": "健康训练建议，与企业危机 RAG 无关。"
+  },
+  {
+    "id": "gate_challenge_business_non_crisis_001",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "公司准备发布季度业绩海报，需要总结营收增长、门店扩张和会员规模亮点。",
+    "notes": "正常经营宣传，不是危机处置。"
+  },
+  {
+    "id": "gate_challenge_business_non_crisis_002",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "人力部门计划推出校园招聘项目，希望整理技术岗和产品岗的岗位介绍。",
+    "notes": "招聘运营场景，不需要危机知识检索。"
+  },
+  {
+    "id": "gate_challenge_business_non_crisis_003",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "品牌将参加行业展会，需要准备展台日程、嘉宾接待和媒体采访流程。",
+    "notes": "正常市场活动安排，没有风险处置意图。"
+  },
+  {
+    "id": "gate_challenge_business_non_crisis_004",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "会员体系下月调整积分兑换比例，希望写一份面向用户的权益说明。",
+    "notes": "正常价格和权益沟通，不是危机响应。"
+  },
+  {
+    "id": "gate_challenge_business_non_crisis_005",
+    "label": "no_rag",
+    "type": "business_non_crisis",
+    "category": "business_non_crisis",
+    "event": "公司完成新一轮融资，希望整理投资机构背景和未来业务规划介绍。",
+    "notes": "融资传播内容，不涉及危机处置。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_001",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "法务同事想整理一份个人信息保护法规学习材料，用于内部培训。",
+    "notes": "topic 接近隐私合规，但 intent 是学习材料，不是当前危机响应。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_002",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "用户询问账号设置页里哪里可以查看隐私条款和授权记录。",
+    "notes": "topic 接近隐私，但 intent 是入口查询。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_003",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "消费者想知道耳机保修期多久，以及附近是否有官方维修点。",
+    "notes": "topic 接近产品售后，但 intent 是普通客服查询。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_004",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "客服团队需要查询三年前某型号产品的公开召回批次编号，方便回复用户。",
+    "notes": "topic 接近召回，但 intent 是历史信息查询。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_005",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "运营同事写了一份系统维护公告，希望把语气润色得更清晰友好。",
+    "notes": "topic 接近服务公告，但 intent 是内容编辑。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_006",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "董事长年度大会发言稿需要优化结构，重点突出创新、客户和长期主义。",
+    "notes": "topic 接近高管发言，但不是高管失当危机。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_007",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "战略部门想分析近两年平台监管政策变化，并整理行业趋势摘要。",
+    "notes": "topic 接近监管，但 intent 是政策研究。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_008",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "客服主管想统计过去半年投诉类型占比，用于优化服务流程。",
+    "notes": "topic 接近投诉，但 intent 是历史数据统计。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_009",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "用户想确认人工客服入口、客服电话和节假日服务时间。",
+    "notes": "topic 接近用户服务，但 intent 是联系方式查询。"
+  },
+  {
+    "id": "gate_challenge_hard_negative_010",
+    "label": "no_rag",
+    "type": "hard_negative",
+    "category": "hard_negative",
+    "event": "技术团队做演练，想讨论如果未来核心系统出现故障，预案里应该包含哪些角色分工。",
+    "notes": "topic 接近服务故障，但 intent 是假设演练，不是已发生危机。"
+  }
+]
