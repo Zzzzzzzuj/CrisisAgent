@@ -102,6 +102,21 @@ def _rag_info(sources=None, count=None):
         "rerank_scores": [0.9] if sources else [],
         "count": len(sources) if count is None else count,
         "fallback_used": False,
+        "gate": {
+            "need_rag": True,
+            "intent": "crisis_response_needed",
+            "decision_score": 5,
+            "current_incident": True,
+            "current_incident_signals": ["current_response_need"],
+            "task_intent": "ambiguous_enterprise_risk",
+            "decision_path": "current_incident_override",
+            "reason": "test gate result",
+            "matched_signals": ["current_response_need"],
+            "negative_signals": [],
+        },
+        "retrieval_skipped": False,
+        "retrieval_executed": True,
+        "retrieval_status": "executed_with_hits" if sources else "executed_no_hit",
     }
 
 
@@ -126,6 +141,9 @@ def test_dynamic_execution_trace_records_legal_rag_sources(monkeypatch):
     assert legal_trace["rag"]["sources"] == ["food_safety.md", "legal_risk_rules.md"]
     assert legal_trace["rag"]["count"] == 2
     assert legal_trace["rag"]["fallback_used"] is False
+    assert legal_trace["rag"]["gate"]["need_rag"] is True
+    assert legal_trace["rag"]["retrieval_executed"] is True
+    assert legal_trace["rag"]["retrieval_skipped"] is False
 
 
 def test_dynamic_rag_sources_come_from_legal_agent_metadata(monkeypatch):
@@ -177,6 +195,22 @@ def test_legal_rag_metadata_count_tracks_sources_and_scores_track_chunks(monkeyp
     monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
 
+    monkeypatch.setattr(
+        legal_agent,
+        "evaluate_retrieval_need",
+        lambda **kwargs: {
+            "need_rag": True,
+            "intent": "crisis_response_needed",
+            "decision_score": 5,
+            "reason": "test gate result",
+            "matched_signals": ["current_response_need"],
+            "negative_signals": [],
+            "current_incident": True,
+            "current_incident_signals": ["current_response_need"],
+            "task_intent": "ambiguous_enterprise_risk",
+            "decision_path": "current_incident_override",
+        },
+    )
     monkeypatch.setattr(
         legal_agent,
         "retrieve",

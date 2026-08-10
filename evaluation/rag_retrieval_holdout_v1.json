@@ -1,0 +1,302 @@
+[
+  {
+    "case_id": "retrieval_holdout_v1_food_safety_001",
+    "category": "food_safety",
+    "event": "连锁甜品店的新款奶油蛋糕在周末售出后，多名顾客反馈腹痛和呕吐，门店正在整理批次记录、冷链温度和对外回应口径。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["food_safety.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["data_privacy.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "当前食品食用后不适，容易与产品质量批次处理混淆。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_food_safety_002",
+    "category": "food_safety",
+    "event": "社区团购配送的熟食到货时有异味，几个小区群要求平台解释采购、仓储和配送过程，客服希望先形成统一说明。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["food_safety.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["data_privacy.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "食品仓储配送风险，包含通用客服回应任务词。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_food_safety_003",
+    "category": "food_safety",
+    "event": "某饮料门店员工发现同批次杯装果茶出现沉淀和刺鼻气味，短视频评论区已有消费者询问是否还能饮用。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["food_safety.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["data_privacy.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "食品饮用安全，短 query 风格。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_food_safety_004",
+    "category": "food_safety",
+    "event": "直播间售出的坚果陆续被反馈包装内有细小硬物，运营团队需要同步质检抽查安排、退换处理和消费者沟通方案。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["food_safety.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["data_privacy.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "食品异物反馈，和 product_quality 的检测/退换语义相近。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_food_safety_005",
+    "category": "food_safety",
+    "event": "学校周边门店售卖的便当被家长质疑配料不新鲜，几位学生饭后不适，品牌需要回应目前核查和后续公开进展。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["food_safety.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["data_privacy.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "隐式食品安全风险，含未完全确认原因。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_food_safety_006",
+    "category": "food_safety",
+    "event": "一批预包装沙拉在便利店上架后被拍到标签日期模糊，消费者担心保存时间和食材新鲜度，区域经理要求准备临时公告。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["food_safety.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["data_privacy.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "日期和保存风险，容易与一般产品批次问题混淆。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_data_privacy_001",
+    "category": "data_privacy",
+    "event": "部分用户登录会员中心后看到了其他账号的收货地址和手机号截图，相关图片已经在社群传播，平台需要说明排查和保护措施。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["data_privacy.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "个人信息错显，容易与服务异常共同出现。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_data_privacy_002",
+    "category": "data_privacy",
+    "event": "APP 更新后，客服收到用户反馈称能查看陌生人的订单明细，技术团队怀疑权限缓存异常但尚未确认影响范围。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["data_privacy.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "数据风险与技术故障交叉，目标仍是隐私合规知识。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_data_privacy_003",
+    "category": "data_privacy",
+    "event": "黑客论坛出现疑似平台用户样本，字段包含昵称、手机号后四位和城市，舆论要求公司解释是否存在内部访问异常。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["data_privacy.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "外部样本传播和内部权限排查。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_data_privacy_004",
+    "category": "data_privacy",
+    "event": "企业后台误把一批客户联系方式导入公共活动页面，页面已被截图转发，市场和法务需要一起准备说明。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["data_privacy.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "客户信息公开展示，不是一般活动运营问题。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_data_privacy_005",
+    "category": "data_privacy",
+    "event": "用户反映注销账号后仍收到定向短信，怀疑个人资料未被正确处理，媒体正在询问平台的数据留存规则。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["data_privacy.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "数据留存和用户保护，语义不依赖泄露一词。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_data_privacy_006",
+    "category": "data_privacy",
+    "event": "合作方系统接口返回了超出授权范围的用户资料，双方正在排查调用日志，品牌需要回应用户担忧和后续补救。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["data_privacy.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "service_outage.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "第三方接口和权限范围问题。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_service_outage_001",
+    "category": "service_outage",
+    "event": "晚高峰期间支付页面长时间转圈，部分订单重复扣款，商户无法完成收款，平台需要发布服务恢复和补偿说明。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["service_outage.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "服务异常与支付影响，容易与数据或产品问题混淆。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_service_outage_002",
+    "category": "service_outage",
+    "event": "云端文档协作功能突然无法保存，多家企业客户表示会议材料丢失，客服正在收集影响范围和临时替代方案。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["service_outage.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "服务不可用和用户工作影响。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_service_outage_003",
+    "category": "service_outage",
+    "event": "订票系统在活动开售后频繁报错，用户排队资格被重置，社交平台要求公司解释技术排查和后续处理。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["service_outage.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "系统报错和服务恢复进展。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_service_outage_004",
+    "category": "service_outage",
+    "event": "外卖平台部分区域骑手端无法接单，用户端仍显示预计送达时间，商家投诉订单堆积，需要对外说明故障处置。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["service_outage.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "平台服务链路异常，混入商家和用户影响。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_service_outage_005",
+    "category": "service_outage",
+    "event": "多地门店的会员结算系统同一时间离线，收银员只能手写登记，顾客排队抱怨，技术团队正在确认恢复时间。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["service_outage.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "线下服务系统故障和恢复承诺。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_service_outage_006",
+    "category": "service_outage",
+    "event": "在线课程平台直播课中断近半小时，家长要求退费并追问补课安排，公司需要解释排查、恢复和后续更新机制。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["service_outage.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "product_quality.md", "executive_misconduct.md"],
+    "notes": "服务中断，含补偿和进展机制。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_product_quality_001",
+    "category": "product_quality",
+    "event": "同型号智能水杯被多名用户反馈底座发热和轻微变形，电商评论区开始集中质疑安全性，品牌需要安排检测和售后方案。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["product_quality.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "executive_misconduct.md"],
+    "notes": "产品安全异常，容易和食品安全/召回语义混淆。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_product_quality_002",
+    "category": "product_quality",
+    "event": "儿童学习灯使用几周后陆续出现外壳开裂，家长群要求品牌说明批次、材质和退换安排。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["product_quality.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "executive_misconduct.md"],
+    "notes": "产品批次和售后问题。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_product_quality_003",
+    "category": "product_quality",
+    "event": "新上市耳机被用户拍到充电盒冒烟，售后网点已接到多起咨询，团队需要同步技术检测和临时处置说明。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["product_quality.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "executive_misconduct.md"],
+    "notes": "产品过热冒烟，含客服和检测任务词。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_product_quality_004",
+    "category": "product_quality",
+    "event": "某批次婴儿推车在使用中出现刹车失灵反馈，门店要求总部给出检查流程、维修指引和家长沟通话术。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["product_quality.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "executive_misconduct.md"],
+    "notes": "产品功能失效和安全风险。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_product_quality_005",
+    "category": "product_quality",
+    "event": "用户称净水器滤芯更换后水质检测异常，多个城市售后记录类似现象，品牌需要回应是否涉及型号缺陷。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["product_quality.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "executive_misconduct.md"],
+    "notes": "产品质量和检测，不应被食品安全源吸走。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_product_quality_006",
+    "category": "product_quality",
+    "event": "一批家用小电器返修率突然升高，用户集中反映开关卡顿和异响，运营想先准备公开问答和维修政策。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["product_quality.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "executive_misconduct.md"],
+    "notes": "质量异常和维修政策，避免和 customer-service 泛化混淆。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_executive_misconduct_001",
+    "category": "executive_misconduct",
+    "event": "公司高管在公开访谈中对用户质疑作出轻慢回应，片段被剪辑传播，合作方要求品牌说明组织态度和后续处理。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["executive_misconduct.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "product_quality.md"],
+    "notes": "高管言论争议，容易被 generic crisis response 吸收。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_executive_misconduct_002",
+    "category": "executive_misconduct",
+    "event": "品牌负责人在内部直播里嘲讽投诉用户，录屏外流后评论区出现抵制声音，公关需要准备道歉和管理整改说明。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["executive_misconduct.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "product_quality.md"],
+    "notes": "管理层态度引发公众抵制。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_executive_misconduct_003",
+    "category": "executive_misconduct",
+    "event": "一位区域总经理被曝在供应商群内发表不当评价，截图已被行业媒体转发，公司需要先回应事实核实和组织纪律。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["executive_misconduct.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "product_quality.md"],
+    "notes": "高管/管理人员行为和组织立场。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_executive_misconduct_004",
+    "category": "executive_misconduct",
+    "event": "创始人在发布会上将服务问题归咎于用户不会操作，引发老用户不满，社区要求公司解释是否认同该表态。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["executive_misconduct.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "product_quality.md"],
+    "notes": "高管表达和服务问题混合，目标是组织态度处理。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_executive_misconduct_005",
+    "category": "executive_misconduct",
+    "event": "上市公司管理层成员被员工实名指责长期压制内部反馈，舆论要求董事会说明调查安排和责任边界。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["executive_misconduct.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "product_quality.md"],
+    "notes": "管理责任和内部调查。"
+  },
+  {
+    "case_id": "retrieval_holdout_v1_executive_misconduct_006",
+    "category": "executive_misconduct",
+    "event": "高层在社交平台与消费者争吵的截图扩散，多个门店担心影响销售，品牌需要明确道歉、沟通纪律和后续管理动作。",
+    "expected_retrieval": true,
+    "acceptable_sources": ["executive_misconduct.md"],
+    "neutral_sources": ["crisis_response.md", "legal_risk_rules.md"],
+    "forbidden_sources": ["food_safety.md", "data_privacy.md", "service_outage.md", "product_quality.md"],
+    "notes": "高管社媒争议和组织整改。"
+  }
+]

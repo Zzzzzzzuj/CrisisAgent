@@ -644,6 +644,84 @@ button:disabled {
   margin-top: 10px;
 }
 
+.rag-trace-card {
+  border: 1px solid rgba(31, 41, 51, 0.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.rag-status-row,
+.rag-field-grid,
+.rag-signal-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rag-status-row {
+  align-items: center;
+  margin: 12px 0;
+}
+
+.rag-status-row > span:not(.rag-status-pill),
+.rag-field-grid span,
+.rag-signal-grid span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #425048;
+  font-size: 12px;
+  font-weight: 800;
+  background: #eef7f2;
+}
+
+.rag-status-pill {
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.rag-status-pill.hit {
+  color: #14532d;
+  background: #dff3e9;
+}
+
+.rag-status-pill.no-hit {
+  color: #7a2e0e;
+  background: #fff1df;
+}
+
+.rag-status-pill.skipped {
+  color: #475569;
+  background: #edf1f4;
+}
+
+.rag-status-pill.unknown {
+  color: #53606a;
+  background: #f3f5f4;
+}
+
+.rag-section {
+  margin: 12px 0;
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(248, 251, 249, 0.78);
+}
+
+.rag-section h5 {
+  margin: 0 0 10px;
+}
+
+.rag-reason {
+  margin: 10px 0;
+}
+
+.rag-sources p {
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+
 .full-span {
   grid-column: 1 / -1;
 }

@@ -2,6 +2,7 @@ from backend.config import get_config
 from backend.llm import LLMClient
 from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
+from backend.rag.retrieval_need_gate import evaluate_retrieval_need
 from backend.rag.retriever import retrieve
 
 
@@ -19,6 +20,10 @@ _LAST_RAG_INFO = {
     "rerank_scores": [],
     "count": 0,
     "fallback_used": False,
+    "gate": {},
+    "retrieval_skipped": False,
+    "retrieval_executed": False,
+    "retrieval_status": "not_started",
 }
 REQUIRED_FIELDS = (
     "legal_risks",
@@ -62,6 +67,10 @@ def get_last_rag_info() -> dict:
         "rerank_scores": list(_LAST_RAG_INFO["rerank_scores"]),
         "count": _LAST_RAG_INFO["count"],
         "fallback_used": _LAST_RAG_INFO["fallback_used"],
+        "gate": dict(_LAST_RAG_INFO["gate"]),
+        "retrieval_skipped": _LAST_RAG_INFO["retrieval_skipped"],
+        "retrieval_executed": _LAST_RAG_INFO["retrieval_executed"],
+        "retrieval_status": _LAST_RAG_INFO["retrieval_status"],
     }
 
 
@@ -74,8 +83,13 @@ def _set_rag_info(
     retrieval_type: str | None = None,
     rerank_enabled: bool = False,
     fallback_used: bool = False,
+    gate: dict | None = None,
+    retrieval_skipped: bool = False,
+    retrieval_executed: bool = False,
+    retrieval_status: str = "not_started",
 ) -> None:
     chunks = chunks or []
+    gate = gate or {}
     # sources/count describe unique source files; scores describe final retrieved chunks.
     _LAST_RAG_INFO.update(
         {
@@ -90,6 +104,10 @@ def _set_rag_info(
             "rerank_scores": [chunk.get("rerank_score") for chunk in chunks],
             "count": len(sources),
             "fallback_used": fallback_used,
+            "gate": dict(gate),
+            "retrieval_skipped": retrieval_skipped,
+            "retrieval_executed": retrieval_executed,
+            "retrieval_status": retrieval_status,
         }
     )
 
@@ -230,6 +248,26 @@ legal_context: {legal_context}
 
 def _retrieve_legal_context(payload: dict) -> str:
     query = _build_retrieval_query(payload)
+    gate = evaluate_retrieval_need(
+        event=payload.get("event", ""),
+        draft=payload.get("draft", ""),
+        redteam_review=payload.get("redteam_review", {}),
+    )
+
+    if not gate.get("need_rag", False):
+        _set_rag_info(
+            enabled=True,
+            hit=False,
+            sources=[],
+            query=query,
+            gate=gate,
+            retrieval_skipped=True,
+            retrieval_executed=False,
+            retrieval_status="skipped_by_gate",
+        )
+        logger.info("%s RAG skipped by retrieval need gate: %s", AGENT_NAME, gate)
+        return ""
+
     try:
         retrieval_result = retrieve(query, top_k=3)
     except Exception as exc:
@@ -239,7 +277,17 @@ def _retrieve_legal_context(payload: dict) -> str:
             exc.__class__.__name__,
             str(exc),
         )
-        _set_rag_info(enabled=True, hit=False, sources=[])
+        _set_rag_info(
+            enabled=True,
+            hit=False,
+            sources=[],
+            query=query,
+            gate=gate,
+            retrieval_skipped=False,
+            retrieval_executed=True,
+            fallback_used=True,
+            retrieval_status="retrieval_error",
+        )
         return ""
 
     sources = retrieval_result.get("sources", [])
@@ -260,6 +308,10 @@ def _retrieve_legal_context(payload: dict) -> str:
         retrieval_type=_resolve_retrieval_type(retrieval_result),
         rerank_enabled=_resolve_rerank_enabled(retrieval_result),
         fallback_used=_resolve_retrieval_fallback(retrieval_result),
+        gate=gate,
+        retrieval_skipped=False,
+        retrieval_executed=True,
+        retrieval_status="executed_with_hits" if source_names else "executed_no_hit",
     )
     logger.info("%s RAG retrieved %s sources: %s", AGENT_NAME, len(sources), sources)
     return retrieval_result.get("context", "")
