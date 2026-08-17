@@ -3,7 +3,7 @@ from uuid import uuid4
 from backend.agents import decision_agent, planner_agent
 from backend.core.executor import AGENT_REGISTRY, execute
 from backend.core.plan_validator import validate_plan
-from backend.core.state import AgentState
+from backend.core.state import RUNNING, AgentState
 
 
 def run_dynamic_agent(event: str, agent_registry: dict | None = None) -> dict:
@@ -20,10 +20,11 @@ def run_dynamic_agent(event: str, agent_registry: dict | None = None) -> dict:
         event=event,
         metadata={"planner_input": planner_input},
     )
-    execution_result = execute(
-        validated_plan,
-        state,
-        agent_registry=agent_registry or _build_runtime_registry(),
+    execution_result = execute_dynamic_plan_for_state(
+        state=state,
+        raw_plan=raw_plan,
+        validated_plan=validated_plan,
+        agent_registry=agent_registry,
     )
 
     return {
@@ -34,6 +35,95 @@ def run_dynamic_agent(event: str, agent_registry: dict | None = None) -> dict:
         "raw_plan": raw_plan,
         "validated_plan": validated_plan,
         "executed_agents": execution_result["executed_agents"],
+        "results": state.get_all_results(),
+        "failed_agents": list(state.failed_agents),
+        "execution_trace": list(state.trace),
+    }
+
+
+def initialize_dynamic_state(event: str, session_id: str | None = None) -> AgentState:
+    planner_input = {
+        "event": event,
+        "category": _infer_category(event),
+        "risk_level": _infer_risk_level(event),
+    }
+    return AgentState(
+        session_id=session_id or str(uuid4()),
+        plan_id="",
+        event=event,
+        metadata={"planner_input": planner_input},
+    )
+
+
+def execute_dynamic_state(state: AgentState, agent_registry: dict | None = None) -> dict:
+    planner_input = state.metadata.get("planner_input") or {
+        "event": state.event,
+        "category": _infer_category(state.event),
+        "risk_level": _infer_risk_level(state.event),
+    }
+    state.metadata["planner_input"] = planner_input
+    raw_plan = planner_agent.run(planner_input)
+    validated_plan = validate_plan(raw_plan)
+    execution_result = execute_dynamic_plan_for_state(
+        state=state,
+        raw_plan=raw_plan,
+        validated_plan=validated_plan,
+        agent_registry=agent_registry,
+    )
+    return build_dynamic_result(
+        state=state,
+        raw_plan=raw_plan,
+        validated_plan=validated_plan,
+        execution_result=execution_result,
+    )
+
+
+def execute_dynamic_plan_for_state(
+    state: AgentState,
+    raw_plan: dict,
+    validated_plan: dict,
+    agent_registry: dict | None = None,
+) -> dict:
+    state.set_status(RUNNING)
+    state.plan_id = validated_plan["plan_id"]
+    execution_result = execute(
+        validated_plan,
+        state,
+        agent_registry=agent_registry or _build_runtime_registry(),
+    )
+    state.metadata["raw_plan"] = raw_plan
+    state.metadata["validated_plan"] = validated_plan
+    return execution_result
+
+
+def build_dynamic_result(
+    state: AgentState,
+    raw_plan: dict | None = None,
+    validated_plan: dict | None = None,
+    execution_result: dict | None = None,
+) -> dict:
+    planner_input = state.metadata.get("planner_input", {})
+    raw_plan = raw_plan if raw_plan is not None else state.metadata.get("raw_plan", {})
+    validated_plan = (
+        validated_plan
+        if validated_plan is not None
+        else state.metadata.get("validated_plan", {})
+    )
+    execution_result = execution_result or {
+        "executed_agents": [
+            item.get("agent")
+            for item in state.trace
+            if item.get("agent") and item.get("status") == "success"
+        ],
+    }
+    return {
+        "session_id": state.session_id,
+        "plan_id": state.plan_id,
+        "event": state.event,
+        "planner_input": planner_input,
+        "raw_plan": raw_plan,
+        "validated_plan": validated_plan,
+        "executed_agents": execution_result.get("executed_agents", []),
         "results": state.get_all_results(),
         "failed_agents": list(state.failed_agents),
         "execution_trace": list(state.trace),

@@ -79,6 +79,7 @@ For local development, either export environment variables in the shell or place
 AGENT_MODE=mock
 CHECKPOINT_STORAGE=postgres
 DATABASE_URL=postgresql+psycopg://crisis_agent:crisis_agent_dev_password@localhost:5432/crisis_agent
+RUNTIME_MODE=sync
 ```
 
 Start FastAPI:
@@ -92,6 +93,56 @@ Health check:
 ```bash
 curl http://127.0.0.1:8000/health
 ```
+
+## Dynamic Runtime Modes
+
+The default runtime mode remains synchronous and is safest for local tests:
+
+```env
+RUNTIME_MODE=sync
+```
+
+In sync mode, `POST /api/dynamic/run` executes the Dynamic Runtime before returning.
+
+For production-style long-running requests, enable async mode:
+
+```env
+RUNTIME_MODE=async
+```
+
+In async mode, `POST /api/dynamic/run` only:
+
+- creates a session
+- saves an initial checkpoint
+- marks the state as `QUEUED`
+- submits a background worker task
+- returns `session_id` immediately
+
+The current local implementation uses an in-process worker pool so the project can run without Redis during development. The queue boundary is isolated in `backend/core/runtime_tasks.py`, so it can be replaced with Redis/RQ or Celery later without changing Agent logic or API routes.
+
+Known limits of the in-process worker:
+
+- queued tasks that have not started can be lost if the backend process restarts
+- multiple backend processes do not share the same in-memory worker pool
+- production deployment should replace the local worker with Redis/RQ, Celery, or another durable queue
+
+Dynamic task states include:
+
+- `CREATED`
+- `QUEUED`
+- `RUNNING`
+- `WAITING_HUMAN`
+- `COMPLETED`
+- `FAILED`
+- `REJECTED`
+
+Use the session detail endpoint to poll progress:
+
+```bash
+curl http://127.0.0.1:8000/api/dynamic/<session_id>
+```
+
+If a worker fails, the runtime writes a `runtime_worker` failure trace and saves the failed checkpoint.
 
 ## Verify Dynamic Runtime
 

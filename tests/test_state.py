@@ -1,7 +1,7 @@
 import pytest
 
 from backend.core.executor import execute
-from backend.core.state import COMPLETED, CREATED, RUNNING, WAITING_HUMAN, AgentState
+from backend.core.state import COMPLETED, CREATED, QUEUED, RUNNING, WAITING_HUMAN, AgentState
 
 
 def test_agent_state_crud():
@@ -25,6 +25,7 @@ def test_agent_state_starts_created_and_allows_valid_transitions():
 
     assert state.status == CREATED
 
+    state.set_status(QUEUED)
     state.set_status(RUNNING)
     state.set_status(WAITING_HUMAN)
     state.set_status(RUNNING)

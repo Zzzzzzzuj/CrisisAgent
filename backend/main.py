@@ -12,6 +12,12 @@ from backend.core.policy import evaluate_human_policy
 from backend.core.runtime_evaluator import evaluate_runtime_state
 from backend.core.state import COMPLETED, RUNNING, AgentState
 from backend.core.resume import resume_agent_loop
+from backend.core.runtime_tasks import (
+    create_queued_dynamic_session,
+    is_async_runtime_enabled,
+    submit_dynamic_session,
+    submit_resume_session,
+)
 from backend.schemas import CrisisRunRequest, CrisisRunResponse
 from backend.storage import get_session, list_sessions
 from backend.workflow import run_crisis_workflow
@@ -65,6 +71,21 @@ def run_dynamic(request: dict) -> dict:
     event = str(request.get("event", "")).strip()
     if not event:
         raise HTTPException(status_code=422, detail="Field 'event' is required.")
+
+    if is_async_runtime_enabled():
+        state = create_queued_dynamic_session(event)
+        submit_dynamic_session(state.session_id)
+        return {
+            "session_id": state.session_id,
+            "plan_id": state.plan_id,
+            "event": state.event,
+            "status": "queued",
+            "state_status": state.status,
+            "approval": dict(state.approval),
+            "execution_trace": [],
+            "results": {},
+            "failed_agents": [],
+        }
 
     result = run_dynamic_agent(event)
     state = _state_from_dynamic_result(result)
@@ -128,6 +149,14 @@ def approve_dynamic_session(session_id: str, request: dict | None = None) -> dic
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     save_checkpoint(state)
+    if is_async_runtime_enabled():
+        submit_resume_session(session_id)
+        return {
+            "session_id": session_id,
+            "status": "queued",
+            "state_status": state.status,
+            "approval": dict(state.approval),
+        }
     return resume_agent_loop(session_id)
 
 
