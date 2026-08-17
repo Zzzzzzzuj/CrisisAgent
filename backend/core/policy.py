@@ -12,6 +12,8 @@ def evaluate_human_policy(state: AgentState, evaluation: dict) -> dict:
 
     low_score_triggers = _find_low_score_triggers(state)
     triggers.extend(low_score_triggers)
+    triggers.extend(_find_guardrail_triggers(state))
+    triggers.extend(_find_llm_fallback_triggers(state))
 
     return {
         "required": bool(triggers),
@@ -42,6 +44,24 @@ def _find_low_score_triggers(state: AgentState) -> list[str]:
         triggers.append("low_robustness")
 
     return triggers
+
+
+def _find_guardrail_triggers(state: AgentState) -> list[str]:
+    guardrails = state.metadata.get("guardrails", {})
+    triggers = []
+    if (guardrails.get("input") or {}).get("hit"):
+        triggers.append("guardrail_input")
+    if (guardrails.get("output") or {}).get("hit"):
+        triggers.append("guardrail_output")
+    return triggers
+
+
+def _find_llm_fallback_triggers(state: AgentState) -> list[str]:
+    for item in state.trace:
+        llm = item.get("llm") if isinstance(item, dict) else None
+        if isinstance(llm, dict) and llm.get("fallback_used"):
+            return ["llm_fallback"]
+    return []
 
 
 def _build_reason(triggers: list[str]) -> str:

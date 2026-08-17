@@ -232,6 +232,65 @@ ORDER BY created_at DESC
 LIMIT 5;
 ```
 
+## LLM Reliability And Guardrails
+
+Real LLM mode remains optional. Local tests can keep mock mode:
+
+```env
+AGENT_MODE=mock
+```
+
+For OpenAI-compatible providers, configure the provider without committing secrets:
+
+```env
+AGENT_MODE=llm
+LLM_PROVIDER=openai_compatible
+LLM_MODEL=<provider-model-name>
+LLM_BASE_URL=<openai-compatible-base-url>
+LLM_API_KEY=<your-api-key>
+LLM_TIMEOUT_SECONDS=30
+LLM_MAX_RETRIES=1
+LLM_RETRY_BACKOFF_SECONDS=0.5
+```
+
+`LLMClient` records compact call metadata for each Agent-level request:
+
+- provider and model
+- agent name
+- latency
+- success or failure
+- failure type
+- fallback flag
+- retry count
+- approximate input/output size
+
+The trace does not store API keys or full sensitive prompts.
+
+Failure categories are:
+
+- `timeout`
+- `rate_limit`
+- `provider_error`
+- `invalid_json`
+- `schema_validation_failed`
+- `empty_response`
+
+When JSON output is malformed, the parser attempts one lightweight repair pass for common formatting issues such as fenced JSON, extra text, trailing commas, or Python-style object literals. If repair and schema validation fail, the Agent keeps the existing mock fallback behavior and records the failure in trace.
+
+Guardrails run outside Agent prompts and do not change Agent business logic:
+
+- input guardrail detects prompt-injection patterns such as ignoring previous instructions, revealing system prompts, or bypassing review
+- output guardrail detects dangerous final statements such as absolute commitments, unverified factual conclusions, illegal admissions, privacy leaks, or instructions to skip human review
+
+Human Review is required when any of these conditions are met:
+
+- high-risk event
+- runtime evaluation failure or low decision score
+- input/output guardrail hit
+- LLM fallback observed in Agent trace
+
+When authentication is enabled, approve/reject remains restricted to `legal_reviewer` or `admin`.
+
 ## Testing
 
 The standard test suite remains offline-safe and does not require PostgreSQL:

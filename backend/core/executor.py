@@ -5,6 +5,7 @@ from typing import Callable
 from backend.agents import decision_agent, legal_agent, redteam_agent, sentiment_agent, writer_agent
 from backend.core.adapter import build_agent_input
 from backend.core.state import AgentState
+from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
 
 
 AgentRunner = Callable[[dict], dict]
@@ -39,19 +40,21 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
             continue
 
         try:
+            reset_last_llm_trace()
             payload = build_agent_input(agent_name, agent_state)
             output = registry[agent_name](_adapt_payload_for_runner(agent_name, payload))
         except Exception as exc:
             error = f"{exc.__class__.__name__}: {exc}"
             agent_state.mark_failed(agent_name, error)
-            agent_state.add_trace(
-                _build_trace_item(agent_name, reason, start_time, _now_iso(), "failed", None, error)
-            )
+            trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "failed", None, error)
+            trace_item.update(_collect_llm_metadata())
+            agent_state.add_trace(trace_item)
             continue
 
         executed_agents.append(agent_name)
         agent_state.set_result(agent_name, output)
         trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", output, None)
+        trace_item.update(_collect_llm_metadata())
         trace_item.update(_collect_agent_metadata(agent_name))
         agent_state.add_trace(trace_item)
 
@@ -116,6 +119,13 @@ def _collect_agent_metadata(agent_name: str | None) -> dict:
         return {}
 
     return {"rag": deepcopy(rag_info)}
+
+
+def _collect_llm_metadata() -> dict:
+    llm_trace = get_last_llm_trace()
+    if not llm_trace:
+        return {}
+    return {"llm": deepcopy(llm_trace)}
 
 
 def _now_iso() -> str:

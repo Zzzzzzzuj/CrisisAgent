@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from backend.agents import decision_agent, planner_agent
 from backend.core.executor import AGENT_REGISTRY, execute
+from backend.core.guardrail_runtime import apply_guardrails_to_state
 from backend.core.plan_validator import validate_plan
 from backend.core.state import RUNNING, AgentState
 
@@ -26,6 +27,7 @@ def run_dynamic_agent(event: str, agent_registry: dict | None = None) -> dict:
         validated_plan=validated_plan,
         agent_registry=agent_registry,
     )
+    apply_guardrails_to_state(state)
 
     return {
         "session_id": state.session_id,
@@ -47,12 +49,14 @@ def initialize_dynamic_state(event: str, session_id: str | None = None) -> Agent
         "category": _infer_category(event),
         "risk_level": _infer_risk_level(event),
     }
-    return AgentState(
+    state = AgentState(
         session_id=session_id or str(uuid4()),
         plan_id="",
         event=event,
         metadata={"planner_input": planner_input},
     )
+    apply_guardrails_to_state(state)
+    return state
 
 
 def execute_dynamic_state(state: AgentState, agent_registry: dict | None = None) -> dict:
@@ -70,6 +74,7 @@ def execute_dynamic_state(state: AgentState, agent_registry: dict | None = None)
         validated_plan=validated_plan,
         agent_registry=agent_registry,
     )
+    apply_guardrails_to_state(state)
     return build_dynamic_result(
         state=state,
         raw_plan=raw_plan,

@@ -3,6 +3,7 @@ from time import perf_counter
 import os
 
 from backend.llm import LLMClient
+from backend.llm.client import record_llm_fallback
 from backend.llm.parser import LLMParseError, parse_json_response, validate_required_fields
 from backend.logger import get_logger
 from backend.tools.registry import tool_registry
@@ -47,6 +48,7 @@ def run(event: str) -> dict:
                 exc.__class__.__name__,
                 str(exc),
             )
+            record_llm_fallback(AGENT_NAME, exc)
             return _run_mock(event)
 
     _set_tool_info(name=None, tool_input=None, output=None, success=False, duration_ms=0.0)
@@ -138,6 +140,7 @@ def call_llm(prompt: str) -> str:
             },
         ],
         temperature=0.2,
+        agent_name=AGENT_NAME,
     )
 
 

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import run_dynamic_agent
+from backend.core.guardrail_runtime import apply_guardrails_to_state
 from backend.core.human import approve, reject
 from backend.core.policy import evaluate_human_policy
 from backend.core.runtime_evaluator import evaluate_runtime_state
@@ -89,6 +90,7 @@ def run_dynamic(request: dict) -> dict:
 
     result = run_dynamic_agent(event)
     state = _state_from_dynamic_result(result)
+    apply_guardrails_to_state(state)
     evaluation = evaluate_runtime_state(state)
     policy = evaluate_human_policy(state, evaluation)
 

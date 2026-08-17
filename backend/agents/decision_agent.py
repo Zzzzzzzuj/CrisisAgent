@@ -1,5 +1,6 @@
 from backend.config import get_config
 from backend.llm import LLMClient
+from backend.llm.client import record_llm_fallback
 from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
 
@@ -20,6 +21,7 @@ def run(payload: dict) -> dict:
             exc.__class__.__name__,
             str(exc),
         )
+        record_llm_fallback(AGENT_NAME, exc)
         return _run_mock(payload)
 
     if config.agent_mode == "llm":
@@ -32,6 +34,7 @@ def run(payload: dict) -> dict:
                 exc.__class__.__name__,
                 str(exc),
             )
+            record_llm_fallback(AGENT_NAME, exc)
 
     return _run_mock(payload)
 
@@ -108,6 +111,7 @@ def call_llm(prompt: str) -> str:
             },
         ],
         temperature=0.2,
+        agent_name=AGENT_NAME,
     )
 
 

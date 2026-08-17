@@ -3,6 +3,7 @@ from uuid import uuid4
 from backend.agents import planner_agent
 from backend.core.dynamic_runtime import _infer_category, _infer_risk_level
 from backend.core.executor import execute
+from backend.core.guardrail_runtime import apply_guardrails_to_state
 from backend.core.human import request_review
 from backend.core.plan_validator import validate_plan
 from backend.core.policy import evaluate_human_policy
@@ -48,6 +49,7 @@ def run_agent_loop(
             state,
             agent_registry=agent_registry,
         )
+        apply_guardrails_to_state(state)
         evaluation = evaluator(state)
         policy_result = policy(state, evaluation)
         _record_loop_trace(state, iteration, evaluation)

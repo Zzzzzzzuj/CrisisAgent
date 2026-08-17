@@ -1,5 +1,6 @@
 from backend.config import get_config
 from backend.llm import LLMClient
+from backend.llm.client import record_llm_fallback
 from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
 from backend.rag.retrieval_need_gate import evaluate_retrieval_need
@@ -48,6 +49,7 @@ def run(payload: dict) -> dict:
                 exc.__class__.__name__,
                 str(exc),
             )
+            record_llm_fallback(AGENT_NAME, exc)
             return _run_mock(payload)
 
     _set_rag_info(enabled=False, hit=False, sources=[])
@@ -205,6 +207,7 @@ def call_llm(prompt: str) -> str:
             },
         ],
         temperature=0.2,
+        agent_name=AGENT_NAME,
     )
 
 

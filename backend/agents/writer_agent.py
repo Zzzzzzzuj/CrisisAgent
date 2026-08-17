@@ -1,6 +1,7 @@
 from backend.context import ContextManager
 from backend.config import get_config
 from backend.llm import LLMClient
+from backend.llm.client import record_llm_fallback
 from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
 from backend.memory.retriever import retrieve_memories
@@ -39,6 +40,7 @@ def run(payload: dict) -> dict:
                 exc.__class__.__name__,
                 str(exc),
             )
+            record_llm_fallback(AGENT_NAME, exc)
             return _run_mock(payload)
 
     _set_memory_info(enabled=False, hit=False, memories=[])
@@ -157,6 +159,7 @@ def call_llm(prompt: str) -> str:
             },
         ],
         temperature=0.3,
+        agent_name=AGENT_NAME,
     )
 
 
@@ -284,6 +287,7 @@ def generate_second_draft(payload: dict) -> dict:
             exc.__class__.__name__,
             str(exc),
         )
+        record_llm_fallback(f"{AGENT_NAME} writer_v2", exc)
         return _generate_second_draft_mock(payload)
 
     if config.agent_mode == "llm":
@@ -296,6 +300,7 @@ def generate_second_draft(payload: dict) -> dict:
                 exc.__class__.__name__,
                 str(exc),
             )
+            record_llm_fallback(f"{AGENT_NAME} writer_v2", exc)
 
     return _generate_second_draft_mock(payload)
 

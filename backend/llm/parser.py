@@ -1,11 +1,13 @@
 import json
 import re
+import ast
 
 from backend.logger import get_logger
 
 
 logger = get_logger(__name__)
 _CODE_BLOCK_PATTERN = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
+_TRAILING_COMMA_PATTERN = re.compile(r",\s*([}\]])")
 
 
 class LLMParseError(ValueError):
@@ -45,6 +47,22 @@ def parse_json_response(text: str) -> dict:
             return parsed
         _raise_parse_error("LLM JSON output must be an object.", candidate)
 
+    repaired = _repair_json_candidates(candidates)
+    for candidate in repaired:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            try:
+                literal = ast.literal_eval(candidate)
+            except (ValueError, SyntaxError):
+                continue
+            if isinstance(literal, dict):
+                return literal
+            continue
+        if isinstance(parsed, dict):
+            logger.info("LLM JSON output parsed after repair.")
+            return parsed
+
     _raise_parse_error("Could not parse JSON object from LLM response.", text)
 
 
@@ -71,6 +89,19 @@ def _extract_json_object(text: str) -> str | None:
                 return text[start : index + 1]
 
     return None
+
+
+def _repair_json_candidates(candidates: list[str]) -> list[str]:
+    repaired = []
+    for candidate in candidates:
+        cleaned = candidate.strip()
+        if not cleaned:
+            continue
+        fixed = _TRAILING_COMMA_PATTERN.sub(r"\1", cleaned)
+        fixed = fixed.replace("“", '"').replace("”", '"').replace("’", "'")
+        if fixed not in repaired:
+            repaired.append(fixed)
+    return repaired
 
 
 def _raise_parse_error(message: str, raw_text) -> None:
