@@ -2,9 +2,18 @@ import os
 from datetime import datetime
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.auth import (
+    authenticate_user,
+    build_created_by,
+    build_review_identity,
+    can_view_state,
+    create_access_token,
+    get_optional_current_user,
+    require_reviewer,
+)
 from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import run_dynamic_agent
 from backend.core.human import approve, reject
@@ -48,6 +57,30 @@ def health_check() -> dict:
     return {"status": "ok"}
 
 
+@app.post("/api/auth/login")
+def login(request: dict) -> dict:
+    username = str(request.get("username", "")).strip()
+    password = str(request.get("password", ""))
+    if not username or not password:
+        raise HTTPException(status_code=422, detail="Fields 'username' and 'password' are required.")
+    user = authenticate_user(username, password)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+    return {
+        "access_token": create_access_token(user),
+        "token_type": "bearer",
+        "user": user,
+    }
+
+
+@app.get("/api/auth/me")
+def get_me(current_user: dict | None = Depends(get_optional_current_user)) -> dict:
+    return {
+        "auth_enabled": current_user is not None,
+        "user": current_user,
+    }
+
+
 @app.post("/api/crisis/run", response_model=CrisisRunResponse)
 def run_crisis(request: CrisisRunRequest) -> CrisisRunResponse:
     return run_crisis_workflow(request)
@@ -67,13 +100,17 @@ def get_crisis_session(session_id: str) -> dict:
 
 
 @app.post("/api/dynamic/run")
-def run_dynamic(request: dict) -> dict:
+def run_dynamic(
+    request: dict,
+    current_user: dict | None = Depends(get_optional_current_user),
+) -> dict:
     event = str(request.get("event", "")).strip()
     if not event:
         raise HTTPException(status_code=422, detail="Field 'event' is required.")
 
+    created_by = build_created_by(current_user)
     if is_async_runtime_enabled():
-        state = create_queued_dynamic_session(event)
+        state = create_queued_dynamic_session(event, created_by=created_by)
         submit_dynamic_session(state.session_id)
         return {
             "session_id": state.session_id,
@@ -89,6 +126,7 @@ def run_dynamic(request: dict) -> dict:
 
     result = run_dynamic_agent(event)
     state = _state_from_dynamic_result(result)
+    _attach_created_by(state, created_by)
     evaluation = evaluate_runtime_state(state)
     policy = evaluate_human_policy(state, evaluation)
 
@@ -115,35 +153,50 @@ def run_dynamic(request: dict) -> dict:
 
 
 @app.get("/api/dynamic/sessions")
-def get_dynamic_sessions() -> list[dict]:
+def get_dynamic_sessions(current_user: dict | None = Depends(get_optional_current_user)) -> list[dict]:
+    if current_user and current_user.get("role") == "operator":
+        return _filter_operator_sessions(current_user)
     return list_checkpoints()
 
 
 @app.get("/api/dynamic/{session_id}/metrics")
-def get_dynamic_metrics(session_id: str) -> dict:
+def get_dynamic_metrics(
+    session_id: str,
+    current_user: dict | None = Depends(get_optional_current_user),
+) -> dict:
     state = _load_dynamic_state_or_404(session_id)
+    _ensure_can_view_state(current_user, state)
     return _build_dynamic_metrics(state)
 
 
 @app.get("/api/dynamic/{session_id}")
-def get_dynamic_session(session_id: str) -> dict:
+def get_dynamic_session(
+    session_id: str,
+    current_user: dict | None = Depends(get_optional_current_user),
+) -> dict:
     state = load_checkpoint(session_id)
     if state is None:
         raise HTTPException(status_code=404, detail=f"Dynamic session '{session_id}' not found.")
+    _ensure_can_view_state(current_user, state)
     data = state.to_dict()
     data["trace"] = _enhance_trace(data.get("trace", []))
     return data
 
 
 @app.post("/api/dynamic/{session_id}/approve")
-def approve_dynamic_session(session_id: str, request: dict | None = None) -> dict:
+def approve_dynamic_session(
+    session_id: str,
+    request: dict | None = None,
+    current_user: dict | None = Depends(get_optional_current_user),
+) -> dict:
+    require_reviewer(current_user)
     state = _load_dynamic_state_or_404(session_id)
     body = request or {}
+    identity = build_review_identity(current_user, body)
     try:
         approve(
             state,
-            reviewer=str(body.get("reviewer", "human")),
-            comment=str(body.get("comment", "")),
+            **identity,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -161,14 +214,19 @@ def approve_dynamic_session(session_id: str, request: dict | None = None) -> dic
 
 
 @app.post("/api/dynamic/{session_id}/reject")
-def reject_dynamic_session(session_id: str, request: dict | None = None) -> dict:
+def reject_dynamic_session(
+    session_id: str,
+    request: dict | None = None,
+    current_user: dict | None = Depends(get_optional_current_user),
+) -> dict:
+    require_reviewer(current_user)
     state = _load_dynamic_state_or_404(session_id)
     body = request or {}
+    identity = build_review_identity(current_user, body)
     try:
         reject(
             state,
-            reviewer=str(body.get("reviewer", "human")),
-            comment=str(body.get("comment", "")),
+            **identity,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -200,6 +258,25 @@ def _state_from_dynamic_result(result: dict) -> AgentState:
     state.failed_agents = list(result.get("failed_agents", []))
     state.status = RUNNING
     return state
+
+
+def _attach_created_by(state: AgentState, created_by: dict | None) -> None:
+    if created_by:
+        state.metadata["created_by"] = created_by
+
+
+def _ensure_can_view_state(current_user: dict | None, state: AgentState) -> None:
+    if not can_view_state(current_user, state):
+        raise HTTPException(status_code=403, detail="Insufficient role for this session.")
+
+
+def _filter_operator_sessions(current_user: dict) -> list[dict]:
+    visible_sessions = []
+    for item in list_checkpoints():
+        state = load_checkpoint(str(item.get("session_id", "")))
+        if state is not None and can_view_state(current_user, state):
+            visible_sessions.append(item)
+    return visible_sessions
 
 
 def _enhance_trace(trace: list[dict]) -> list[dict]:

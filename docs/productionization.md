@@ -200,6 +200,84 @@ Invoke-RestMethod -Method Post `
   -ContentType "application/json; charset=utf-8"
 ```
 
+## Auth And RBAC
+
+Local demo mode keeps authentication disabled by default:
+
+```env
+AUTH_ENABLED=false
+```
+
+When `AUTH_ENABLED=false`, existing API calls keep working and `approve` / `reject` can still pass a demo `reviewer` value in the request body.
+
+Enable authentication for production-style review flows:
+
+```env
+AUTH_ENABLED=true
+SECRET_KEY=<use-a-strong-random-secret>
+JWT_EXPIRE_MINUTES=1440
+```
+
+Roles:
+
+- `operator`: creates crisis cases and can view cases created by that user
+- `legal_reviewer`: can approve or reject `WAITING_HUMAN` cases
+- `admin`: can view all cases and approve or reject cases
+
+`SECRET_KEY` must come from the environment. Do not commit real secrets.
+
+Create initial users with a one-off local script or admin console. The password must be hashed with the project helper; do not insert plaintext passwords:
+
+```powershell
+$script = @'
+from backend.auth import hash_password
+from backend.db.models import User
+from backend.db.session import get_session_factory
+
+with get_session_factory()() as db:
+    db.add(User(username="legal-reviewer", password_hash=hash_password("change-me"), role="legal_reviewer"))
+    db.commit()
+'@
+$script | python -
+```
+
+Login:
+
+```powershell
+$loginBody = @{ username = "legal-reviewer"; password = "change-me" } | ConvertTo-Json
+$token = (Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8000/api/auth/login `
+  -Body ([System.Text.Encoding]::UTF8.GetBytes($loginBody)) `
+  -ContentType "application/json; charset=utf-8").access_token
+```
+
+Check current user:
+
+```powershell
+Invoke-RestMethod `
+  -Uri http://127.0.0.1:8000/api/auth/me `
+  -Headers @{ Authorization = "Bearer $token" }
+```
+
+Authenticated approve:
+
+```powershell
+$approveBody = @{ comment = "Approved for release." } | ConvertTo-Json
+Invoke-RestMethod -Method Post `
+  -Uri "http://127.0.0.1:8000/api/dynamic/<session_id>/approve" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -Body ([System.Text.Encoding]::UTF8.GetBytes($approveBody)) `
+  -ContentType "application/json; charset=utf-8"
+```
+
+When auth is enabled, `operator` users receive `403` for approve/reject. `legal_reviewer` and `admin` approvals record:
+
+- `reviewer_id`
+- `reviewer_username`
+- `reviewer_role`
+
+Audit logs use the authenticated username as `actor`; they no longer rely on the default `human` reviewer in authenticated mode.
+
 ## Verify Database Records
 
 Use `psql` inside the container:

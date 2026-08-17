@@ -220,6 +220,9 @@ class SQLAlchemyCheckpointRepository:
                 required=bool(approval.get("required")),
                 decision=approval.get("decision"),
                 reviewer=str(approval.get("reviewer", "")),
+                reviewer_id=approval.get("reviewer_id"),
+                reviewer_username=str(approval.get("reviewer_username", approval.get("reviewer", ""))),
+                reviewer_role=str(approval.get("reviewer_role", "")),
                 comment=str(approval.get("comment", "")),
                 reason=str(approval.get("reason", "")),
                 timestamp=approval.get("timestamp"),
@@ -249,8 +252,11 @@ class SQLAlchemyCheckpointRepository:
                 AuditLog(
                     session_id=session_id,
                     action=status,
-                    actor=str(approval.get("reviewer", "")),
+                    actor=str(approval.get("reviewer_username") or approval.get("reviewer", "")),
                     details={
+                        "reviewer_id": approval.get("reviewer_id"),
+                        "reviewer_username": approval.get("reviewer_username", approval.get("reviewer", "")),
+                        "reviewer_role": approval.get("reviewer_role", ""),
                         "comment": approval.get("comment", ""),
                         "reason": approval.get("reason", item.get("reason", "")),
                         "decision": approval.get("decision"),
