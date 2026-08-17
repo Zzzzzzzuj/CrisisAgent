@@ -24,6 +24,10 @@ def is_async_runtime_enabled() -> bool:
     return get_runtime_mode() == "async"
 
 
+def is_worker_initialized() -> bool:
+    return _EXECUTOR is not None
+
+
 def create_queued_dynamic_session(event: str, created_by: dict | None = None) -> AgentState:
     state = initialize_dynamic_state(event)
     state.set_status(QUEUED)

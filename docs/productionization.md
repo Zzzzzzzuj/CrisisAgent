@@ -407,6 +407,97 @@ Legal Agent RAG trace now preserves retrieval audit fields for database-managed 
 
 These fields are additive. Existing `sources`, `scores`, `rerank_scores`, `count`, and local Markdown fallback behavior remain available.
 
+## Observability and Deployment Readiness
+
+CrisisAgent exposes lightweight runtime observability without changing Agent execution logic.
+
+Health checks:
+
+```bash
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/ready
+```
+
+- `/health` only confirms that the FastAPI process is alive.
+- `/ready` checks checkpoint storage, PostgreSQL connectivity when enabled, async worker initialization, runtime environment, and auth secret configuration.
+
+Runtime metrics:
+
+```bash
+curl http://127.0.0.1:8000/api/metrics/runtime
+```
+
+The runtime metrics response includes:
+
+- `total_sessions`
+- `completed_sessions`
+- `failed_sessions`
+- `waiting_human_sessions`
+- `agent_failure_count`
+- `llm_call_count`
+- `llm_fallback_count`
+- `guardrail_trigger_count`
+- `rag_hit_count`
+- `rag_fallback_count`
+- `approval_count`
+- `rejection_count`
+- `average_runtime_latency_ms`
+
+When `CHECKPOINT_STORAGE=postgres`, these metrics are derived through the database-backed checkpoint repository. In JSON fallback mode, they are derived from the local checkpoint file.
+
+Structured logs are available through `backend.observability.logger`. Log records are JSON-like and include compact operational fields such as session id, agent name, status, latency, fallback flag, guardrail flag, and reviewer. Logs must not include API keys, bearer tokens, or full sensitive inputs.
+
+Production environment checklist:
+
+```text
+CHECKPOINT_STORAGE=json|postgres
+DATABASE_URL=postgresql+psycopg://<user>:<password>@<host>:5432/crisis_agent
+RUNTIME_MODE=sync|async
+RUNTIME_WORKERS=2
+AUTH_ENABLED=false|true
+SECRET_KEY=<strong-random-secret-required-when-auth-enabled>
+LLM_PROVIDER=openai_compatible
+LLM_MODEL=<model-name>
+LLM_API_KEY=<provider-api-key>
+LLM_BASE_URL=<provider-base-url>
+LLM_TIMEOUT_SECONDS=30
+LLM_MAX_RETRIES=1
+LLM_RETRY_BACKOFF_SECONDS=0.5
+```
+
+PostgreSQL startup checklist:
+
+```bash
+docker compose up -d postgres
+python -m alembic upgrade head
+```
+
+Start the backend:
+
+```bash
+python -m uvicorn backend.main:app --reload
+```
+
+Auth deployment checklist:
+
+- Keep `AUTH_ENABLED=false` for local demo mode.
+- Set `AUTH_ENABLED=true` only when `SECRET_KEY` is configured.
+- Create users with hashed passwords; never store plaintext passwords.
+- Restrict Human Review approve/reject to `legal_reviewer` or `admin`.
+
+Async runtime limitations:
+
+- Current async mode uses an in-process worker pool.
+- Process restart can lose queued tasks that have not started.
+- Multi-process deployments do not share the in-memory queue.
+- Production deployments should replace the in-process queue with Redis/RQ, Celery, or another durable worker system.
+
+Secret management:
+
+- Do not commit `.env`, real database passwords, `SECRET_KEY`, or LLM API keys.
+- Prefer platform secret managers or deployment environment variables.
+- Logs and reports should record provider/model names, not secrets.
+
 ## Testing
 
 The standard test suite remains offline-safe and does not require PostgreSQL:

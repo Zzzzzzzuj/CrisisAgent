@@ -29,6 +29,8 @@ from backend.core.runtime_tasks import (
     submit_resume_session,
 )
 from backend.db.session import get_db_session
+from backend.observability.metrics import collect_runtime_metrics
+from backend.observability.readiness import check_readiness
 from backend.schemas import CrisisRunRequest, CrisisRunResponse
 from backend.storage import get_session, list_sessions
 from backend.workflow import run_crisis_workflow
@@ -57,6 +59,21 @@ app.add_middleware(
 @app.get("/health")
 def health_check() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def readiness_check() -> dict:
+    result = check_readiness()
+    if not result["ready"]:
+        raise HTTPException(status_code=503, detail=result)
+    return result
+
+
+@app.get("/api/metrics/runtime")
+def get_runtime_metrics(current_user: dict | None = Depends(get_current_user)) -> dict:
+    if is_auth_enabled() and (current_user or {}).get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Runtime metrics require admin role.")
+    return collect_runtime_metrics()
 
 
 @app.post("/api/auth/login")
