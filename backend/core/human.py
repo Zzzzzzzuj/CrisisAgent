@@ -1,7 +1,7 @@
 from copy import deepcopy
 from datetime import datetime, timezone
 
-from backend.core.state import FAILED, RUNNING, WAITING_HUMAN, AgentState
+from backend.core.state import REJECTED, RUNNING, WAITING_HUMAN, AgentState
 
 
 def request_review(
@@ -10,7 +10,7 @@ def request_review(
     reviewer: str = "",
     comment: str = "",
 ) -> dict:
-    state.status = WAITING_HUMAN
+    state.set_status(WAITING_HUMAN)
     _update_approval(
         state,
         required=True,
@@ -26,7 +26,7 @@ def request_review(
 
 def approve(state: AgentState, reviewer: str = "human", comment: str = "") -> dict:
     _ensure_waiting_human(state)
-    state.status = RUNNING
+    state.set_status(RUNNING)
     _update_approval(
         state,
         required=False,
@@ -42,7 +42,7 @@ def approve(state: AgentState, reviewer: str = "human", comment: str = "") -> di
 
 def reject(state: AgentState, reviewer: str = "human", comment: str = "") -> dict:
     _ensure_waiting_human(state)
-    state.status = FAILED
+    state.set_status(REJECTED)
     _update_approval(
         state,
         required=False,

@@ -1,7 +1,7 @@
 from backend.core.checkpoint import load_checkpoint, save_checkpoint
 from backend.core.human import approve, reject, request_review
 from backend.core.resume import resume_agent_loop
-from backend.core.state import COMPLETED, FAILED, WAITING_HUMAN, AgentState
+from backend.core.state import COMPLETED, REJECTED, WAITING_HUMAN, AgentState
 
 
 TEST_EVENT = "某食品品牌被爆使用过期原料，偷拍视频在网上传播。"
@@ -149,7 +149,7 @@ def test_rejected_checkpoint_does_not_continue(tmp_path):
     )
 
     assert result["status"] == "failed"
-    assert result["state_status"] == FAILED
+    assert result["state_status"] == REJECTED
     assert result["stopped_reason"] == "human_rejected"
     assert result["approval"]["decision"] == "rejected"
     assert calls["planner"] == 0

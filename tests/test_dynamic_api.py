@@ -97,6 +97,37 @@ def test_dynamic_run_creates_task_and_checkpoint(monkeypatch):
     assert "session-1" in store
 
 
+def test_dynamic_run_high_risk_enters_waiting_human(monkeypatch):
+    store = _patch_checkpoint(monkeypatch)
+    monkeypatch.setattr(
+        "backend.main.run_dynamic_agent",
+        lambda event: _dynamic_result("session-high", event),
+    )
+    monkeypatch.setattr(
+        "backend.main.evaluate_runtime_state",
+        lambda state: {"passed": True, "issues": []},
+    )
+    monkeypatch.setattr(
+        "backend.main.evaluate_human_policy",
+        lambda state, evaluation: {
+            "required": True,
+            "reason": "Human review required: high_risk",
+            "triggers": ["high_risk"],
+        },
+    )
+
+    response = _request("POST", "/api/dynamic/run", json={"event": "食品安全事件"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["session_id"] == "session-high"
+    assert body["status"] == "waiting_human"
+    assert body["state_status"] == "WAITING_HUMAN"
+    assert body["approval"]["required"] is True
+    assert body["approval"]["decision"] == "pending"
+    assert store["session-high"]["status"] == "WAITING_HUMAN"
+
+
 def test_dynamic_get_returns_checkpoint_state(monkeypatch):
     store = _patch_checkpoint(monkeypatch)
     state = AgentState(session_id="session-2", plan_id="plan-2", event="event")
@@ -151,6 +182,42 @@ def test_dynamic_approve_resumes_runtime(monkeypatch):
     assert body["approval"]["comment"] == "ok"
 
 
+def test_dynamic_approve_uses_repository_backed_resume(monkeypatch):
+    store = _patch_checkpoint(monkeypatch)
+    state = AgentState(session_id="session-3b", plan_id="plan-3b", event="event")
+    state.status = "WAITING_HUMAN"
+    state.approval.update(
+        {
+            "required": True,
+            "decision": "pending",
+            "reason": "human required",
+        }
+    )
+    store[state.session_id] = state.to_dict()
+
+    def resume(session_id, *args, **kwargs):
+        assert args == ()
+        assert kwargs == {}
+        restored = AgentState.from_dict(store[session_id])
+        return {
+            "session_id": session_id,
+            "status": "completed",
+            "state_status": restored.status,
+            "approval": restored.approval,
+        }
+
+    monkeypatch.setattr("backend.main.resume_agent_loop", resume)
+
+    response = _request(
+        "POST",
+        "/api/dynamic/session-3b/approve",
+        json={"reviewer": "alice", "comment": "ok"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["session_id"] == "session-3b"
+
+
 def test_dynamic_reject_marks_session_failed(monkeypatch):
     store = _patch_checkpoint(monkeypatch)
     state = AgentState(session_id="session-4", plan_id="plan-4", event="event")
@@ -166,7 +233,7 @@ def test_dynamic_reject_marks_session_failed(monkeypatch):
 
     def resume(session_id):
         restored = AgentState.from_dict(store[session_id])
-        assert restored.status == "FAILED"
+        assert restored.status == "REJECTED"
         assert restored.approval["decision"] == "rejected"
         return {
             "session_id": session_id,

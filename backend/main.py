@@ -10,7 +10,7 @@ from backend.core.dynamic_runtime import run_dynamic_agent
 from backend.core.human import approve, reject
 from backend.core.policy import evaluate_human_policy
 from backend.core.runtime_evaluator import evaluate_runtime_state
-from backend.core.state import COMPLETED, WAITING_HUMAN, AgentState
+from backend.core.state import COMPLETED, RUNNING, AgentState
 from backend.core.resume import resume_agent_loop
 from backend.schemas import CrisisRunRequest, CrisisRunResponse
 from backend.storage import get_session, list_sessions
@@ -169,7 +169,7 @@ def _state_from_dynamic_result(result: dict) -> AgentState:
         },
     )
     state.failed_agents = list(result.get("failed_agents", []))
-    state.status = WAITING_HUMAN if state.approval.get("required") else COMPLETED
+    state.status = RUNNING
     return state
 
 

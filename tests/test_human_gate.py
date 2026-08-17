@@ -2,7 +2,7 @@ from backend.core.agent_loop import run_agent_loop
 from backend.core.human import approve, reject, request_review
 from backend.core.policy import evaluate_human_policy
 from backend.core.runtime_evaluator import evaluate_runtime_state
-from backend.core.state import COMPLETED, FAILED, RUNNING, WAITING_HUMAN, AgentState
+from backend.core.state import COMPLETED, REJECTED, RUNNING, WAITING_HUMAN, AgentState
 
 
 def test_high_risk_enters_waiting_human():
@@ -64,7 +64,7 @@ def test_reject_sets_failed_status_and_records_reviewer_comment_timestamp():
 
     trace = reject(state, reviewer="bob", comment="Not acceptable.")
 
-    assert state.status == FAILED
+    assert state.status == REJECTED
     assert state.approval["decision"] == "rejected"
     assert state.approval["reviewer"] == "bob"
     assert state.approval["comment"] == "Not acceptable."

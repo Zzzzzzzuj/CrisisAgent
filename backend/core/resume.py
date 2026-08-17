@@ -1,18 +1,18 @@
 from backend.agents import planner_agent
 from backend.core.agent_loop import _build_loop_result, _build_planner_input, _record_loop_trace
-from backend.core.checkpoint import CHECKPOINT_PATH, load_checkpoint, save_checkpoint
+from backend.core.checkpoint import load_checkpoint, save_checkpoint
 from backend.core.executor import execute
 from backend.core.human import request_review
 from backend.core.plan_validator import validate_plan
 from backend.core.policy import evaluate_human_policy
 from backend.core.runtime_evaluator import evaluate_runtime_state
-from backend.core.state import COMPLETED, FAILED, RUNNING, WAITING_HUMAN
+from backend.core.state import COMPLETED, FAILED, REJECTED, RUNNING, WAITING_HUMAN
 
 
 def resume_agent_loop(
     session_id: str,
     max_iterations: int = 2,
-    checkpoint_path=CHECKPOINT_PATH,
+    checkpoint_path=None,
     planner=None,
     validator=None,
     executor=None,
@@ -35,7 +35,8 @@ def resume_agent_loop(
 
     decision = state.approval.get("decision")
     if decision == "rejected":
-        state.status = FAILED
+        if state.status != REJECTED:
+            state.set_status(REJECTED)
         save_checkpoint(state, checkpoint_path)
         return _build_loop_result(
             state=state,
@@ -58,7 +59,7 @@ def resume_agent_loop(
     evaluator = evaluator or evaluate_runtime_state
     policy = policy or _approved_resume_policy
 
-    state.status = RUNNING
+    state.set_status(RUNNING)
     state.approval["required"] = False
     planner_input = state.metadata.get("planner_input") or _build_planner_input(state.event)
     state.metadata["planner_input"] = planner_input
@@ -94,7 +95,8 @@ def _continue_agent_loop(
 
     for offset in range(max_iterations):
         iteration = start_iteration + offset
-        state.status = RUNNING
+        if state.status != RUNNING:
+            state.set_status(RUNNING)
         raw_plan = planner(planner_input)
         validated_plan = validator(raw_plan)
         state.plan_id = validated_plan.get("plan_id", state.plan_id)
@@ -128,7 +130,7 @@ def _continue_agent_loop(
             )
 
         if evaluation.get("passed"):
-            state.status = COMPLETED
+            state.set_status(COMPLETED)
             return _build_loop_result(
                 state=state,
                 iterations=iterations,
@@ -138,7 +140,7 @@ def _continue_agent_loop(
 
         state.metadata["last_evaluation_issues"] = list(evaluation.get("issues", []))
 
-    state.status = FAILED
+    state.set_status(FAILED)
     return _build_loop_result(
         state=state,
         iterations=iterations,

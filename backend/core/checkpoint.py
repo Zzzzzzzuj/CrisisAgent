@@ -1,75 +1,44 @@
-import json
 from pathlib import Path
 
 from backend.core.state import AgentState
+from backend.db.repositories import (
+    CheckpointRepository,
+    JSONCheckpointRepository,
+    SQLAlchemyCheckpointRepository,
+)
+from backend.db.session import is_database_checkpoint_enabled
 
 
 CHECKPOINT_PATH = Path(__file__).resolve().parent / "data" / "checkpoints.json"
 
 
-def save_checkpoint(state: AgentState, checkpoint_path: str | Path = CHECKPOINT_PATH) -> dict:
-    data = _read_checkpoint_data(checkpoint_path)
-    state_data = state.to_dict()
-    data[state.session_id] = state_data
-    _write_checkpoint_data(checkpoint_path, data)
-    return state_data
+def save_checkpoint(state: AgentState, checkpoint_path: str | Path | None = None) -> dict:
+    return _get_repository(checkpoint_path).save_checkpoint(state)
 
 
-def load_checkpoint(session_id: str, checkpoint_path: str | Path = CHECKPOINT_PATH) -> AgentState | None:
-    data = _read_checkpoint_data(checkpoint_path)
-    state_data = data.get(session_id)
-    if state_data is None:
-        return None
-    return AgentState.from_dict(state_data)
+def load_checkpoint(session_id: str, checkpoint_path: str | Path | None = None) -> AgentState | None:
+    return _get_repository(checkpoint_path).load_checkpoint(session_id)
 
 
-def list_checkpoints(checkpoint_path: str | Path = CHECKPOINT_PATH) -> list[dict]:
-    data = _read_checkpoint_data(checkpoint_path)
-    return [
-        {
-            "session_id": state_data.get("session_id", session_id),
-            "plan_id": state_data.get("plan_id", ""),
-            "event": state_data.get("event", ""),
-            "status": state_data.get("status", ""),
-            "created_time": _extract_created_time(state_data),
-        }
-        for session_id, state_data in sorted(data.items())
-    ]
+def list_checkpoints(checkpoint_path: str | Path | None = None) -> list[dict]:
+    return _get_repository(checkpoint_path).list_checkpoints()
 
 
-def delete_checkpoint(session_id: str, checkpoint_path: str | Path = CHECKPOINT_PATH) -> bool:
-    data = _read_checkpoint_data(checkpoint_path)
-    if session_id not in data:
-        return False
-    del data[session_id]
-    _write_checkpoint_data(checkpoint_path, data)
-    return True
+def delete_checkpoint(session_id: str, checkpoint_path: str | Path | None = None) -> bool:
+    return _get_repository(checkpoint_path).delete_checkpoint(session_id)
 
 
-def _read_checkpoint_data(checkpoint_path: str | Path) -> dict:
-    path = Path(checkpoint_path)
-    if not path.exists():
-        return {}
-
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-
-    return data if isinstance(data, dict) else {}
+def list_audit_logs(
+    session_id: str | None = None,
+    checkpoint_path: str | Path | None = None,
+) -> list[dict]:
+    return _get_repository(checkpoint_path).list_audit_logs(session_id)
 
 
-def _write_checkpoint_data(checkpoint_path: str | Path, data: dict) -> None:
-    path = Path(checkpoint_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+def _get_repository(checkpoint_path: str | Path | None = None) -> CheckpointRepository:
+    if checkpoint_path is not None:
+        return JSONCheckpointRepository(checkpoint_path)
+    if is_database_checkpoint_enabled():
+        return SQLAlchemyCheckpointRepository()
+    return JSONCheckpointRepository(CHECKPOINT_PATH)
 
-
-def _extract_created_time(state_data: dict) -> str:
-    trace = state_data.get("trace", [])
-    if not isinstance(trace, list):
-        return ""
-    for item in trace:
-        if isinstance(item, dict) and item.get("start_time"):
-            return str(item["start_time"])
-    return ""

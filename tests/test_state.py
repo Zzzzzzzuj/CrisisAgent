@@ -1,5 +1,7 @@
+import pytest
+
 from backend.core.executor import execute
-from backend.core.state import AgentState
+from backend.core.state import COMPLETED, CREATED, RUNNING, WAITING_HUMAN, AgentState
 
 
 def test_agent_state_crud():
@@ -16,6 +18,27 @@ def test_agent_state_crud():
     assert state.get_result("missing") is None
     assert state.get_all_results() == {"sentiment": {"risk_level": "high"}}
     assert state.to_context()["metadata"] == {"category": "food_safety"}
+
+
+def test_agent_state_starts_created_and_allows_valid_transitions():
+    state = AgentState(session_id="session-status", plan_id="plan", event="event")
+
+    assert state.status == CREATED
+
+    state.set_status(RUNNING)
+    state.set_status(WAITING_HUMAN)
+    state.set_status(RUNNING)
+    state.set_status(COMPLETED)
+
+    assert state.status == COMPLETED
+
+
+def test_agent_state_rejects_invalid_transition_from_completed():
+    state = AgentState(session_id="session-invalid", plan_id="plan", event="event")
+    state.set_status(COMPLETED)
+
+    with pytest.raises(ValueError):
+        state.set_status(RUNNING)
 
 
 def test_agents_can_share_state_results_through_executor():

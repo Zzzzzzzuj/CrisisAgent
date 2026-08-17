@@ -2,10 +2,51 @@ from copy import deepcopy
 
 
 INIT = "INIT"
+CREATED = "CREATED"
 RUNNING = "RUNNING"
 WAITING_HUMAN = "WAITING_HUMAN"
 COMPLETED = "COMPLETED"
 FAILED = "FAILED"
+REJECTED = "REJECTED"
+
+VALID_STATE_STATUSES = {
+    INIT,
+    CREATED,
+    RUNNING,
+    WAITING_HUMAN,
+    COMPLETED,
+    FAILED,
+    REJECTED,
+}
+
+ALLOWED_STATE_TRANSITIONS = {
+    INIT: {CREATED, RUNNING, WAITING_HUMAN, COMPLETED, FAILED, REJECTED},
+    CREATED: {RUNNING, WAITING_HUMAN, COMPLETED, FAILED, REJECTED},
+    RUNNING: {WAITING_HUMAN, COMPLETED, FAILED, REJECTED},
+    WAITING_HUMAN: {RUNNING, FAILED, REJECTED},
+    COMPLETED: set(),
+    FAILED: set(),
+    REJECTED: set(),
+}
+
+
+def validate_state_status(status: str) -> str:
+    if status not in VALID_STATE_STATUSES:
+        raise ValueError(f"Unsupported AgentState status: {status}")
+    return status
+
+
+def validate_state_transition(current_status: str, next_status: str) -> str:
+    validate_state_status(current_status)
+    validate_state_status(next_status)
+    if current_status == next_status:
+        return next_status
+    allowed_targets = ALLOWED_STATE_TRANSITIONS[current_status]
+    if next_status not in allowed_targets:
+        raise ValueError(
+            f"Invalid AgentState transition: {current_status} -> {next_status}"
+        )
+    return next_status
 
 
 class AgentState:
@@ -26,7 +67,7 @@ class AgentState:
         self.metadata = metadata or {}
         self.failed_agents = []
         self.current_agent = None
-        self.status = INIT
+        self.status = CREATED
         self.approval = {
             "required": False,
             "decision": None,
@@ -59,7 +100,11 @@ class AgentState:
             "approval": deepcopy(self.approval),
         }
 
+    def set_status(self, status: str) -> None:
+        self.status = validate_state_transition(self.status, status)
+
     def to_dict(self) -> dict:
+        validate_state_status(self.status)
         return {
             "session_id": self.session_id,
             "plan_id": self.plan_id,
@@ -83,7 +128,7 @@ class AgentState:
             trace=deepcopy(data.get("trace", [])),
             metadata=deepcopy(data.get("metadata", {})),
         )
-        state.status = data.get("status", INIT)
+        state.status = validate_state_status(data.get("status", CREATED))
         state.approval.update(deepcopy(data.get("approval", {})))
         state.failed_agents = deepcopy(data.get("failed_agents", []))
         state.current_agent = data.get("current_agent")
