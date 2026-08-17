@@ -9,6 +9,9 @@ def request_review(
     reason: str,
     reviewer: str = "",
     comment: str = "",
+    reviewer_id: int | None = None,
+    reviewer_username: str = "",
+    reviewer_role: str = "",
 ) -> dict:
     state.set_status(WAITING_HUMAN)
     _update_approval(
@@ -18,13 +21,23 @@ def request_review(
         reviewer=reviewer,
         comment=comment,
         reason=reason,
+        reviewer_id=reviewer_id,
+        reviewer_username=reviewer_username,
+        reviewer_role=reviewer_role,
     )
     trace = _build_human_trace("waiting_human", reason, state.approval)
     state.add_trace(trace)
     return trace
 
 
-def approve(state: AgentState, reviewer: str = "human", comment: str = "") -> dict:
+def approve(
+    state: AgentState,
+    reviewer: str = "human",
+    comment: str = "",
+    reviewer_id: int | None = None,
+    reviewer_username: str = "",
+    reviewer_role: str = "",
+) -> dict:
     _ensure_waiting_human(state)
     state.set_status(RUNNING)
     _update_approval(
@@ -34,13 +47,23 @@ def approve(state: AgentState, reviewer: str = "human", comment: str = "") -> di
         reviewer=reviewer,
         comment=comment,
         reason=state.approval.get("reason", ""),
+        reviewer_id=reviewer_id,
+        reviewer_username=reviewer_username,
+        reviewer_role=reviewer_role,
     )
     trace = _build_human_trace("approved", "Human approved runtime continuation.", state.approval)
     state.add_trace(trace)
     return trace
 
 
-def reject(state: AgentState, reviewer: str = "human", comment: str = "") -> dict:
+def reject(
+    state: AgentState,
+    reviewer: str = "human",
+    comment: str = "",
+    reviewer_id: int | None = None,
+    reviewer_username: str = "",
+    reviewer_role: str = "",
+) -> dict:
     _ensure_waiting_human(state)
     state.set_status(REJECTED)
     _update_approval(
@@ -50,6 +73,9 @@ def reject(state: AgentState, reviewer: str = "human", comment: str = "") -> dic
         reviewer=reviewer,
         comment=comment,
         reason=state.approval.get("reason", ""),
+        reviewer_id=reviewer_id,
+        reviewer_username=reviewer_username,
+        reviewer_role=reviewer_role,
     )
     trace = _build_human_trace("rejected", "Human rejected runtime result.", state.approval)
     state.add_trace(trace)
@@ -63,12 +89,19 @@ def _update_approval(
     reviewer: str,
     comment: str,
     reason: str,
+    reviewer_id: int | None = None,
+    reviewer_username: str = "",
+    reviewer_role: str = "",
 ) -> None:
+    username = reviewer_username or reviewer
     state.approval.update(
         {
             "required": required,
             "decision": decision,
-            "reviewer": reviewer,
+            "reviewer": username,
+            "reviewer_id": reviewer_id,
+            "reviewer_username": username,
+            "reviewer_role": reviewer_role,
             "comment": comment,
             "reason": reason,
             "timestamp": _now_iso(),

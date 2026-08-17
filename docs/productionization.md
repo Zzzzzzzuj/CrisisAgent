@@ -144,6 +144,62 @@ curl http://127.0.0.1:8000/api/dynamic/<session_id>
 
 If a worker fails, the runtime writes a `runtime_worker` failure trace and saves the failed checkpoint.
 
+## Auth And RBAC
+
+Local demo mode keeps authentication disabled by default:
+
+```env
+AUTH_ENABLED=false
+```
+
+When authentication is enabled, configure a deployment secret and create users in the database:
+
+```env
+AUTH_ENABLED=true
+SECRET_KEY=<strong-random-secret>
+AUTH_TOKEN_EXPIRE_MINUTES=480
+```
+
+Never commit a real `SECRET_KEY` or user password.
+
+Roles:
+
+- `operator`: creates dynamic crisis cases and can view cases they created.
+- `legal_reviewer`: can approve or reject `WAITING_HUMAN` cases.
+- `admin`: can approve/reject and view all dynamic cases.
+
+Auth endpoints:
+
+```http
+POST /api/auth/login
+GET /api/auth/me
+```
+
+Login request:
+
+```json
+{
+  "username": "reviewer",
+  "password": "<password>"
+}
+```
+
+Use the returned token as:
+
+```http
+Authorization: Bearer <token>
+```
+
+When `AUTH_ENABLED=true`, dynamic approve/reject requires `legal_reviewer` or `admin`.
+The runtime records the authenticated reviewer in checkpoint approval data:
+
+- `reviewer_id`
+- `reviewer_username`
+- `reviewer_role`
+
+`audit_logs.actor` also records the authenticated username instead of the demo default `human`.
+When an operator creates a dynamic case, `created_by` is stored in state metadata and persisted to `crisis_sessions` for access control.
+
 ## Verify Dynamic Runtime
 
 Create a dynamic crisis case.

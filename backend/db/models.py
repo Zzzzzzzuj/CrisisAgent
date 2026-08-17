@@ -19,6 +19,9 @@ class CrisisSession(Base):
     status: Mapped[str] = mapped_column(String(32), default="CREATED", index=True)
     final_statement_preview: Mapped[str] = mapped_column(Text, default="")
     scores: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_by_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_by_username: Mapped[str] = mapped_column(String(128), default="")
+    created_by_role: Mapped[str] = mapped_column(String(32), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
@@ -73,6 +76,9 @@ class Approval(Base):
     required: Mapped[bool] = mapped_column(default=False)
     decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
     reviewer: Mapped[str] = mapped_column(String(128), default="")
+    reviewer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reviewer_username: Mapped[str] = mapped_column(String(128), default="")
+    reviewer_role: Mapped[str] = mapped_column(String(32), default="")
     comment: Mapped[str] = mapped_column(Text, default="")
     reason: Mapped[str] = mapped_column(Text, default="")
     timestamp: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -99,4 +105,15 @@ class AuditLog(Base):
     actor: Mapped[str] = mapped_column(String(128), default="")
     details: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(Text)
+    role: Mapped[str] = mapped_column(String(32), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 

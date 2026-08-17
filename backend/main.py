@@ -2,9 +2,18 @@ import os
 from datetime import datetime
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
+from backend.auth import (
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+    is_auth_enabled,
+    require_reviewer,
+    user_to_claims,
+)
 from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import run_dynamic_agent
 from backend.core.guardrail_runtime import apply_guardrails_to_state
@@ -19,6 +28,7 @@ from backend.core.runtime_tasks import (
     submit_dynamic_session,
     submit_resume_session,
 )
+from backend.db.session import get_db_session
 from backend.schemas import CrisisRunRequest, CrisisRunResponse
 from backend.storage import get_session, list_sessions
 from backend.workflow import run_crisis_workflow
@@ -49,6 +59,29 @@ def health_check() -> dict:
     return {"status": "ok"}
 
 
+@app.post("/api/auth/login")
+def login(request: dict, db: Session = Depends(get_db_session)) -> dict:
+    username = str(request.get("username", "")).strip()
+    password = str(request.get("password", ""))
+    if not username or not password:
+        raise HTTPException(status_code=422, detail="username and password are required.")
+    user = authenticate_user(db, username, password)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+    return {
+        "access_token": create_access_token(user),
+        "token_type": "bearer",
+        "user": user_to_claims(user),
+    }
+
+
+@app.get("/api/auth/me")
+def auth_me(current_user: dict | None = Depends(get_current_user)) -> dict:
+    if not is_auth_enabled():
+        return {"auth_enabled": False, "user": None}
+    return {"auth_enabled": True, "user": current_user}
+
+
 @app.post("/api/crisis/run", response_model=CrisisRunResponse)
 def run_crisis(request: CrisisRunRequest) -> CrisisRunResponse:
     return run_crisis_workflow(request)
@@ -68,13 +101,13 @@ def get_crisis_session(session_id: str) -> dict:
 
 
 @app.post("/api/dynamic/run")
-def run_dynamic(request: dict) -> dict:
+def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_user)) -> dict:
     event = str(request.get("event", "")).strip()
     if not event:
         raise HTTPException(status_code=422, detail="Field 'event' is required.")
 
     if is_async_runtime_enabled():
-        state = create_queued_dynamic_session(event)
+        state = create_queued_dynamic_session(event, created_by=current_user)
         submit_dynamic_session(state.session_id)
         return {
             "session_id": state.session_id,
@@ -90,6 +123,7 @@ def run_dynamic(request: dict) -> dict:
 
     result = run_dynamic_agent(event)
     state = _state_from_dynamic_result(result)
+    _record_created_by(state, current_user)
     apply_guardrails_to_state(state)
     evaluation = evaluate_runtime_state(state)
     policy = evaluate_human_policy(state, evaluation)
@@ -117,35 +151,52 @@ def run_dynamic(request: dict) -> dict:
 
 
 @app.get("/api/dynamic/sessions")
-def get_dynamic_sessions() -> list[dict]:
-    return list_checkpoints()
+def get_dynamic_sessions(current_user: dict | None = Depends(get_current_user)) -> list[dict]:
+    sessions = list_checkpoints()
+    if not is_auth_enabled() or current_user is None or current_user.get("role") in {"admin", "legal_reviewer"}:
+        return sessions
+    return [
+        session
+        for session in sessions
+        if (session.get("created_by") or {}).get("id") == current_user.get("id")
+    ]
 
 
 @app.get("/api/dynamic/{session_id}/metrics")
-def get_dynamic_metrics(session_id: str) -> dict:
+def get_dynamic_metrics(session_id: str, current_user: dict | None = Depends(get_current_user)) -> dict:
     state = _load_dynamic_state_or_404(session_id)
+    _ensure_session_access(state, current_user)
     return _build_dynamic_metrics(state)
 
 
 @app.get("/api/dynamic/{session_id}")
-def get_dynamic_session(session_id: str) -> dict:
+def get_dynamic_session(session_id: str, current_user: dict | None = Depends(get_current_user)) -> dict:
     state = load_checkpoint(session_id)
     if state is None:
         raise HTTPException(status_code=404, detail=f"Dynamic session '{session_id}' not found.")
+    _ensure_session_access(state, current_user)
     data = state.to_dict()
     data["trace"] = _enhance_trace(data.get("trace", []))
     return data
 
 
 @app.post("/api/dynamic/{session_id}/approve")
-def approve_dynamic_session(session_id: str, request: dict | None = None) -> dict:
+def approve_dynamic_session(
+    session_id: str,
+    request: dict | None = None,
+    current_user: dict | None = Depends(require_reviewer),
+) -> dict:
     state = _load_dynamic_state_or_404(session_id)
     body = request or {}
     try:
+        reviewer_identity = _reviewer_identity(body, current_user)
         approve(
             state,
-            reviewer=str(body.get("reviewer", "human")),
+            reviewer=reviewer_identity["reviewer"],
             comment=str(body.get("comment", "")),
+            reviewer_id=reviewer_identity["reviewer_id"],
+            reviewer_username=reviewer_identity["reviewer_username"],
+            reviewer_role=reviewer_identity["reviewer_role"],
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -163,20 +214,66 @@ def approve_dynamic_session(session_id: str, request: dict | None = None) -> dic
 
 
 @app.post("/api/dynamic/{session_id}/reject")
-def reject_dynamic_session(session_id: str, request: dict | None = None) -> dict:
+def reject_dynamic_session(
+    session_id: str,
+    request: dict | None = None,
+    current_user: dict | None = Depends(require_reviewer),
+) -> dict:
     state = _load_dynamic_state_or_404(session_id)
     body = request or {}
     try:
+        reviewer_identity = _reviewer_identity(body, current_user)
         reject(
             state,
-            reviewer=str(body.get("reviewer", "human")),
+            reviewer=reviewer_identity["reviewer"],
             comment=str(body.get("comment", "")),
+            reviewer_id=reviewer_identity["reviewer_id"],
+            reviewer_username=reviewer_identity["reviewer_username"],
+            reviewer_role=reviewer_identity["reviewer_role"],
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     save_checkpoint(state)
     return resume_agent_loop(session_id)
+
+
+def _record_created_by(state: AgentState, current_user: dict | None) -> None:
+    if not is_auth_enabled() or current_user is None:
+        return
+    state.metadata["created_by"] = {
+        "id": current_user.get("id"),
+        "username": current_user.get("username", ""),
+        "role": current_user.get("role", ""),
+    }
+
+
+def _reviewer_identity(body: dict, current_user: dict | None) -> dict:
+    if not is_auth_enabled() or current_user is None:
+        reviewer = str(body.get("reviewer", "human"))
+        return {
+            "reviewer": reviewer,
+            "reviewer_id": None,
+            "reviewer_username": reviewer,
+            "reviewer_role": "",
+        }
+    return {
+        "reviewer": str(current_user.get("username", "")),
+        "reviewer_id": current_user.get("id"),
+        "reviewer_username": str(current_user.get("username", "")),
+        "reviewer_role": str(current_user.get("role", "")),
+    }
+
+
+def _ensure_session_access(state: AgentState, current_user: dict | None) -> None:
+    if not is_auth_enabled() or current_user is None:
+        return
+    if current_user.get("role") in {"admin", "legal_reviewer"}:
+        return
+    created_by = state.metadata.get("created_by", {})
+    if isinstance(created_by, dict) and created_by.get("id") == current_user.get("id"):
+        return
+    raise HTTPException(status_code=403, detail="Session access denied.")
 
 
 def _load_dynamic_state_or_404(session_id: str) -> AgentState:

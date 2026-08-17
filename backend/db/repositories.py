@@ -125,6 +125,11 @@ class SQLAlchemyCheckpointRepository:
                     "event": row.event,
                     "status": row.status,
                     "created_time": row.created_at.isoformat() if row.created_at else "",
+                    "created_by": {
+                        "id": row.session.created_by_id if row.session else None,
+                        "username": row.session.created_by_username if row.session else "",
+                        "role": row.session.created_by_role if row.session else "",
+                    },
                 }
                 for row in rows
             ]
@@ -176,6 +181,11 @@ class SQLAlchemyCheckpointRepository:
         row.status = state_data.get("status", "")
         row.final_statement_preview = str(final_statement)[:160]
         row.scores = scores if isinstance(scores, dict) else {}
+        created_by = (state_data.get("metadata", {}) or {}).get("created_by", {})
+        if isinstance(created_by, dict):
+            row.created_by_id = created_by.get("id")
+            row.created_by_username = str(created_by.get("username", ""))
+            row.created_by_role = str(created_by.get("role", ""))
 
     def _upsert_checkpoint(self, db: Session, state_data: dict) -> None:
         session_id = state_data["session_id"]
@@ -220,6 +230,9 @@ class SQLAlchemyCheckpointRepository:
                 required=bool(approval.get("required")),
                 decision=approval.get("decision"),
                 reviewer=str(approval.get("reviewer", "")),
+                reviewer_id=approval.get("reviewer_id"),
+                reviewer_username=str(approval.get("reviewer_username", approval.get("reviewer", ""))),
+                reviewer_role=str(approval.get("reviewer_role", "")),
                 comment=str(approval.get("comment", "")),
                 reason=str(approval.get("reason", "")),
                 timestamp=approval.get("timestamp"),
@@ -249,11 +262,14 @@ class SQLAlchemyCheckpointRepository:
                 AuditLog(
                     session_id=session_id,
                     action=status,
-                    actor=str(approval.get("reviewer", "")),
+                    actor=str(approval.get("reviewer_username", approval.get("reviewer", ""))),
                     details={
                         "comment": approval.get("comment", ""),
                         "reason": approval.get("reason", item.get("reason", "")),
                         "decision": approval.get("decision"),
+                        "reviewer_id": approval.get("reviewer_id"),
+                        "reviewer_username": approval.get("reviewer_username", approval.get("reviewer", "")),
+                        "reviewer_role": approval.get("reviewer_role", ""),
                         "timestamp": timestamp,
                     },
                 )

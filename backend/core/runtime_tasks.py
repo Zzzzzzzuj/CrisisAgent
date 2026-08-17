@@ -24,11 +24,17 @@ def is_async_runtime_enabled() -> bool:
     return get_runtime_mode() == "async"
 
 
-def create_queued_dynamic_session(event: str) -> AgentState:
+def create_queued_dynamic_session(event: str, created_by: dict | None = None) -> AgentState:
     state = initialize_dynamic_state(event)
     state.set_status(QUEUED)
     state.metadata["runtime_mode"] = "async"
     state.metadata["queued_at"] = _now_iso()
+    if created_by:
+        state.metadata["created_by"] = {
+            "id": created_by.get("id"),
+            "username": created_by.get("username", ""),
+            "role": created_by.get("role", ""),
+        }
     save_checkpoint(state)
     return state
 
