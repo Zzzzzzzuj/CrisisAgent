@@ -38,6 +38,7 @@ class HybridRetriever(BaseRetriever):
                     "score": chunk.score,
                     "keyword_score": (chunk.metadata or {}).get("keyword_score", 0.0),
                     "vector_score": chunk.embedding_score or 0.0,
+                    **_source_metadata(chunk),
                 }
                 for chunk in top_chunks
             ],
@@ -116,6 +117,15 @@ def _build_hybrid_chunk(
         embedding_score=round(vector_score, 4),
         metadata=metadata,
     )
+
+
+def _source_metadata(chunk: RetrievedChunk) -> dict:
+    metadata = chunk.metadata or {}
+    return {
+        "document_id": metadata.get("document_id"),
+        "document_version": metadata.get("document_version"),
+        "source_category": metadata.get("source_category"),
+    }
 
 
 def _format_context(chunks: list[RetrievedChunk]) -> str:

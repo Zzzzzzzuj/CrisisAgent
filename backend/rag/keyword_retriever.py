@@ -2,9 +2,8 @@ import re
 from pathlib import Path
 
 from backend.rag.base import BaseRetriever
-from backend.rag.document_loader import KNOWLEDGE_BASE_DIR, load_documents
+from backend.rag.document_loader import KNOWLEDGE_BASE_DIR, load_chunks
 from backend.rag.schemas import RetrievalResult, RetrievedChunk
-from backend.rag.text_splitter import split_documents
 
 
 _TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]{2,}")
@@ -15,8 +14,7 @@ class KeywordRetriever(BaseRetriever):
         self.knowledge_base_dir = knowledge_base_dir
 
     def retrieve(self, query: str, top_k: int = 3) -> RetrievalResult:
-        documents = load_documents(self.knowledge_base_dir)
-        chunks = split_documents(documents)
+        chunks = load_chunks(self.knowledge_base_dir)
         query_tokens = _tokenize(query)
 
         scored_chunks = []
@@ -30,11 +28,12 @@ class KeywordRetriever(BaseRetriever):
 
         retrieved_chunks = [
             RetrievedChunk(
+                chunk_id=chunk.get("chunk_id"),
                 text=chunk["text"],
                 source=chunk["source"],
                 title=chunk["title"],
                 score=round(score, 4),
-                metadata={"retriever": "keyword"},
+                metadata={**dict(chunk.get("metadata", {})), "retriever": "keyword"},
             )
             for score, chunk in top_chunks
         ]
@@ -44,9 +43,11 @@ class KeywordRetriever(BaseRetriever):
             chunks=retrieved_chunks,
             sources=[
                 {
+                    "chunk_id": chunk.chunk_id,
                     "source": chunk.source,
                     "title": chunk.title,
                     "score": chunk.score,
+                    **_source_metadata(chunk),
                 }
                 for chunk in retrieved_chunks
             ],
@@ -84,3 +85,12 @@ def _format_context(chunks: list[RetrievedChunk]) -> str:
     for chunk in chunks:
         context_parts.append(f"[{chunk.source} | score={chunk.score}]\n{chunk.text}")
     return "\n\n".join(context_parts)
+
+
+def _source_metadata(chunk: RetrievedChunk) -> dict:
+    metadata = chunk.metadata or {}
+    return {
+        "document_id": metadata.get("document_id"),
+        "document_version": metadata.get("document_version"),
+        "source_category": metadata.get("source_category"),
+    }

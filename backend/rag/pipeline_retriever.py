@@ -98,6 +98,7 @@ def _filter_by_min_relevance(result: RetrievalResult, min_score: float) -> Retri
                 "title": chunk.title,
                 "score": chunk.score,
                 "rerank_score": chunk.rerank_score,
+                **_source_metadata(chunk),
             }
             for chunk in kept_chunks
         ],
@@ -169,6 +170,7 @@ def _copy_chunk_with_metadata(
             "retrieval_type": retrieval_type,
             "rerank_enabled": rerank_enabled,
             "retrieval_fallback": fallback,
+            "rerank_score": chunk.rerank_score,
         }
     )
     return RetrievedChunk(
@@ -181,3 +183,12 @@ def _copy_chunk_with_metadata(
         embedding_score=chunk.embedding_score,
         rerank_score=chunk.rerank_score,
     )
+
+
+def _source_metadata(chunk: RetrievedChunk) -> dict:
+    metadata = chunk.metadata or {}
+    return {
+        "document_id": metadata.get("document_id"),
+        "document_version": metadata.get("document_version"),
+        "source_category": metadata.get("source_category"),
+    }

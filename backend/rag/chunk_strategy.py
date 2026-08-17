@@ -27,12 +27,21 @@ def split_markdown_documents(
                 ).to_dict()
                 chunk["metadata"] = {
                     "document_title": document["title"],
+                    "document_id": document.get("document_id"),
+                    "document_version": document.get("version"),
+                    "source_category": document.get("source_category"),
                     "section_title": section_title,
                     "section_index": section_index,
                     "chunk_index": chunk_index,
                     "chunk_size": chunk_size,
                     "overlap": overlap,
                 }
+                if document.get("document_id"):
+                    chunk["document_id"] = document.get("document_id")
+                if document.get("version") is not None:
+                    chunk["document_version"] = document.get("version")
+                if document.get("source_category"):
+                    chunk["source_category"] = document.get("source_category")
                 chunks.append(chunk)
 
     return chunks

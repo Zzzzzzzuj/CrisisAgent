@@ -34,7 +34,7 @@ class VectorStore:
                 title=chunk["title"],
                 score=round(score, 4),
                 embedding_score=round(score, 4),
-                metadata={"retriever": "vector"},
+                metadata={**dict(chunk.get("metadata", {})), "retriever": "vector"},
             )
             for score, chunk in top_chunks
         ]
@@ -48,6 +48,7 @@ class VectorStore:
                     "source": chunk.source,
                     "title": chunk.title,
                     "score": chunk.score,
+                    **_source_metadata(chunk),
                 }
                 for chunk in retrieved_chunks
             ],
@@ -84,3 +85,12 @@ def _format_context(chunks: list[RetrievedChunk]) -> str:
             f"[{chunk.source} | chunk_id={chunk.chunk_id} | score={chunk.score}]\n{chunk.text}"
         )
     return "\n\n".join(context_parts)
+
+
+def _source_metadata(chunk: RetrievedChunk) -> dict:
+    metadata = chunk.metadata or {}
+    return {
+        "document_id": metadata.get("document_id"),
+        "document_version": metadata.get("document_version"),
+        "source_category": metadata.get("source_category"),
+    }

@@ -70,6 +70,8 @@ Expected tables include:
 - `approvals`
 - `evaluations`
 - `audit_logs`
+- `knowledge_documents`
+- `knowledge_chunks`
 
 ## Start Backend With PostgreSQL
 
@@ -346,6 +348,64 @@ Human Review is required when any of these conditions are met:
 - LLM fallback observed in Agent trace
 
 When authentication is enabled, approve/reject remains restricted to `legal_reviewer` or `admin`.
+
+## RAG Knowledge Management
+
+The original Markdown knowledge base remains the fallback path:
+
+```text
+backend/rag/knowledge_base/*.md
+```
+
+When PostgreSQL checkpoint storage is enabled and published knowledge documents exist in the database, RAG loaders prefer database-managed documents/chunks. If the database is unavailable or no published knowledge exists, the runtime falls back to the local Markdown files so existing tests and local demos keep working.
+
+Run migrations before ingestion:
+
+```bash
+python -m alembic upgrade head
+```
+
+Ingest the bundled Markdown knowledge base:
+
+```bash
+python scripts/ingest_knowledge_base.py --path backend/rag/knowledge_base
+```
+
+Ingest one file with an explicit category:
+
+```bash
+python scripts/ingest_knowledge_base.py --path backend/rag/knowledge_base/data_privacy.md --category data_privacy
+```
+
+List managed knowledge documents:
+
+```bash
+python scripts/list_knowledge_documents.py
+```
+
+The ingestion pipeline records:
+
+- document id
+- source file and title
+- source category
+- version
+- embedding status
+- published status
+- chunk ids
+- chunk embeddings
+
+Legal Agent RAG trace now preserves retrieval audit fields for database-managed chunks:
+
+- `document_id`
+- `document_version`
+- `chunk_id`
+- `source_category`
+- `retrieval_query`
+- `score`
+- `rerank_score`
+- `fallback_used`
+
+These fields are additive. Existing `sources`, `scores`, `rerank_scores`, `count`, and local Markdown fallback behavior remain available.
 
 ## Testing
 

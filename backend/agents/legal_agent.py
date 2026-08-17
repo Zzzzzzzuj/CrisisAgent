@@ -16,6 +16,7 @@ _LAST_RAG_INFO = {
     "rerank_enabled": False,
     "query": "",
     "sources": [],
+    "source_details": [],
     "chunks": [],
     "scores": [],
     "rerank_scores": [],
@@ -64,6 +65,7 @@ def get_last_rag_info() -> dict:
         "rerank_enabled": _LAST_RAG_INFO["rerank_enabled"],
         "query": _LAST_RAG_INFO["query"],
         "sources": list(_LAST_RAG_INFO["sources"]),
+        "source_details": list(_LAST_RAG_INFO["source_details"]),
         "chunks": list(_LAST_RAG_INFO["chunks"]),
         "scores": list(_LAST_RAG_INFO["scores"]),
         "rerank_scores": list(_LAST_RAG_INFO["rerank_scores"]),
@@ -80,6 +82,7 @@ def _set_rag_info(
     enabled: bool,
     hit: bool,
     sources: list[str],
+    source_details: list[dict] | None = None,
     query: str = "",
     chunks: list[dict] | None = None,
     retrieval_type: str | None = None,
@@ -92,6 +95,7 @@ def _set_rag_info(
 ) -> None:
     chunks = chunks or []
     gate = gate or {}
+    source_details = source_details or []
     # sources/count describe unique source files; scores describe final retrieved chunks.
     _LAST_RAG_INFO.update(
         {
@@ -101,6 +105,7 @@ def _set_rag_info(
             "rerank_enabled": rerank_enabled,
             "query": query,
             "sources": sources,
+            "source_details": source_details,
             "chunks": chunks,
             "scores": [chunk.get("score") for chunk in chunks],
             "rerank_scores": [chunk.get("rerank_score") for chunk in chunks],
@@ -294,18 +299,34 @@ def _retrieve_legal_context(payload: dict) -> str:
         return ""
 
     sources = retrieval_result.get("sources", [])
-    chunks = _normalize_rag_chunks(retrieval_result.get("chunks", []))
+    chunks = _normalize_rag_chunks(retrieval_result.get("chunks", []), query)
     source_names = []
+    source_details = []
     for source in sources:
         if not isinstance(source, dict) or not source.get("source"):
             continue
         source_name = str(source["source"])
         if source_name not in source_names:
             source_names.append(source_name)
+            source_details.append(
+                {
+                    "source": source_name,
+                    "title": source.get("title"),
+                    "document_id": source.get("document_id"),
+                    "document_version": source.get("document_version"),
+                    "chunk_id": source.get("chunk_id"),
+                    "source_category": source.get("source_category"),
+                    "score": source.get("score"),
+                    "rerank_score": source.get("rerank_score"),
+                    "retrieval_query": query,
+                    "fallback_used": source.get("retrieval_fallback", False),
+                }
+            )
     _set_rag_info(
         enabled=True,
         hit=bool(source_names),
         sources=source_names,
+        source_details=source_details,
         query=query,
         chunks=chunks,
         retrieval_type=_resolve_retrieval_type(retrieval_result),
@@ -320,18 +341,24 @@ def _retrieve_legal_context(payload: dict) -> str:
     return retrieval_result.get("context", "")
 
 
-def _normalize_rag_chunks(chunks: list[dict]) -> list[dict]:
+def _normalize_rag_chunks(chunks: list[dict], retrieval_query: str = "") -> list[dict]:
     normalized_chunks = []
     for chunk in chunks:
         if not isinstance(chunk, dict):
             continue
+        metadata = chunk.get("metadata", {}) if isinstance(chunk.get("metadata"), dict) else {}
         normalized_chunks.append(
             {
                 "chunk_id": chunk.get("chunk_id"),
+                "document_id": metadata.get("document_id"),
+                "document_version": metadata.get("document_version"),
                 "source": chunk.get("source"),
+                "source_category": metadata.get("source_category"),
                 "title": chunk.get("title"),
                 "score": chunk.get("score"),
                 "rerank_score": chunk.get("rerank_score"),
+                "retrieval_query": retrieval_query,
+                "fallback_used": metadata.get("retrieval_fallback", False),
                 "text_preview": str(chunk.get("text", ""))[:120],
             }
         )
