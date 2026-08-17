@@ -1,206 +1,211 @@
-# Architecture
+# CrisisAgent Architecture
 
-## 项目解决的问题
+本文档说明 CrisisAgent v3.0.0 的真实工程结构。项目核心仍是企业危机响应 Agent Runtime；生产化阶段补充了持久化、异步执行、认证审计、Guardrails、知识库管理和可观测性，但没有替换 Agent 业务逻辑或 Prompt 语义。
 
-CrisisAgent 面向企业危机公关场景，目标是帮助企业在突发负面事件中快速完成舆情判断、回应草稿、风险攻击、合规审查、最终决策和人工审核。
+## 1. System Overview
 
-传统“一个 Prompt 生成最终声明”的方式很难满足真实业务需要，因为危机公关不是单点生成任务，而是一条风险控制链路。CrisisAgent 将这条链路工程化，使每个步骤都能被测试、观察、替换和评估。
-
-## 为什么采用多 Agent 架构
-
-多 Agent 的核心价值是职责拆分：
-
-- Agent A 负责舆情分析，判断风险、情绪和回应语气。
-- Agent C 负责策略文案，生成第一版和第二版声明。
-- Agent D 负责红队攻击，模拟公众质疑和媒体追问。
-- Agent B 负责合规审查，结合 RAG 知识库降低法律表达风险。
-- Agent E 负责最终决策，输出最终声明和评分。
-
-如果只用一个 LLM，所有能力会混在同一个 Prompt 里，很难定位错误，也很难单独增强合规、评测、工具调用或人工审核。
-
-## 总体架构图
-
-```text
-User Event
-  ↓
-FastAPI
-  ↓
-Dynamic Runtime
-  ↓
-Planner
-  ↓
-Plan Validator
-  ↓
-Executor
-  ↓
-AgentState
-  ↓
-Agent Adapter
-  ↓
-Agents
-  ↓
-RAG / Memory / Tools / Context
-  ↓
-Runtime Evaluator
-  ↓
-Human Gate
-  ↓
-Checkpoint
-  ↓
-Resume
-  ↓
-Dashboard / Evaluation
+```mermaid
+flowchart TD
+    A["User Event"] --> B["FastAPI API Layer"]
+    B --> C["Fixed Workflow or Dynamic Runtime"]
+    C --> D["AgentState"]
+    D --> E["Agents"]
+    E --> F["RAG / Memory / Tools"]
+    E --> G["LLMClient / Mock Fallback"]
+    D --> H["Runtime Evaluation"]
+    H --> I["Human Policy"]
+    I --> J["Human Review"]
+    D --> K["Checkpoint Repository"]
+    K --> L["JSON fallback or PostgreSQL"]
+    D --> M["Trace / Metrics / Dashboard"]
 ```
 
-固定 workflow 仍然保留：
+两条运行链路并存：
+
+- Fixed Workflow：`backend/workflow.py`，固定执行顺序，适合回归和对比。
+- Dynamic Runtime：`backend/core/dynamic_runtime.py`，Planner 生成计划，Validator 补齐依赖，Executor 按计划执行 Agent。
+
+## 2. Planner / Executor / AgentState
+
+Dynamic Runtime 的核心是把 Agent 调用从“函数链”拆成可检查状态机：
+
+- `planner_agent.py`：根据事件生成初始 plan。
+- `plan_validator.py`：验证并补齐依赖，确保顺序为 sentiment -> writer -> redteam -> legal -> writer_v2 -> decision。
+- `executor.py`：调用 Agent Adapter，将每个 Agent 输出写入 `state.results`，同时写入 `state.trace`。
+- `state.py`：保存 session、plan、event、results、trace、approval、metadata、failed_agents 和 current_agent。
+
+`AgentState` 的状态包括：
 
 ```text
-用户输入事件
-  ↓
-FastAPI
-  ↓
-workflow.py
-  ↓
-Agent A 舆情分析
-  ↓
-Agent C 第一版文案
-  ↓
-Agent D 红队攻击
-  ↓
-Agent B 合规审查
-  ↓
-Agent C 第二版文案
-  ↓
-Agent E 最终决策
-  ↓
-agent_trace
+CREATED -> QUEUED -> RUNNING -> WAITING_HUMAN -> COMPLETED
+                                      |              |
+                                      v              v
+                                   REJECTED        FAILED
 ```
 
-## 后端结构
+状态机校验防止无效状态跳转。
 
-```text
-backend/
-  main.py
-  workflow.py
-  schemas.py
-  storage.py
-  agents/
-  core/
-  rag/
-  memory/
-  tools/
-  context/
-  prompts/
-  llm_client.py
-  prompt_loader.py
-  config.py
-  logger.py
-```
+## 3. Dynamic Runtime
 
-关键职责：
+`POST /api/dynamic/run` 在 sync 模式下会同步执行完整 runtime；在 async 模式下只创建 session、保存初始 checkpoint、提交后台任务并立即返回 queued。
 
-- `backend/main.py`: FastAPI API 层，负责接收请求和返回响应。
-- `backend/workflow.py`: 固定 A/C/D/B/C/E workflow 编排入口。
-- `backend/agents/`: 每个 Agent 的 mock/llm 双模式逻辑。
-- `backend/core/`: Dynamic Runtime，包括 Planner、Executor、AgentState、Human Gate、Checkpoint、Resume。
-- `backend/rag/`: RAG 检索基础设施，包括 keyword、vector、hybrid 和 reranker。
-- `backend/memory/`: 企业历史危机经验记忆。
-- `backend/tools/`: Tool 抽象和 Tool Registry。
-- `backend/context/`: ContextManager，用于上下文优先级和 token 控制。
-- `evaluation/`: 离线评测体系。
-- `frontend/`: Vue Dashboard。
+关键模块：
 
-## LLM / Mock 双模式
+- `backend/core/dynamic_runtime.py`
+- `backend/core/executor.py`
+- `backend/core/runtime_tasks.py`
+- `backend/core/checkpoint.py`
+- `backend/core/resume.py`
 
-每个 Agent 保持稳定接口，例如：
+## 4. Async Runtime
+
+通过 `RUNTIME_MODE` 切换：
+
+- `RUNTIME_MODE=sync`：保持旧行为，HTTP 请求等待完整 Agent 流程结束。
+- `RUNTIME_MODE=async`：使用 in-process `ThreadPoolExecutor` 后台执行。
+
+异步模式会保存：
+
+- `QUEUED`
+- `RUNNING`
+- `WAITING_HUMAN`
+- `COMPLETED`
+- `FAILED`
+- `REJECTED`
+
+已知限制：
+
+- 这是进程内 worker，不是分布式队列。
+- 服务重启会丢失尚未执行的内存队列任务。
+- 多进程部署时 worker pool 不共享。
+- 生产环境应替换 Redis/RQ/Celery 等 durable queue。
+
+## 5. Human Review
+
+Human Review 由 `backend/core/policy.py` 和 `backend/core/human.py` 驱动。
+
+会触发人工审核的情况包括：
+
+- high-risk event
+- evaluation failed or low scores
+- guardrail hit
+- LLM fallback observed
+
+`approve` / `reject` 会更新 `AgentState.approval`，写入 trace，并通过 checkpoint repository 持久化。
+
+## 6. Checkpoint / Resume
+
+`backend/core/checkpoint.py` 提供统一接口：
 
 ```python
-run(payload) -> dict
+save_checkpoint(state)
+load_checkpoint(session_id)
+list_checkpoints()
+delete_checkpoint(session_id)
 ```
 
-内部根据 `AGENT_MODE` 选择：
+底层通过 repository 实现：
 
-```text
-mock:
-  rule/mock function
+- JSON fallback：默认本地文件，便于测试和 demo。
+- PostgreSQL：生产化路径，保存 session、checkpoint、trace、approval、evaluation 和 audit logs。
 
-llm:
-  load_prompt
-  ↓
-  call_llm
-  ↓
-  parse_llm_json
-  ↓
-  validate
-  ↓
-  normalize
+Resume 入口位于 `backend/core/resume.py`。当 WAITING_HUMAN checkpoint 被 approved 后，runtime 可以恢复后续执行。
+
+## 7. Legal RAG
+
+Legal Agent 的 RAG 链路：
+
+```mermaid
+flowchart TD
+    A["Legal Agent Input"] --> B["Retrieval Need Gate v3"]
+    B -->|need_rag=false| C["Skip Retriever"]
+    B -->|need_rag=true| D["RAG Pipeline"]
+    D --> E["Query Rewrite"]
+    E --> F["Keyword Retriever"]
+    E --> G["Vector Retriever"]
+    F --> H["Hybrid Fusion"]
+    G --> H
+    H --> I["Domain-Aware RuleBasedReranker v2"]
+    I --> J["min_rerank_score filter"]
+    J --> K["Legal Context"]
 ```
 
-这样做的好处是 API 和 workflow 不需要因为模型接入而改变。
+RAG trace 区分：
 
-## Fallback 机制
+- Gate Skip：`retrieval_skipped=true`
+- Executed No Hit：`retrieval_executed=true` 且 `count=0`
+- Executed With Hits：`count>0`
+- Retrieval Error：`fallback_used=true`
 
-LLM 模式下，如果发生网络异常、超时、JSON 解析失败、字段缺失或类型错误，Agent 会 fallback 到 mock 逻辑。fallback 会记录日志和 trace，保证整体流程不中断。
+当前没有使用 pgvector、ANN index、BM25、RRF 或 Cross Encoder。
 
-## RAG / Memory / Tools
+## 8. Guardrails
 
-RAG 主要服务 Agent B 合规审查：
+Guardrails 位于 `backend/guardrails/`：
 
-```text
-event + draft + redteam_review
-  ↓
-retrieval query
-  ↓
-HybridRetriever
-  ↓
-Reranker
-  ↓
-legal_context
-  ↓
-Legal Agent Prompt
+- `prompt_injection.py`：检测用户输入中的 prompt injection。
+- `input_guardrail.py`：输入侧风险封装。
+- `output_guardrail.py`：检测最终声明中的高风险措辞。
+
+输出侧规则覆盖：
+
+- 绝对承诺
+- 未核实事实定性
+- 直接承认违法
+- 隐私信息泄露
+- 跳过人工审核暗示
+
+Guardrail 命中后不会自动修改 Agent 输出，而是进入 Human Review。
+
+## 9. Auth / RBAC
+
+Auth 位于 `backend/auth.py`，新增 API：
+
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+
+角色：
+
+- `operator`：创建 case，查看自己创建的 case。
+- `legal_reviewer`：可以 approve/reject。
+- `admin`：可以查看全部 case 和审核。
+
+`AUTH_ENABLED=false` 时保持 demo 行为；`AUTH_ENABLED=true` 时 approve/reject 必须携带 JWT，且只允许 `legal_reviewer` 或 `admin`。
+
+## 10. Observability
+
+新增模块：
+
+- `backend/observability/logger.py`
+- `backend/observability/metrics.py`
+- `backend/observability/readiness.py`
+
+API：
+
+- `GET /health`：服务存活检查。
+- `GET /ready`：检查 checkpoint backend、database、worker、required env、auth secret。
+- `GET /api/metrics/runtime`：聚合 runtime metrics。
+
+Metrics 字段包括 session 状态、Agent failure、LLM call/fallback、Guardrail trigger、RAG hit/fallback、approval/rejection 和平均 runtime latency。
+
+## 11. PostgreSQL / Alembic
+
+PostgreSQL production path 包含：
+
+- `crisis_sessions`
+- `agent_checkpoints`
+- `agent_traces`
+- `approvals`
+- `evaluations`
+- `audit_logs`
+- `users`
+- `knowledge_documents`
+- `knowledge_chunks`
+
+迁移使用 Alembic：
+
+```bash
+python -m alembic upgrade head
 ```
 
-Memory 主要服务 Agent C 文案生成，让它参考历史危机经验，但不直接复制历史声明。
-
-Tools 用于给 Agent 提供外部能力，目前包括舆情分析工具和法规检索工具。
-
-## Trace 和 Metrics
-
-Dynamic Runtime 的 trace 记录：
-
-- agent
-- status
-- start_time
-- end_time
-- duration_ms
-- input_summary
-- output_summary
-- error
-
-Metrics 接口统计：
-
-- total_duration
-- agent_count
-- failed_agents
-- rag_hits
-- memory_hits
-- tool_calls
-- human_status
-
-这些信息支撑 Dashboard 展示和故障排查。
-
-## Evaluation 体系
-
-Evaluation 模块不依赖前端，也不改变业务 API。它通过离线 case 调用 workflow/runtime，生成 JSON 和 Markdown 报告。
-
-当前评测覆盖：
-
-- 风险识别准确率
-- 情绪识别准确率
-- tone accuracy
-- RAG recall@k
-- MRR
-- rerank gain
-- memory hit rate
-- response quality
-- hallucination risk
+JSON fallback 仍是默认路径，普通 pytest 不要求启动 PostgreSQL。

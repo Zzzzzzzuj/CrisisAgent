@@ -1,58 +1,31 @@
 # CrisisAgent Demo Guide
 
-本文档用于 GitHub 展示和面试演示，目标是在 5 到 8 分钟内讲清楚 CrisisAgent 的产品价值和工程架构。
+本文档用于 GitHub 展示和面试演示。推荐目标是在 5 到 8 分钟内讲清楚：系统如何把一个危机事件拆成多 Agent 流程，如何进入 Human Review，如何保存 checkpoint，以及如何通过 Trace / Metrics 排查运行过程。
 
-## 1. Demo 案例
+## 1. Backend
 
-案例文件：
+```powershell
+cd C:\path\to\CrisisAgent
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn backend.main:app --reload
+```
+
+检查：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health
+Invoke-RestMethod http://127.0.0.1:8000/ready
+```
+
+Swagger:
 
 ```text
-demo/cases.json
+http://127.0.0.1:8000/docs
 ```
 
-内置案例：
+## 2. Frontend
 
-- `food_safety`: 食品安全危机
-- `data_leak`: 数据泄露危机
-- `general_complaint`: 普通服务投诉
-
-## 2. 命令行 Demo
-
-运行：
-
-```bash
-python scripts/run_demo_cases.py
-```
-
-脚本会输出：
-
-- case 名称
-- dynamic runtime 结果
-- plan
-- agent trace
-- RAG 命中
-- memory 命中
-- evaluation
-- human gate 状态
-- final statement
-
-建议讲解方式：
-
-1. 先展示 food_safety，说明高风险事件会触发更严格的审核逻辑。
-2. 再展示 data_leak，说明系统可以覆盖数据隐私类危机。
-3. 最后展示 general_complaint，说明系统也能处理低风险普通投诉。
-
-## 3. Dashboard Demo
-
-启动后端：
-
-```bash
-uvicorn backend.main:app --reload
-```
-
-启动前端：
-
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
@@ -64,58 +37,184 @@ npm run dev
 http://localhost:5173
 ```
 
-推荐演示路径：
+演示路径：
 
-1. 首页“危机案例管理中心”
-   - 说明系统以 Crisis Case 为核心，而不是 session。
-   - 展示案例列表和审核状态。
+1. 打开 Crisis Dashboard。
+2. 新建危机案例。
+3. 进入详情页查看风险等级、AI 声明、Human Review。
+4. 展开高级分析查看 Agent Trace、RAG、Gate、Metrics、Raw JSON。
 
-2. 新建危机案例
-   - 输入食品安全事件。
-   - 点击生成响应方案。
+## 3. Mock Demo
 
-3. 进入案例详情
-   - 展示风险等级。
-   - 展示舆情分析。
-   - 展示 AI 生成声明。
-   - 展示 Human Review。
+Mock 模式适合离线演示和普通测试：
 
-4. 展开高级分析
-   - 展示 Agent Trace。
-   - 展示 RAG 和 Memory 信息。
-   - 展示 runtime metrics。
+```powershell
+$env:AGENT_MODE="mock"
+$env:CHECKPOINT_STORAGE="json"
+$env:RUNTIME_MODE="sync"
+python scripts\run_demo_cases.py
+```
 
-## 4. 面试讲解脚本
+脚本会输出：
 
-可以这样开场：
+- case 名称
+- plan
+- dynamic runtime 结果
+- agent trace
+- RAG 命中
+- memory 命中
+- evaluation
+- human gate 状态
+- final statement
 
-> CrisisAgent 是一个企业危机响应 Agent Platform。它不是让一个大模型直接生成公关稿，而是把真实危机响应拆成 Planner、Executor、多个专业 Agent、RAG、Memory、Evaluation 和 Human Review。前端面向业务用户展示 Crisis Case，底层保留 Agent Trace 和 Metrics，方便调试和复盘。
+## 4. Real LLM Demo
 
-重点讲 4 个点：
+真实 LLM demo 需要配置 OpenAI-compatible API，例如 DeepSeek：
 
-- 为什么多 Agent：职责拆分，方便定位和替换。
-- 为什么需要 RAG：合规审查不能靠模型编法律依据。
-- 为什么需要 Human Gate：危机公关是高风险场景，不能全自动发布。
-- 为什么需要 Evaluation：Agent 系统不能只看单次输出，要持续评测。
+```powershell
+$env:AGENT_MODE="llm"
+$env:LLM_PROVIDER="openai_compatible"
+$env:LLM_MODEL="<model-name>"
+$env:LLM_BASE_URL="<provider-base-url>"
+$env:LLM_API_KEY="<your-api-key>"
+python scripts\run_real_llm_demo.py
+```
 
-## 5. 常见问题
+不要把真实 API Key 写进命令历史截图、README、报告或 Git。
 
-### 为什么不用一个 LLM？
+真实 smoke 可能出现 LLM structured output 不稳定，系统会通过 JSON parsing、字段校验和 fallback 保持链路继续运行。面试中应明确区分“真实 LLM 请求成功”和“触发 mock fallback 后流程成功”。
 
-一个 LLM 可以做 demo，但工程上不可控。拆成多 Agent 后，每一步都有输入输出、trace、fallback 和测试。
+## 5. Async Runtime
 
-### RAG 放在哪里？
+切换异步模式：
 
-当前主要放在 Legal Agent，因为合规审查最依赖稳定知识库。
+```powershell
+$env:RUNTIME_MODE="async"
+python -m uvicorn backend.main:app --reload
+```
 
-### Memory 和 RAG 有什么区别？
+创建动态任务：
 
-RAG 是法规、规范、知识库；Memory 是企业历史危机经验。
+```powershell
+$body = @{ event = "某食品品牌被曝光使用过期原料，消费者要求监管介入。" } | ConvertTo-Json
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+$result = Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8000/api/dynamic/run `
+  -Body $bytes `
+  -ContentType "application/json; charset=utf-8"
+$result.session_id
+$result.status
+```
 
-### Human Review 如何恢复？
+异步模式下初始返回通常是 `queued`。随后查询：
 
-Runtime 会把 AgentState 保存到 checkpoint。人工 approve 后，系统可以从 checkpoint 恢复执行。
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8000/api/dynamic/$($result.session_id)"
+```
 
-### 这个项目如何继续生产化？
+注意：当前 worker 是 in-process worker pool，不是 Redis/RQ/Celery。
 
-可以接数据库、权限系统、消息队列、真实向量数据库、线上监控，以及更严格的人工标注评测集。
+## 6. PostgreSQL Backend
+
+使用 Docker Compose：
+
+```powershell
+docker compose up -d postgres
+```
+
+配置：
+
+```powershell
+$env:CHECKPOINT_STORAGE="postgres"
+$env:DATABASE_URL="postgresql+psycopg://<user>:<password>@localhost:5432/crisis_agent"
+python -m alembic upgrade head
+```
+
+运行 demo：
+
+```powershell
+python scripts\run_demo_cases.py
+```
+
+查询 API：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/dynamic/sessions
+```
+
+PostgreSQL 路径用于证明 checkpoint、trace、approval 和 audit log 可以落库；普通 pytest 仍默认走 JSON fallback。
+
+## 7. Auth Enabled
+
+默认：
+
+```powershell
+$env:AUTH_ENABLED="false"
+```
+
+开启：
+
+```powershell
+$env:AUTH_ENABLED="true"
+$env:SECRET_KEY="<strong-random-secret>"
+```
+
+登录：
+
+```powershell
+$loginBody = @{ username = "reviewer"; password = "<password>" } | ConvertTo-Json
+$login = Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8000/api/auth/login `
+  -Body $loginBody `
+  -ContentType "application/json"
+$token = $login.access_token
+```
+
+审核时携带 token：
+
+```powershell
+$headers = @{ Authorization = "Bearer $token" }
+$approveBody = @{ comment = "同意发布，注意同步客服 FAQ。" } | ConvertTo-Json
+Invoke-RestMethod -Method Post `
+  -Uri "http://127.0.0.1:8000/api/dynamic/<session_id>/approve" `
+  -Headers $headers `
+  -Body $approveBody `
+  -ContentType "application/json"
+```
+
+`operator` 不能 approve/reject；`legal_reviewer` 和 `admin` 可以。
+
+## 8. Readiness and Metrics
+
+Readiness：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/ready
+```
+
+Runtime metrics：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/metrics/runtime
+```
+
+重点讲解字段：
+
+- `total_sessions`
+- `completed_sessions`
+- `failed_sessions`
+- `waiting_human_sessions`
+- `llm_fallback_count`
+- `guardrail_trigger_count`
+- `rag_hit_count`
+- `approval_count`
+- `rejection_count`
+
+## 9. Suggested Interview Demo Script
+
+1. 用一句话说明项目：企业危机响应 Agent 平台，不是单 Prompt 生成公关稿。
+2. 展示 Dynamic Runtime：Planner -> Validator -> Executor -> AgentState。
+3. 展示 Legal Agent：Gate 决定是否需要 RAG，RAG trace 展示来源和 rerank score。
+4. 展示 Human Review：高风险 case 进入 WAITING_HUMAN，审核人 approve/reject 后有 audit log。
+5. 展示生产化：PostgreSQL、Alembic、Auth/RBAC、Guardrails、Observability。
+6. 展示诚实边界：async 是 in-process，metrics 不是 Prometheus，embedding 不是 pgvector。
