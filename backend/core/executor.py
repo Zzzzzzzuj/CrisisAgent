@@ -52,10 +52,11 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
             continue
 
         executed_agents.append(agent_name)
-        agent_state.set_result(agent_name, output)
-        trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", output, None)
-        trace_item.update(_collect_llm_metadata())
-        trace_item.update(_collect_agent_metadata(agent_name))
+        output_metadata = _extract_result_metadata(output)
+        clean_output = _strip_result_metadata(output)
+        agent_state.set_result(agent_name, clean_output)
+        trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", clean_output, None)
+        trace_item.update(_collect_trace_metadata(agent_name, output_metadata))
         agent_state.add_trace(trace_item)
 
     agent_state.current_agent = None
@@ -126,6 +127,34 @@ def _collect_llm_metadata() -> dict:
     if not llm_trace:
         return {}
     return {"llm": deepcopy(llm_trace)}
+
+
+def _extract_result_metadata(output) -> dict:
+    if isinstance(output, dict) and isinstance(output.get("_metadata"), dict):
+        return deepcopy(output["_metadata"])
+    return {}
+
+
+def _strip_result_metadata(output):
+    if not isinstance(output, dict) or "_metadata" not in output:
+        return output
+    clean_output = dict(output)
+    clean_output.pop("_metadata", None)
+    return clean_output
+
+
+def _collect_trace_metadata(agent_name: str | None, result_metadata: dict) -> dict:
+    trace_metadata = {}
+    if isinstance(result_metadata.get("llm"), dict):
+        trace_metadata["llm"] = deepcopy(result_metadata["llm"])
+    else:
+        trace_metadata.update(_collect_llm_metadata())
+
+    if isinstance(result_metadata.get("rag"), dict):
+        trace_metadata["rag"] = deepcopy(result_metadata["rag"])
+    else:
+        trace_metadata.update(_collect_agent_metadata(agent_name))
+    return trace_metadata
 
 
 def _now_iso() -> str:

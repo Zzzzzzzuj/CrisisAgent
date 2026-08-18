@@ -18,7 +18,7 @@ Dynamic Runtime 部分我实现了 Planner、Validator、Executor 和 AgentState
 
 RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回低分 chunk，所以加了 rerank 后的相关度过滤。后来为了减少无关任务触发 RAG，又做了 Retrieval Need Gate v3，区分“topic 相关”和“当前危机响应意图”。再通过 frozen challenge 和 retrieval holdout 验证 Gate 和 Reranker 的效果。Reranker v2 是手写 domain-aware rule，不是 Cross Encoder，这一点我会明确说明。
 
-生产化阶段我补了 PostgreSQL checkpoint backend、Alembic migration、Auth/RBAC、真实审核人审计、LLM reliability、Guardrails、RAG knowledge ingestion、Observability 和 readiness。最后一轮测试结果是 `437 passed`。真实 DeepSeek + BGE smoke 的结果是 `PASS_WITH_LLM_FALLBACK_OBSERVED`，说明真实模型请求和 BGE 能跑通，但也观察到 structured output 不稳定，所以不能夸大成生产可靠性。
+生产化阶段我补了 PostgreSQL checkpoint backend、Alembic migration、Auth/RBAC、真实审核人审计、LLM reliability、Guardrails、RAG knowledge ingestion、Observability 和 readiness。最后一轮测试结果是 `440 passed`。真实 DeepSeek + BGE smoke 的结果是 `PASS_WITH_LLM_FALLBACK_OBSERVED`，说明真实模型请求和 BGE 能跑通，但也观察到 structured output 不稳定，所以不能夸大成生产可靠性。
 
 ## 面试官可能追问
 
@@ -38,26 +38,30 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 背诵版回答：当前是本地轻量 RAG：Markdown fallback、数据库知识文档导入、chunk 管理、Hash/BGE embedding、Keyword + Vector Hybrid、RuleBasedReranker 和 trace metadata。没有使用 pgvector、ANN、BM25、RRF 或 Cross Encoder。这个项目重点是把 RAG 链路做成可评测和可审计，而不是追求最复杂检索技术。
 
-### 5. 真实 LLM 输出不稳定怎么办？
+### 5. 怎么证明 RAG 有用？
+
+背诵版回答：我没有只说“接了 RAG”，而是做了两层验证。第一层是可见性：Legal Agent trace 会记录 `rag_used`、`retrieval_backend`、`retrieval_query`、`evidence_chunks`、chunk_id、document_id、version、score、rerank_score 和 evidence_summary，能看到法律审核参考了哪些证据。第二层是对比：`scripts/run_rag_ablation_demo.py` 会对同一个 case 分别运行 `RAG_ENABLED=false/true`，对比 final statement、legal risks、safe points、guardrail 和 evaluation score。这样能解释 RAG 对输出的影响，而不是只展示检索命中。
+
+### 6. 真实 LLM 输出不稳定怎么办？
 
 背诵版回答：LLMClient 做了 timeout、retry、失败分类；parser 做 JSON 提取和修复；字段缺失会触发 schema validation failed。Agent 会 fallback 到 mock 结果，同时 trace 记录 failure_type 和 fallback_used。Human Policy 发现 LLM fallback 后会进入人工审核。
 
-### 6. Human Review 如何做到可审计？
+### 7. Human Review 如何做到可审计？
 
 背诵版回答：开启 `AUTH_ENABLED=true` 后，用户通过 JWT 登录，角色分为 operator、legal_reviewer 和 admin。approve/reject 只允许 legal_reviewer 或 admin，审核动作会记录 reviewer_id、reviewer_username、reviewer_role，并写入 audit_logs。
 
-### 7. PostgreSQL 在项目中存什么？
+### 8. PostgreSQL 在项目中存什么？
 
 背诵版回答：生产化路径保存 crisis_sessions、agent_checkpoints、agent_traces、approvals、evaluations、audit_logs、users 以及 knowledge_documents/knowledge_chunks。JSON fallback 仍保留，用于本地测试和 demo。
 
-### 8. Async Runtime 是生产级队列吗？
+### 9. Async Runtime 是生产级队列吗？
 
 背诵版回答：不是。当前 async 是 in-process ThreadPoolExecutor，能证明异步接口和后台执行模型，但进程重启会丢失尚未执行的内存队列，多进程也不共享。文档里明确下一步应替换 Redis/RQ/Celery。
 
-### 9. 你怎么验证项目不是只跑通一个 demo？
+### 10. 你怎么验证项目不是只跑通一个 demo？
 
-背诵版回答：我做了多层测试和评测。普通 pytest 当前是 437 passed；Evaluation 里有 Response V2、RAG Baseline、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
+背诵版回答：我做了多层测试和评测。普通 pytest 当前是 440 passed；Evaluation 里有 Response V2、RAG Baseline、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
 
-### 10. 这个项目最大的不足是什么？
+### 11. 这个项目最大的不足是什么？
 
 背诵版回答：第一，async worker 还不是 durable queue；第二，RAG embedding 还没有接 pgvector/ANN；第三，Reranker 是手写规则；第四，真实 LLM 输出仍有结构化不稳定，需要更强的 retry-with-format 或 provider response_format；第五，module-level RAG trace state 在并发下有隔离风险。

@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from contextvars import ContextVar
 from copy import deepcopy
 from time import perf_counter
 
@@ -12,6 +13,7 @@ from backend.logger import get_logger
 
 logger = get_logger(__name__)
 _LAST_LLM_TRACE: dict = {}
+_LLM_TRACE_CONTEXT: ContextVar[dict] = ContextVar("llm_trace_context", default={})
 
 
 FAILURE_TIMEOUT = "timeout"
@@ -159,11 +161,13 @@ class LLMClient:
 
 
 def get_last_llm_trace() -> dict:
-    return deepcopy(_LAST_LLM_TRACE)
+    context_trace = _LLM_TRACE_CONTEXT.get({})
+    return deepcopy(context_trace or _LAST_LLM_TRACE)
 
 
 def reset_last_llm_trace() -> None:
     _LAST_LLM_TRACE.clear()
+    _LLM_TRACE_CONTEXT.set({})
 
 
 def record_llm_fallback(agent_name: str, exc: Exception) -> dict:
@@ -187,6 +191,7 @@ def record_llm_fallback(agent_name: str, exc: Exception) -> dict:
     )
     _LAST_LLM_TRACE.clear()
     _LAST_LLM_TRACE.update(trace)
+    _LLM_TRACE_CONTEXT.set(deepcopy(trace))
     return get_last_llm_trace()
 
 
@@ -266,6 +271,7 @@ def _record_llm_trace(
             "output_chars": response_chars,
         }
     )
+    _LLM_TRACE_CONTEXT.set(deepcopy(_LAST_LLM_TRACE))
 
 
 def _estimate_message_chars(messages) -> int:

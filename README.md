@@ -236,7 +236,7 @@ python scripts\list_knowledge_documents.py
 Current regression result:
 
 ```text
-437 passed
+440 passed
 ```
 
 Run locally:

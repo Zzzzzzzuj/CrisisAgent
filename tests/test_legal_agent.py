@@ -134,6 +134,39 @@ def test_legal_agent_gate_allows_retriever_once_and_records_hit(monkeypatch):
     assert rag_info["retrieval_skipped"] is False
     assert rag_info["retrieval_executed"] is True
     assert rag_info["retrieval_status"] == "executed_with_hits"
+    assert rag_info["rag_used"] is True
+    assert rag_info["retrieval_backend"] == "markdown"
+    assert rag_info["retrieval_query"]
+    assert rag_info["evidence_chunks"][0]["chunk_id"] == "legal-1"
+    assert rag_info["evidence_chunks"][0]["score"] == 0.9
+    assert rag_info["evidence_chunks"][0]["rerank_score"] == 0.95
+    assert "Legal Agent used" in rag_info["evidence_summary"]
+
+
+def test_legal_agent_rag_enabled_false_skips_retrieval(monkeypatch):
+    monkeypatch.setenv("RAG_ENABLED", "false")
+
+    def fail_gate_if_called(*args, **kwargs):
+        raise AssertionError("gate should not run when RAG_ENABLED=false")
+
+    def fail_retrieve_if_called(*args, **kwargs):
+        raise AssertionError("retriever should not run when RAG_ENABLED=false")
+
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", fail_gate_if_called)
+    monkeypatch.setattr(legal_agent, "retrieve", fail_retrieve_if_called)
+
+    context = legal_agent._retrieve_legal_context(TEST_PAYLOAD)
+    rag_info = legal_agent.get_last_rag_info()
+
+    assert context == ""
+    assert rag_info["enabled"] is False
+    assert rag_info["rag_used"] is False
+    assert rag_info["retrieval_backend"] == "none"
+    assert rag_info["retrieval_status"] == "disabled"
+    assert rag_info["retrieval_skipped"] is True
+    assert rag_info["retrieval_executed"] is False
+    assert rag_info["evidence_chunks"] == []
+    assert "RAG was disabled" in rag_info["evidence_summary"]
 
 
 def test_legal_agent_gate_allowed_empty_retrieval_is_distinct_from_gate_skip(monkeypatch):

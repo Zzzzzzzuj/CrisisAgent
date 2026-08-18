@@ -75,6 +75,14 @@ def _get_agent_tools(agent: str) -> list[ToolTraceItem]:
     ]
 
 
+def _strip_result_metadata(output):
+    if not isinstance(output, dict) or "_metadata" not in output:
+        return output
+    clean = deepcopy(output)
+    clean.pop("_metadata", None)
+    return clean
+
+
 def _record_step(
     trace: list[AgentTraceItem],
     agent: str,
@@ -87,10 +95,11 @@ def _record_step(
     start_time = _now_iso()
     output = runner(agent_input)
     end_time = _now_iso()
+    clean_output = _strip_result_metadata(output)
 
     fallback_candidate = False
     if requested_mode == "llm" and mock_runner is not None:
-        fallback_candidate = output == mock_runner(deepcopy(agent_input))
+        fallback_candidate = clean_output == mock_runner(deepcopy(agent_input))
 
     mode, fallback, status = _resolve_mode_and_fallback(requested_mode, fallback_candidate)
     rag = legal_agent.get_last_rag_info() if agent == "Agent B" else None
@@ -102,7 +111,7 @@ def _record_step(
         agent,
         name,
         agent_input,
-        output,
+        clean_output,
         start_time,
         end_time,
         mode,
@@ -113,7 +122,7 @@ def _record_step(
         context,
         tools,
     )
-    return output
+    return clean_output
 
 
 def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:

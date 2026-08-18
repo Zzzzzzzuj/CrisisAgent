@@ -153,7 +153,7 @@ Runtime metrics 覆盖：
 当前测试结果：
 
 ```text
-437 passed
+440 passed
 ```
 
 Real DeepSeek + BGE minimal smoke：

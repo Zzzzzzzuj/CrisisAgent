@@ -1,6 +1,10 @@
+import os
+from contextvars import ContextVar
+from copy import deepcopy
+
 from backend.config import get_config
 from backend.llm import LLMClient
-from backend.llm.client import record_llm_fallback
+from backend.llm.client import get_last_llm_trace, record_llm_fallback
 from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
 from backend.rag.retrieval_need_gate import evaluate_retrieval_need
@@ -9,15 +13,20 @@ from backend.rag.retriever import retrieve
 
 logger = get_logger(__name__)
 AGENT_NAME = "Agent B"
-_LAST_RAG_INFO = {
+_DEFAULT_RAG_INFO = {
     "enabled": False,
     "hit": False,
+    "rag_used": False,
+    "retrieval_backend": "none",
     "retrieval_type": None,
     "rerank_enabled": False,
     "query": "",
+    "retrieval_query": "",
     "sources": [],
     "source_details": [],
     "chunks": [],
+    "evidence_chunks": [],
+    "evidence_summary": "RAG was not used.",
     "scores": [],
     "rerank_scores": [],
     "count": 0,
@@ -27,6 +36,8 @@ _LAST_RAG_INFO = {
     "retrieval_executed": False,
     "retrieval_status": "not_started",
 }
+_LAST_RAG_INFO = deepcopy(_DEFAULT_RAG_INFO)
+_RAG_INFO_CONTEXT: ContextVar[dict] = ContextVar("legal_rag_info_context", default=deepcopy(_DEFAULT_RAG_INFO))
 REQUIRED_FIELDS = (
     "legal_risks",
     "safe_points",
@@ -42,7 +53,7 @@ def run(payload: dict) -> dict:
     if config.agent_mode == "llm":
         _set_rag_info(enabled=True, hit=False, sources=[])
         try:
-            return _run_llm(payload)
+            return _attach_metadata(_run_llm(payload))
         except Exception as exc:
             logger.warning(
                 "%s fallback to mock mode due to llm failure: %s | %s",
@@ -50,32 +61,15 @@ def run(payload: dict) -> dict:
                 exc.__class__.__name__,
                 str(exc),
             )
-            record_llm_fallback(AGENT_NAME, exc)
-            return _run_mock(payload)
+            llm_trace = record_llm_fallback(AGENT_NAME, exc)
+            return _attach_metadata(_run_mock(payload), llm_trace=llm_trace)
 
     _set_rag_info(enabled=False, hit=False, sources=[])
-    return _run_mock(payload)
+    return _attach_metadata(_run_mock(payload))
 
 
 def get_last_rag_info() -> dict:
-    return {
-        "enabled": _LAST_RAG_INFO["enabled"],
-        "hit": _LAST_RAG_INFO["hit"],
-        "retrieval_type": _LAST_RAG_INFO["retrieval_type"],
-        "rerank_enabled": _LAST_RAG_INFO["rerank_enabled"],
-        "query": _LAST_RAG_INFO["query"],
-        "sources": list(_LAST_RAG_INFO["sources"]),
-        "source_details": list(_LAST_RAG_INFO["source_details"]),
-        "chunks": list(_LAST_RAG_INFO["chunks"]),
-        "scores": list(_LAST_RAG_INFO["scores"]),
-        "rerank_scores": list(_LAST_RAG_INFO["rerank_scores"]),
-        "count": _LAST_RAG_INFO["count"],
-        "fallback_used": _LAST_RAG_INFO["fallback_used"],
-        "gate": dict(_LAST_RAG_INFO["gate"]),
-        "retrieval_skipped": _LAST_RAG_INFO["retrieval_skipped"],
-        "retrieval_executed": _LAST_RAG_INFO["retrieval_executed"],
-        "retrieval_status": _LAST_RAG_INFO["retrieval_status"],
-    }
+    return deepcopy(_RAG_INFO_CONTEXT.get(_LAST_RAG_INFO))
 
 
 def _set_rag_info(
@@ -96,17 +90,31 @@ def _set_rag_info(
     chunks = chunks or []
     gate = gate or {}
     source_details = source_details or []
+    evidence_chunks = _build_evidence_chunks(chunks, source_details)
+    retrieval_backend = _resolve_retrieval_backend(evidence_chunks, source_details, retrieval_status)
+    rag_used = enabled and retrieval_executed and bool(evidence_chunks)
+    evidence_summary = _build_evidence_summary(
+        rag_used=rag_used,
+        retrieval_status=retrieval_status,
+        retrieval_backend=retrieval_backend,
+        evidence_chunks=evidence_chunks,
+        gate=gate,
+    )
     # sources/count describe unique source files; scores describe final retrieved chunks.
-    _LAST_RAG_INFO.update(
-        {
+    rag_info = {
             "enabled": enabled,
             "hit": hit,
+            "rag_used": rag_used,
+            "retrieval_backend": retrieval_backend,
             "retrieval_type": retrieval_type,
             "rerank_enabled": rerank_enabled,
             "query": query,
+            "retrieval_query": query,
             "sources": sources,
             "source_details": source_details,
             "chunks": chunks,
+            "evidence_chunks": evidence_chunks,
+            "evidence_summary": evidence_summary,
             "scores": [chunk.get("score") for chunk in chunks],
             "rerank_scores": [chunk.get("rerank_score") for chunk in chunks],
             "count": len(sources),
@@ -115,8 +123,10 @@ def _set_rag_info(
             "retrieval_skipped": retrieval_skipped,
             "retrieval_executed": retrieval_executed,
             "retrieval_status": retrieval_status,
-        }
-    )
+    }
+    _LAST_RAG_INFO.clear()
+    _LAST_RAG_INFO.update(deepcopy(rag_info))
+    _RAG_INFO_CONTEXT.set(deepcopy(rag_info))
 
 
 def _run_mock(payload: dict) -> dict:
@@ -256,6 +266,19 @@ legal_context: {legal_context}
 
 def _retrieve_legal_context(payload: dict) -> str:
     query = _build_retrieval_query(payload)
+    if not _is_rag_enabled():
+        _set_rag_info(
+            enabled=False,
+            hit=False,
+            sources=[],
+            query=query,
+            retrieval_skipped=True,
+            retrieval_executed=False,
+            retrieval_status="disabled",
+        )
+        logger.info("%s RAG disabled by RAG_ENABLED=false", AGENT_NAME)
+        return ""
+
     gate = evaluate_retrieval_need(
         event=payload.get("event", ""),
         draft=payload.get("draft", ""),
@@ -363,6 +386,98 @@ def _normalize_rag_chunks(chunks: list[dict], retrieval_query: str = "") -> list
             }
         )
     return normalized_chunks
+
+
+def _attach_metadata(output: dict, llm_trace: dict | None = None) -> dict:
+    enriched = dict(output)
+    metadata = {
+        "rag": get_last_rag_info(),
+    }
+    llm = llm_trace if llm_trace is not None else get_last_llm_trace()
+    if llm:
+        metadata["llm"] = deepcopy(llm)
+    enriched["_metadata"] = metadata
+    return enriched
+
+
+def _is_rag_enabled() -> bool:
+    return os.getenv("RAG_ENABLED", "true").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _build_evidence_chunks(chunks: list[dict], source_details: list[dict]) -> list[dict]:
+    evidence = []
+    if chunks:
+        for chunk in chunks:
+            evidence.append(
+                {
+                    "chunk_id": chunk.get("chunk_id"),
+                    "document_id": chunk.get("document_id"),
+                    "document_version": chunk.get("document_version"),
+                    "source": chunk.get("source"),
+                    "source_category": chunk.get("source_category"),
+                    "score": chunk.get("score"),
+                    "rerank_score": chunk.get("rerank_score"),
+                    "text_preview": str(chunk.get("text_preview", ""))[:200],
+                }
+            )
+        return evidence
+
+    for source in source_details:
+        evidence.append(
+            {
+                "chunk_id": source.get("chunk_id"),
+                "document_id": source.get("document_id"),
+                "document_version": source.get("document_version"),
+                "source": source.get("source"),
+                "source_category": source.get("source_category"),
+                "score": source.get("score"),
+                "rerank_score": source.get("rerank_score"),
+                "text_preview": "",
+            }
+        )
+    return evidence
+
+
+def _resolve_retrieval_backend(
+    evidence_chunks: list[dict],
+    source_details: list[dict],
+    retrieval_status: str,
+) -> str:
+    if retrieval_status in {"disabled", "skipped_by_gate", "not_started"}:
+        return "none"
+    metadata_rows = evidence_chunks or source_details
+    if any(row.get("document_id") or row.get("document_version") for row in metadata_rows):
+        return "db"
+    if metadata_rows:
+        return "markdown"
+    return "none"
+
+
+def _build_evidence_summary(
+    rag_used: bool,
+    retrieval_status: str,
+    retrieval_backend: str,
+    evidence_chunks: list[dict],
+    gate: dict,
+) -> str:
+    if retrieval_status == "disabled":
+        return "RAG was disabled by RAG_ENABLED=false; Legal Agent reviewed without retrieved evidence."
+    if retrieval_status == "skipped_by_gate":
+        reason = gate.get("reason", "retrieval need gate rejected RAG")
+        return f"RAG was skipped by gate: {reason}"
+    if retrieval_status == "retrieval_error":
+        return "RAG retrieval failed; Legal Agent continued with empty context and fallback metadata."
+    if not rag_used:
+        return "RAG executed but returned no relevant evidence chunks."
+    sources = []
+    for chunk in evidence_chunks:
+        source = chunk.get("source")
+        if source and source not in sources:
+            sources.append(source)
+    return (
+        f"Legal Agent used {len(evidence_chunks)} evidence chunks "
+        f"from {retrieval_backend} backend: {', '.join(sources)}."
+    )
 
 
 def _resolve_retrieval_type(retrieval_result: dict) -> str | None:
