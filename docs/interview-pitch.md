@@ -40,7 +40,7 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 ### 5. 怎么证明 RAG 有用？
 
-背诵版回答：我没有只说“接了 RAG”，而是做了两层验证。第一层是可见性：Legal Agent trace 会记录 `rag_used`、`retrieval_backend`、`retrieval_query`、`evidence_chunks`、chunk_id、document_id、version、score、rerank_score 和 evidence_summary，能看到法律审核参考了哪些证据。第二层是对比：`scripts/run_rag_ablation_demo.py` 会对同一个 case 分别运行 `RAG_ENABLED=false/true`，对比 final statement、legal risks、safe points、guardrail 和 evaluation score。这样能解释 RAG 对输出的影响，而不是只展示检索命中。
+背诵版回答：我不会只看最终回答来证明 RAG 有用，因为最终文本可能只是模型自己写得像。我的验证分两层：第一层看 trace，Legal Agent 会记录 `rag_used`、`retrieval_backend`、`retrieval_query`、`evidence_chunks`、chunk_id、document_id、version、score、rerank_score 和 `evidence_summary`，能看到法律审核具体参考了哪些证据。第二层做 ablation：`scripts/run_rag_ablation_demo.py` 会对同一个 case 分别运行 `RAG_ENABLED=false/true`，对比 `legal_risks`、`safe_points`、`final_statement`、guardrail 和 evaluation score。比如食品安全 case 关闭 RAG 时 `evidence_chunks_count=0`，开启后会命中 `food_safety.md` 并带出 evidence chunks。这样能证明 RAG evidence 真的进入了审核链路，而不是只展示一个好看的回答。
 
 ### 6. 真实 LLM 输出不稳定怎么办？
 

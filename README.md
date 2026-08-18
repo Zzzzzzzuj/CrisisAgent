@@ -215,6 +215,44 @@ $env:AGENT_MODE="llm"
 python scripts\run_real_llm_demo.py
 ```
 
+## RAG Evidence & Ablation
+
+Legal Agent 的 RAG 不是只在最终回答里“看起来用了知识库”，而是会把证据链写入 trace，方便审计和面试展示。Legal trace 中重点字段包括：
+
+- `rag_used`：本次 Legal 审核是否实际使用了 RAG evidence。
+- `retrieval_backend`：证据来源路径，例如 `db`、`markdown` 或 `none`。
+- `retrieval_query`：Legal Agent 实际送入检索器的 query。
+- `evidence_chunks`：最终进入 Legal 审核上下文的证据片段。
+- `chunk_id` / `document_id` / `document_version`：用于追踪证据来自哪份文档和哪个版本。
+- `score` / `rerank_score`：检索分数和 rerank 后分数。
+- `evidence_summary`：用一句话说明本次 RAG evidence 如何进入法律审核。
+
+RAG on/off 对比 demo：
+
+```powershell
+python scripts\run_rag_ablation_demo.py
+```
+
+示例输出摘要：
+
+```json
+{
+  "rag_disabled": {
+    "rag_used": false,
+    "retrieval_backend": "none",
+    "evidence_chunks_count": 0
+  },
+  "rag_enabled": {
+    "rag_used": true,
+    "retrieval_backend": "markdown",
+    "evidence_chunks_count": 3,
+    "evidence_summary": "Legal Agent used 3 evidence chunks from markdown backend: food_safety.md."
+  }
+}
+```
+
+这个脚本对同一个危机事件分别运行 `RAG_ENABLED=false` 和 `RAG_ENABLED=true`，对比 `final_statement`、`legal_risks`、`safe_points`、`guardrail_triggered` 和 evaluation scores。当前示例中 RAG 开启后命中 `food_safety.md`，并在 trace 中展示 3 个 evidence chunks；关闭 RAG 时 `rag_used=false` 且 evidence 为空。
+
 BGE readiness:
 
 ```powershell

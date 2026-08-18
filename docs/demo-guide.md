@@ -84,7 +84,39 @@ python scripts\run_real_llm_demo.py
 
 真实 smoke 可能出现 LLM structured output 不稳定，系统会通过 JSON parsing、字段校验和 fallback 保持链路继续运行。面试中应明确区分“真实 LLM 请求成功”和“触发 mock fallback 后流程成功”。
 
-## 5. Async Runtime
+## 5. 如何验证 RAG 真的生效
+
+RAG 展示不要只看最终声明是否更像样，而要看 Legal Agent trace 里的 evidence 是否真的进入了审核过程。
+
+运行 RAG ablation demo：
+
+```powershell
+python scripts\run_rag_ablation_demo.py
+```
+
+观察输出中的两组结果：
+
+- `RAG_ENABLED=false`：`rag_used=false`，`retrieval_backend=none`，`evidence_chunks_count=0`。
+- `RAG_ENABLED=true`：`rag_used=true`，`retrieval_backend=markdown` 或 `db`，`evidence_chunks_count>0`。
+- 示例食品安全 case 会命中 `food_safety.md`，并展示 Legal Agent 使用了 3 个 evidence chunks。
+
+在 Dashboard 里验证：
+
+1. 新建一个食品安全、数据隐私或产品质量危机 case。
+2. 进入 case detail。
+3. 展开“高级分析”。
+4. 查看 Legal Agent 的 RAG / Gate trace。
+5. 重点确认 `rag_used`、`retrieval_backend`、`retrieval_query`、`evidence_chunks`、`score`、`rerank_score` 和 `evidence_summary`。
+
+面试演示时可以这样讲：
+
+```text
+我不是只看最终回答来证明 RAG 有用，而是看 trace 中 Legal Agent 是否实际拿到了 evidence chunks，
+并通过 RAG_ENABLED=false/true 对同一个 case 做 ablation，对比 legal_risks、safe_points、final_statement、
+guardrail 和 evaluation score。
+```
+
+## 6. Async Runtime
 
 切换异步模式：
 
@@ -114,7 +146,7 @@ Invoke-RestMethod "http://127.0.0.1:8000/api/dynamic/$($result.session_id)"
 
 注意：当前 worker 是 in-process worker pool，不是 Redis/RQ/Celery。
 
-## 6. PostgreSQL Backend
+## 7. PostgreSQL Backend
 
 使用 Docker Compose：
 
@@ -144,7 +176,7 @@ Invoke-RestMethod http://127.0.0.1:8000/api/dynamic/sessions
 
 PostgreSQL 路径用于证明 checkpoint、trace、approval 和 audit log 可以落库；普通 pytest 仍默认走 JSON fallback。
 
-## 7. Auth Enabled
+## 8. Auth Enabled
 
 默认：
 
@@ -184,7 +216,7 @@ Invoke-RestMethod -Method Post `
 
 `operator` 不能 approve/reject；`legal_reviewer` 和 `admin` 可以。
 
-## 8. Readiness and Metrics
+## 9. Readiness and Metrics
 
 Readiness：
 
@@ -210,11 +242,12 @@ Invoke-RestMethod http://127.0.0.1:8000/api/metrics/runtime
 - `approval_count`
 - `rejection_count`
 
-## 9. Suggested Interview Demo Script
+## 10. Suggested Interview Demo Script
 
 1. 用一句话说明项目：企业危机响应 Agent 平台，不是单 Prompt 生成公关稿。
 2. 展示 Dynamic Runtime：Planner -> Validator -> Executor -> AgentState。
 3. 展示 Legal Agent：Gate 决定是否需要 RAG，RAG trace 展示来源和 rerank score。
-4. 展示 Human Review：高风险 case 进入 WAITING_HUMAN，审核人 approve/reject 后有 audit log。
-5. 展示生产化：PostgreSQL、Alembic、Auth/RBAC、Guardrails、Observability。
-6. 展示诚实边界：async 是 in-process，metrics 不是 Prometheus，embedding 不是 pgvector。
+4. 展示 RAG Ablation：同一 case 下 `RAG_ENABLED=false/true` 的 evidence 差异。
+5. 展示 Human Review：高风险 case 进入 WAITING_HUMAN，审核人 approve/reject 后有 audit log。
+6. 展示生产化：PostgreSQL、Alembic、Auth/RBAC、Guardrails、Observability。
+7. 展示诚实边界：async 是 in-process，metrics 不是 Prometheus，embedding 不是 pgvector。
