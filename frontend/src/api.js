@@ -21,6 +21,10 @@ export function getDynamicMetrics(sessionId) {
   return api.get(`/api/dynamic/${sessionId}/metrics`).then((response) => response.data);
 }
 
+export function getRuntimeMetrics() {
+  return api.get("/api/metrics/runtime").then((response) => response.data);
+}
+
 export function approveDynamicSession(sessionId, payload) {
   return api.post(`/api/dynamic/${sessionId}/approve`, payload).then((response) => response.data);
 }

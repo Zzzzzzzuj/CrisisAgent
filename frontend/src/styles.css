@@ -192,6 +192,19 @@ nav a.router-link-active {
   background: #eaf7ef;
 }
 
+.stat-card.failed {
+  background: #fde8e4;
+}
+
+.stat-card.runtime {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.compact-warning {
+  margin: -8px 0 4px;
+  font-size: 13px;
+}
+
 .section-heading {
   margin-top: 4px;
 }
@@ -720,6 +733,45 @@ button:disabled {
 .rag-sources p {
   margin: 8px 0 0;
   line-height: 1.6;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 10px;
+}
+
+.evidence-card {
+  border: 1px solid rgba(31, 41, 51, 0.08);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.evidence-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.evidence-head span {
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #425048;
+  font-size: 12px;
+  font-weight: 800;
+  background: #eef7f2;
+}
+
+.evidence-meta {
+  margin-bottom: 8px;
+}
+
+.evidence-preview {
+  margin: 0;
+  color: #53606a;
+  line-height: 1.7;
 }
 
 .full-span {

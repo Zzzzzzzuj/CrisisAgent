@@ -2,12 +2,14 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
-import { getDynamicSession, listDynamicSessions } from "../api";
+import { getDynamicSession, getRuntimeMetrics, listDynamicSessions } from "../api";
 import CaseCard from "../components/CaseCard.vue";
 
 const cases = ref([]);
+const runtimeMetrics = ref(null);
 const loading = ref(false);
 const error = ref("");
+const metricsError = ref("");
 
 const totalCases = computed(() => cases.value.length);
 const highRiskCases = computed(
@@ -16,17 +18,38 @@ const highRiskCases = computed(
 const pendingReview = computed(() => cases.value.filter((item) => item.status === "WAITING_HUMAN").length);
 const completedCases = computed(() => cases.value.filter((item) => item.status === "COMPLETED").length);
 const recentCases = computed(() => cases.value.slice(0, 6));
+const runtimeCards = computed(() => {
+  const metrics = runtimeMetrics.value || {};
+  return [
+    ["LLM Fallback", metrics.llm_fallback_count],
+    ["Guardrail Hits", metrics.guardrail_trigger_count],
+    ["RAG Hits", metrics.rag_hit_count],
+    ["RAG Fallback", metrics.rag_fallback_count],
+    ["Approvals", metrics.approval_count],
+    ["Rejections", metrics.rejection_count],
+  ];
+});
 
 async function loadCases() {
   loading.value = true;
   error.value = "";
+  metricsError.value = "";
   try {
-    const sessions = await listDynamicSessions();
+    const [sessions] = await Promise.all([listDynamicSessions(), loadRuntimeMetrics()]);
     cases.value = await Promise.all(sessions.map(enrichCase));
   } catch (err) {
     error.value = err.response?.data?.detail || err.message || "加载危机案例失败";
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadRuntimeMetrics() {
+  try {
+    runtimeMetrics.value = await getRuntimeMetrics();
+  } catch (err) {
+    runtimeMetrics.value = null;
+    metricsError.value = err.response?.data?.detail || err.message || "Runtime Metrics 暂不可用";
   }
 }
 
@@ -68,7 +91,7 @@ onMounted(loadCases);
     <div class="stats-grid">
       <article class="stat-card">
         <span>Total Cases</span>
-        <strong>{{ totalCases }}</strong>
+        <strong>{{ runtimeMetrics?.total_sessions ?? totalCases }}</strong>
       </article>
       <article class="stat-card alert">
         <span>High Risk Cases</span>
@@ -76,13 +99,28 @@ onMounted(loadCases);
       </article>
       <article class="stat-card pending">
         <span>Pending Review</span>
-        <strong>{{ pendingReview }}</strong>
+        <strong>{{ runtimeMetrics?.waiting_human_sessions ?? pendingReview }}</strong>
       </article>
       <article class="stat-card complete">
         <span>Completed Cases</span>
-        <strong>{{ completedCases }}</strong>
+        <strong>{{ runtimeMetrics?.completed_sessions ?? completedCases }}</strong>
+      </article>
+      <article class="stat-card failed">
+        <span>Failed Sessions</span>
+        <strong>{{ runtimeMetrics?.failed_sessions ?? 0 }}</strong>
+      </article>
+      <article
+        v-for="[label, value] in runtimeCards"
+        :key="label"
+        class="stat-card runtime"
+      >
+        <span>{{ label }}</span>
+        <strong>{{ value ?? 0 }}</strong>
       </article>
     </div>
+    <p v-if="metricsError" class="muted compact-warning">
+      {{ metricsError }}，案例列表仍可正常查看。
+    </p>
 
     <div class="section-heading">
       <div>

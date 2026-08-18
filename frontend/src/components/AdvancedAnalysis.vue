@@ -17,6 +17,16 @@ const props = defineProps({
 const trace = computed(() => props.session.trace || []);
 const ragItems = computed(() => trace.value.filter((item) => item.rag));
 const memoryItems = computed(() => trace.value.filter((item) => item.memory));
+const guardrails = computed(() => props.session.metadata?.guardrails || {});
+const policy = computed(() => props.session.metadata?.policy || {});
+const inputGuardrail = computed(() => guardrails.value.input || {});
+const outputGuardrail = computed(() => guardrails.value.output || {});
+const guardrailTriggered = computed(
+  () => inputGuardrail.value.hit === true || outputGuardrail.value.hit === true,
+);
+const humanReviewByGuardrail = computed(
+  () => Array.isArray(policy.value.triggers) && policy.value.triggers.some((item) => String(item).startsWith("guardrail_")),
+);
 
 function formatJson(value) {
   return JSON.stringify(value || {}, null, 2);
@@ -34,6 +44,13 @@ function yesNo(value) {
 
 function formatList(value) {
   return Array.isArray(value) && value.length > 0 ? value.join(" / ") : "None";
+}
+
+function formatNumber(value) {
+  if (typeof value !== "number") {
+    return value ?? "Unknown";
+  }
+  return Number.isInteger(value) ? value : value.toFixed(4);
 }
 
 function retrievalLabel(rag = {}) {
@@ -116,6 +133,9 @@ function retrievalClass(rag = {}) {
           <section class="rag-section">
             <h5>Retrieval</h5>
             <div class="rag-field-grid">
+              <span>RAG Used: <strong>{{ yesNo(item.rag?.rag_used) }}</strong></span>
+              <span>Backend: <strong>{{ item.rag?.retrieval_backend || "Unknown" }}</strong></span>
+              <span>Query: <strong>{{ item.rag?.retrieval_query || "None" }}</strong></span>
               <span>Status: <strong>{{ item.rag?.retrieval_status || "Unknown" }}</strong></span>
               <span>Skipped: <strong>{{ yesNo(item.rag?.retrieval_skipped) }}</strong></span>
               <span>Executed: <strong>{{ yesNo(item.rag?.retrieval_executed) }}</strong></span>
@@ -127,8 +147,64 @@ function retrievalClass(rag = {}) {
             </div>
           </section>
 
+          <section class="rag-section">
+            <h5>RAG Evidence</h5>
+            <p class="muted rag-reason">
+              {{ item.rag?.evidence_summary || "暂无 RAG Evidence 摘要。" }}
+            </p>
+            <p
+              v-if="!Array.isArray(item.rag?.evidence_chunks) || item.rag.evidence_chunks.length === 0"
+              class="muted"
+            >
+              暂无 RAG Evidence。
+            </p>
+            <div v-else class="evidence-list">
+              <article
+                v-for="(chunk, chunkIndex) in item.rag.evidence_chunks"
+                :key="`${chunk.chunk_id || chunk.source || 'chunk'}-${chunkIndex}`"
+                class="evidence-card"
+              >
+                <div class="evidence-head">
+                  <strong>{{ chunk.source || chunk.chunk_id || `Evidence ${chunkIndex + 1}` }}</strong>
+                  <span>{{ chunk.source_category || "uncategorized" }}</span>
+                </div>
+                <div class="rag-field-grid evidence-meta">
+                  <span>chunk_id: <strong>{{ chunk.chunk_id || "None" }}</strong></span>
+                  <span>document_id: <strong>{{ chunk.document_id || "None" }}</strong></span>
+                  <span>version: <strong>{{ chunk.document_version || "None" }}</strong></span>
+                  <span>score: <strong>{{ formatNumber(chunk.score) }}</strong></span>
+                  <span>rerank: <strong>{{ formatNumber(chunk.rerank_score) }}</strong></span>
+                  <span>fallback: <strong>{{ yesNo(chunk.fallback_used) }}</strong></span>
+                </div>
+                <p class="evidence-preview">{{ chunk.text_preview || "暂无文本预览。" }}</p>
+              </article>
+            </div>
+          </section>
+
           <pre>{{ formatJson(item.rag) }}</pre>
         </details>
+      </article>
+
+      <article class="analysis-card">
+        <h4>Guardrails</h4>
+        <div class="rag-status-row">
+          <span :class="['rag-status-pill', guardrailTriggered ? 'no-hit' : 'hit']">
+            Guardrail Triggered: {{ yesNo(guardrailTriggered) }}
+          </span>
+          <span>Human Review: {{ yesNo(humanReviewByGuardrail) }}</span>
+        </div>
+        <section class="rag-section">
+          <h5>Input Guardrail</h5>
+          <p><strong>Hit:</strong> {{ yesNo(inputGuardrail.hit) }}</p>
+          <p><strong>Severity:</strong> {{ inputGuardrail.severity || "none" }}</p>
+          <p><strong>Issues:</strong> {{ formatList(inputGuardrail.issues) }}</p>
+        </section>
+        <section class="rag-section">
+          <h5>Output Guardrail</h5>
+          <p><strong>Hit:</strong> {{ yesNo(outputGuardrail.hit) }}</p>
+          <p><strong>Severity:</strong> {{ outputGuardrail.severity || "none" }}</p>
+          <p><strong>Issues:</strong> {{ formatList(outputGuardrail.issues) }}</p>
+        </section>
       </article>
 
       <article class="analysis-card">
