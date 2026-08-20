@@ -166,7 +166,7 @@ RAG trace 区分：
 - Executed With Hits：`count>0`
 - Retrieval Error：`fallback_used=true`
 
-当前没有使用 pgvector、ANN index、BM25、RRF 或 Cross Encoder。
+默认 demo 不使用 pgvector、ANN index、BM25、RRF 或 Cross Encoder；Phase 12 提供可选 pgvector backend，但不改变默认 JSON/list fallback。
 
 ## 7.1 RAG Knowledge Management Flow
 
@@ -178,15 +178,18 @@ flowchart TD
     D --> E["Embedding generation"]
     E --> F["knowledge_documents"]
     E --> G["knowledge_chunks"]
-    G --> H["Published DB knowledge"]
-    H --> I["RAG Retriever"]
-    J["No DB knowledge or DB unavailable"] --> K["Markdown fallback"]
-    K --> I
-    I --> L["Legal Agent evidence_chunks"]
-    L --> M["Trace: chunk_id, document_id, version, score, rerank_score"]
+    G --> H["JSON/list embedding fallback"]
+    G --> I["optional knowledge_chunk_vectors pgvector(512)"]
+    H --> J["Published DB knowledge"]
+    I --> J
+    K["No DB knowledge or DB unavailable"] --> L["Markdown fallback"]
+    L --> M["RAG Retriever"]
+    J --> M
+    M --> N["Legal Agent evidence_chunks"]
+    N --> O["Trace: backend, chunk_id, document_id, version, score, rerank_score"]
 ```
 
-边界说明：当前 embedding 以 JSON/list 结构保存和读取，不是 pgvector，也没有 ANN 索引。Knowledge management 用于可审计 ingestion 和 evidence trace，不等同于完整企业知识库管理后台。
+边界说明：默认 embedding 以 JSON/list 结构保存和读取；pgvector 是可选生产化增强，需要 PostgreSQL `vector` extension 和 `VECTOR_BACKEND=pgvector`。Knowledge management 用于可审计 ingestion 和 evidence trace，不等同于完整企业知识库管理后台。
 
 ## 8. Guardrails
 
@@ -266,6 +269,7 @@ PostgreSQL production path 包含：
 - `users`
 - `knowledge_documents`
 - `knowledge_chunks`
+- `knowledge_chunk_vectors` optional pgvector storage
 
 迁移使用 Alembic：
 
@@ -273,4 +277,4 @@ PostgreSQL production path 包含：
 python -m alembic upgrade head
 ```
 
-JSON fallback 仍是默认路径，普通 pytest 不要求启动 PostgreSQL。
+JSON fallback 仍是默认路径，普通 pytest 不要求启动 PostgreSQL 或 pgvector。

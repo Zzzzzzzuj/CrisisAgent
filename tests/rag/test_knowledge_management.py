@@ -70,6 +70,23 @@ def test_markdown_fallback_still_loads_when_database_storage_is_disabled(monkeyp
     assert documents[0]["content"].startswith("# Data Privacy")
 
 
+def test_pgvector_ingestion_failure_keeps_json_embedding_fallback(monkeypatch, tmp_path, session_factory):
+    path = _write_markdown(tmp_path)
+    repository = KnowledgeRepository(session_factory=session_factory)
+    monkeypatch.setenv("VECTOR_BACKEND", "pgvector")
+    monkeypatch.setattr(
+        "backend.rag.knowledge_repository.upsert_pgvector_embedding",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("pgvector unavailable")),
+    )
+
+    result = repository.ingest_file(path, source_category="data_privacy")
+    chunks = repository.load_published_chunks()
+
+    assert result["chunk_count"] >= 1
+    assert chunks[0]["embedding"]
+    assert chunks[0]["metadata"]["pgvector_write_fallback"] is True
+
+
 def test_legal_rag_trace_records_database_chunk_metadata(monkeypatch):
     retrieval_result = {
         "context": "privacy context",

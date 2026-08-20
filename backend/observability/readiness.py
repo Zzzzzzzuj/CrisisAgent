@@ -11,12 +11,14 @@ from backend.core.runtime_tasks import (
     is_worker_initialized,
 )
 from backend.db.session import get_database_url, get_engine, is_database_checkpoint_enabled
+from backend.rag.vector_backend import get_vector_backend, get_pgvector_distance, get_pgvector_index_type
 
 
 def check_readiness() -> dict:
     checks = {
         "checkpoint_backend": _check_checkpoint_backend(),
         "database": _check_database(),
+        "vector_backend": _check_vector_backend(),
         "async_worker": _check_async_worker(),
         "required_env": _check_required_env(),
         "auth": _check_auth(),
@@ -72,6 +74,48 @@ def _check_database() -> dict:
         }
 
 
+def _check_vector_backend() -> dict:
+    backend = get_vector_backend()
+    if backend == "json":
+        return {
+            "ok": True,
+            "backend": "json",
+            "fallback": "json embedding/list vector store",
+        }
+
+    if not is_database_checkpoint_enabled():
+        return {
+            "ok": False,
+            "backend": "pgvector",
+            "error": "CHECKPOINT_STORAGE=postgres is required when VECTOR_BACKEND=pgvector.",
+        }
+
+    try:
+        with get_engine().connect() as connection:
+            extension = connection.execute(
+                text("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
+            ).scalar()
+            table_exists = connection.execute(
+                text("SELECT to_regclass('public.knowledge_chunk_vectors')")
+            ).scalar()
+        return {
+            "ok": bool(extension and table_exists),
+            "backend": "pgvector",
+            "distance": get_pgvector_distance(),
+            "index_type": get_pgvector_index_type(),
+            "extension_installed": bool(extension),
+            "vector_table_exists": bool(table_exists),
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "backend": "pgvector",
+            "distance": get_pgvector_distance(),
+            "index_type": get_pgvector_index_type(),
+            "error": exc.__class__.__name__,
+        }
+
+
 def _check_async_worker() -> dict:
     mode = get_runtime_mode()
     queue_backend = get_task_queue_backend()
@@ -98,6 +142,7 @@ def _check_required_env() -> dict:
         "checkpoint_storage": os.getenv("CHECKPOINT_STORAGE", "json"),
         "runtime_mode": get_runtime_mode(),
         "task_queue_backend": get_task_queue_backend(),
+        "vector_backend": get_vector_backend(),
         "auth_enabled": is_auth_enabled(),
     }
 

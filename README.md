@@ -71,7 +71,7 @@ flowchart TD
     D --> L["Observability / Metrics / Readiness"]
     L --> M["Lightweight runtime metrics, not Prometheus"]
     C --> N["Default in-process worker; optional Redis + RQ"]
-    F --> O["JSON/list embedding storage, not pgvector / ANN"]
+    F --> O["Default JSON/list embedding; optional pgvector path"]
 ```
 
 Dynamic Runtime 位于 `backend/core/`，通过 `AgentState` 保存 `session_id`、`plan_id`、`event`、`results`、`trace`、`approval`、`metadata` 和 `failed_agents`。
@@ -163,6 +163,9 @@ python -m uvicorn backend.main:app --reload
 | `AUTH_ENABLED` | `false` for demo, `true` for RBAC |
 | `SECRET_KEY` | Required when `AUTH_ENABLED=true` |
 | `EMBEDDING_MODEL` | `hash` or `bge` |
+| `VECTOR_BACKEND` | `json` or optional `pgvector`; default `json` |
+| `PGVECTOR_INDEX_TYPE` | Optional pgvector index hint: `ivfflat`, `hnsw`, or `none` |
+| `PGVECTOR_DISTANCE` | Optional distance metric: `cosine` or `l2` |
 | `HF_HOME` | Optional Hugging Face cache directory |
 | `VITE_API_BASE_URL` | Frontend API base URL |
 
@@ -304,6 +307,19 @@ python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base
 python scripts\list_knowledge_documents.py
 ```
 
+Optional pgvector vector backend:
+
+```powershell
+$env:CHECKPOINT_STORAGE="postgres"
+$env:VECTOR_BACKEND="pgvector"
+$env:PGVECTOR_DISTANCE="cosine"
+$env:PGVECTOR_INDEX_TYPE="ivfflat"
+python -m alembic upgrade head
+python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embedding-model bge
+```
+
+`VECTOR_BACKEND=json` remains the default and stores embeddings as JSON/list data. `VECTOR_BACKEND=pgvector` is an optional productionization path that uses PostgreSQL `vector(512)` storage for BGE-style 512-dimensional embeddings. If pgvector is unavailable at runtime, vector retrieval falls back to the JSON vector store and marks the trace with `retrieval_backend=json_vector` plus `pgvector_fallback_used=true`.
+
 ## Testing
 
 Current regression result:
@@ -354,7 +370,8 @@ v3.0.0 packages the project as a production-ready prototype:
 ## What Not To Overclaim
 
 - The default async worker is in-process; Redis + RQ is optional and requires a separate worker process.
-- Embeddings are stored as JSON/list structures, not pgvector or ANN index.
+- Embeddings default to JSON/list storage; pgvector is optional and must be explicitly enabled.
+- pgvector support is not an ANN/vector-database claim for the default demo path.
 - Runtime metrics are lightweight in-app metrics, not Prometheus or OpenTelemetry.
 - Reranker v2 is hand-written domain-aware rules, not a trained Cross Encoder.
 - Real model smoke observed LLM fallback, so do not claim all agents always return valid structured JSON.

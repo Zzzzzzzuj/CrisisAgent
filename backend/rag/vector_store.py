@@ -34,7 +34,12 @@ class VectorStore:
                 title=chunk["title"],
                 score=round(score, 4),
                 embedding_score=round(score, 4),
-                metadata={**dict(chunk.get("metadata", {})), "retriever": "vector"},
+                metadata={
+                    **dict(chunk.get("metadata", {})),
+                    "retriever": "vector",
+                    "retrieval_backend": "json_vector",
+                    "vector_backend": "json",
+                },
             )
             for score, chunk in top_chunks
         ]
@@ -48,6 +53,8 @@ class VectorStore:
                     "source": chunk.source,
                     "title": chunk.title,
                     "score": chunk.score,
+                    "retrieval_backend": "json_vector",
+                    "vector_backend": "json",
                     **_source_metadata(chunk),
                 }
                 for chunk in retrieved_chunks

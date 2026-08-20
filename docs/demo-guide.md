@@ -209,6 +209,20 @@ PostgreSQL demo 必须满足：
 - Alembic migration 已执行：`python -m alembic upgrade head`。
 - 如果 `/ready` 显示 `ModuleNotFoundError` 或 `postgres` backend 不可用，先检查依赖和数据库；若只是演示 Agent/RAG，可以切回 `CHECKPOINT_STORAGE=json`。
 
+可选 pgvector demo：
+
+```powershell
+$env:CHECKPOINT_STORAGE="postgres"
+$env:VECTOR_BACKEND="pgvector"
+$env:PGVECTOR_DISTANCE="cosine"
+$env:PGVECTOR_INDEX_TYPE="ivfflat"
+python -m alembic upgrade head
+python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embedding-model bge
+Invoke-RestMethod http://127.0.0.1:8000/ready
+```
+
+普通面试演示推荐保留 `VECTOR_BACKEND=json`。pgvector 是可选生产化增强，不是 `run_full_demo.py`、mock demo 或普通 pytest 的前置条件。
+
 ## 5. Real LLM Demo
 
 真实 LLM demo 需要配置 OpenAI-compatible API，例如 DeepSeek：
@@ -392,4 +406,4 @@ Invoke-RestMethod http://127.0.0.1:8000/api/metrics/runtime
 4. 展示 RAG Ablation：同一 case 下 `RAG_ENABLED=false/true` 的 evidence 差异。
 5. 展示 Human Review：高风险 case 进入 WAITING_HUMAN，审核人 approve/reject 后有 audit log。
 6. 展示生产化：PostgreSQL、Alembic、Auth/RBAC、Guardrails、Observability。
-7. 展示诚实边界：默认 async 是 in-process，RQ 是可选增强；metrics 不是 Prometheus，embedding 不是 pgvector。
+7. 展示诚实边界：默认 async 是 in-process，RQ 是可选增强；metrics 不是 Prometheus；embedding 默认是 JSON/list，pgvector 需要显式启用。

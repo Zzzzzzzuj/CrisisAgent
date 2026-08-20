@@ -343,6 +343,9 @@ def _retrieve_legal_context(payload: dict) -> str:
                     "rerank_score": source.get("rerank_score"),
                     "retrieval_query": query,
                     "fallback_used": source.get("retrieval_fallback", False),
+                    "retrieval_backend": source.get("retrieval_backend"),
+                    "vector_backend": source.get("vector_backend"),
+                    "pgvector_fallback_used": source.get("pgvector_fallback_used", False),
                 }
             )
     _set_rag_info(
@@ -382,6 +385,9 @@ def _normalize_rag_chunks(chunks: list[dict], retrieval_query: str = "") -> list
                 "rerank_score": chunk.get("rerank_score"),
                 "retrieval_query": retrieval_query,
                 "fallback_used": metadata.get("retrieval_fallback", False),
+                "retrieval_backend": metadata.get("retrieval_backend"),
+                "vector_backend": metadata.get("vector_backend"),
+                "pgvector_fallback_used": metadata.get("pgvector_fallback_used", False),
                 "text_preview": str(chunk.get("text", ""))[:120],
             }
         )
@@ -417,6 +423,9 @@ def _build_evidence_chunks(chunks: list[dict], source_details: list[dict]) -> li
                     "source_category": chunk.get("source_category"),
                     "score": chunk.get("score"),
                     "rerank_score": chunk.get("rerank_score"),
+                    "retrieval_backend": chunk.get("retrieval_backend"),
+                    "vector_backend": chunk.get("vector_backend"),
+                    "pgvector_fallback_used": chunk.get("pgvector_fallback_used", False),
                     "text_preview": str(chunk.get("text_preview", ""))[:200],
                 }
             )
@@ -432,6 +441,9 @@ def _build_evidence_chunks(chunks: list[dict], source_details: list[dict]) -> li
                 "source_category": source.get("source_category"),
                 "score": source.get("score"),
                 "rerank_score": source.get("rerank_score"),
+                "retrieval_backend": source.get("retrieval_backend"),
+                "vector_backend": source.get("vector_backend"),
+                "pgvector_fallback_used": source.get("pgvector_fallback_used", False),
                 "text_preview": "",
             }
         )
@@ -446,6 +458,10 @@ def _resolve_retrieval_backend(
     if retrieval_status in {"disabled", "skipped_by_gate", "not_started"}:
         return "none"
     metadata_rows = evidence_chunks or source_details
+    for row in metadata_rows:
+        backend = row.get("retrieval_backend")
+        if backend:
+            return str(backend)
     if any(row.get("document_id") or row.get("document_version") for row in metadata_rows):
         return "db"
     if metadata_rows:

@@ -36,7 +36,7 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 ### 4. RAG 做到了什么程度？
 
-背诵版回答：当前是本地轻量 RAG：Markdown fallback、数据库知识文档导入、chunk 管理、Hash/BGE embedding、Keyword + Vector Hybrid、RuleBasedReranker 和 trace metadata。没有使用 pgvector、ANN、BM25、RRF 或 Cross Encoder。这个项目重点是把 RAG 链路做成可评测和可审计，而不是追求最复杂检索技术。
+背诵版回答：当前是本地轻量 RAG：Markdown fallback、数据库知识文档导入、chunk 管理、Hash/BGE embedding、Keyword + Vector Hybrid、RuleBasedReranker 和 trace metadata。默认向量存储仍是 JSON/list，Phase 12 补了可选 pgvector backend，但普通 demo 和 pytest 不依赖它；我没有使用 BM25、RRF 或 Cross Encoder。这个项目重点是把 RAG 链路做成可评测和可审计，而不是追求最复杂检索技术。
 
 ### 5. 怎么证明 RAG 有用？
 
@@ -64,4 +64,4 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 ### 11. 这个项目最大的不足是什么？
 
-背诵版回答：第一，async 默认仍是 in-process，Redis + RQ 是可选增强但还没有 dead-letter queue；第二，RAG embedding 还没有接 pgvector/ANN；第三，Reranker 是手写规则；第四，真实 LLM 输出仍有结构化不稳定，需要更强的 retry-with-format 或 provider response_format；第五，module-level RAG trace state 仍需继续收敛。
+背诵版回答：第一，async 默认仍是 in-process，Redis + RQ 是可选增强但还没有 dead-letter queue；第二，pgvector 只是可选 backend，还没有做 ANN 对照和生产压测；第三，Reranker 是手写规则；第四，真实 LLM 输出仍有结构化不稳定，需要更强的 retry-with-format 或 provider response_format；第五，module-level RAG trace state 仍需继续收敛。

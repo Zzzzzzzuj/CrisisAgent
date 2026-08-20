@@ -3,11 +3,14 @@ from pathlib import Path
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm.attributes import flag_modified
 
 from backend.db.models import KnowledgeChunkRecord, KnowledgeDocumentRecord
 from backend.db.session import get_session_factory, is_database_checkpoint_enabled
 from backend.rag.chunk_strategy import split_markdown_documents
 from backend.rag.embedding import get_embedding_model
+from backend.rag.pgvector_store import upsert_pgvector_embedding
+from backend.rag.vector_backend import is_pgvector_backend_enabled
 
 
 PUBLISHED = "published"
@@ -92,6 +95,21 @@ class KnowledgeRepository:
                 )
                 db.add(row)
                 chunk_rows.append(row)
+                if is_pgvector_backend_enabled():
+                    db.flush()
+                    try:
+                        with db.begin_nested():
+                            upsert_pgvector_embedding(
+                                db,
+                                chunk_id=chunk_id,
+                                embedding=embedding,
+                                embedding_model=embedding_model.__class__.__name__,
+                                embedding_dimension=len(embedding),
+                            )
+                    except Exception:
+                        metadata["pgvector_write_fallback"] = True
+                        row.metadata_json = metadata
+                        flag_modified(row, "metadata_json")
 
             db.commit()
             return {

@@ -120,7 +120,7 @@ Guardrail 命中不会修改 Agent 输出，而是进入 Human Review。
 - `scripts/ingest_knowledge_base.py`
 - `scripts/list_knowledge_documents.py`
 
-本地 Markdown fallback 仍保留。当前 embedding 存储是 JSON/list，不是 pgvector 或 ANN index。
+本地 Markdown fallback 仍保留。默认 embedding 存储是 JSON/list；pgvector 是后续可选生产化路径，不是默认 demo 依赖。
 
 ## 9. Observability / Metrics / Readiness
 

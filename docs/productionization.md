@@ -72,6 +72,7 @@ Expected tables include:
 - `audit_logs`
 - `knowledge_documents`
 - `knowledge_chunks`
+- `knowledge_chunk_vectors` when optional pgvector migration is applied
 
 ## Start Backend With PostgreSQL
 
@@ -430,6 +431,40 @@ The ingestion pipeline records:
 - chunk ids
 - chunk embeddings
 
+### Optional pgvector Vector Backend
+
+The default vector backend remains offline-safe JSON/list storage:
+
+```env
+VECTOR_BACKEND=json
+```
+
+For a production-style PostgreSQL vector path, enable pgvector explicitly:
+
+```env
+CHECKPOINT_STORAGE=postgres
+VECTOR_BACKEND=pgvector
+PGVECTOR_DISTANCE=cosine
+PGVECTOR_INDEX_TYPE=ivfflat
+```
+
+Run migrations and ingest with a 512-dimensional embedding model such as the current BGE path:
+
+```bash
+python -m alembic upgrade head
+python scripts/ingest_knowledge_base.py --path backend/rag/knowledge_base --embedding-model bge
+```
+
+The pgvector migration attempts `CREATE EXTENSION IF NOT EXISTS vector`, creates `knowledge_chunk_vectors`, and stores vectors in a `vector(512)` column with a cosine ivfflat index. JSON/list embeddings in `knowledge_chunks.embedding` remain available and are not removed.
+
+Runtime behavior:
+
+- `VECTOR_BACKEND=json`: use existing JSON/list vector retrieval and record `retrieval_backend=json_vector`.
+- `VECTOR_BACKEND=pgvector`: use PostgreSQL pgvector similarity search.
+- If pgvector querying fails, vector retrieval falls back to JSON/list search and records `pgvector_fallback_used=true`.
+
+Readiness checks include the vector backend. When `VECTOR_BACKEND=pgvector`, `/ready` verifies PostgreSQL connectivity, the `vector` extension, and the `knowledge_chunk_vectors` table. Ordinary pytest and offline demos should keep `VECTOR_BACKEND=json` and do not require pgvector.
+
 Legal Agent RAG trace now preserves retrieval audit fields for database-managed chunks:
 
 - `document_id`
@@ -488,6 +523,9 @@ Production environment checklist:
 ```text
 CHECKPOINT_STORAGE=json|postgres
 DATABASE_URL=postgresql+psycopg://<user>:<password>@<host>:5432/crisis_agent
+VECTOR_BACKEND=json|pgvector
+PGVECTOR_INDEX_TYPE=ivfflat|hnsw|none
+PGVECTOR_DISTANCE=cosine|l2
 RUNTIME_MODE=sync|async
 TASK_QUEUE_BACKEND=inprocess|rq
 REDIS_URL=redis://localhost:6379/0
