@@ -4,7 +4,12 @@ from sqlalchemy import text
 
 from backend.auth import is_auth_enabled
 from backend.core import checkpoint
-from backend.core.runtime_tasks import get_runtime_mode, is_worker_initialized
+from backend.core.runtime_tasks import (
+    check_rq_backend,
+    get_runtime_mode,
+    get_task_queue_backend,
+    is_worker_initialized,
+)
 from backend.db.session import get_database_url, get_engine, is_database_checkpoint_enabled
 
 
@@ -69,9 +74,20 @@ def _check_database() -> dict:
 
 def _check_async_worker() -> dict:
     mode = get_runtime_mode()
+    queue_backend = get_task_queue_backend()
+    if mode == "async" and queue_backend == "rq":
+        rq_status = check_rq_backend()
+        return {
+            "ok": rq_status.get("ok") is True,
+            "runtime_mode": mode,
+            "task_queue_backend": queue_backend,
+            "worker_initialized": rq_status.get("ok") is True,
+            **rq_status,
+        }
     return {
         "ok": True,
         "runtime_mode": mode,
+        "task_queue_backend": queue_backend,
         "worker_initialized": is_worker_initialized(),
     }
 
@@ -81,6 +97,7 @@ def _check_required_env() -> dict:
         "ok": True,
         "checkpoint_storage": os.getenv("CHECKPOINT_STORAGE", "json"),
         "runtime_mode": get_runtime_mode(),
+        "task_queue_backend": get_task_queue_backend(),
         "auth_enabled": is_auth_enabled(),
     }
 

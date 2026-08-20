@@ -8,7 +8,7 @@ CrisisAgent 是一个面向企业危机响应场景的 AI Agent 应用原型。�
 
 - Multi-Agent workflow：Sentiment、Writer v1、RedTeam、Legal、Writer v2、Decision 分工执行。
 - Dynamic Runtime：Planner 生成计划，Plan Validator 补齐依赖，Executor 通过 AgentState 串联各 Agent。
-- Async Runtime：`RUNTIME_MODE=async` 下 `/api/dynamic/run` 返回 queued，由 in-process worker 后台执行。
+- Async Runtime：`RUNTIME_MODE=async` 下 `/api/dynamic/run` 返回 queued，可选 in-process worker 或 Redis + RQ worker 后台执行。
 - Human Review：高风险、低评测分、LLM fallback 或 Guardrail 命中时进入人工审核。
 - Checkpoint / Resume：支持 JSON fallback 与 PostgreSQL checkpoint backend。
 - Legal RAG：Retrieval Need Gate v3 判断是否需要检索，Hybrid Retrieval + Domain-Aware RuleBasedReranker v2 提供法律上下文。
@@ -70,7 +70,7 @@ flowchart TD
     F --> K["Knowledge Base: Markdown or DB documents"]
     D --> L["Observability / Metrics / Readiness"]
     L --> M["Lightweight runtime metrics, not Prometheus"]
-    C --> N["In-process worker, not distributed queue"]
+    C --> N["Default in-process worker; optional Redis + RQ"]
     F --> O["JSON/list embedding storage, not pgvector / ANN"]
 ```
 
@@ -138,7 +138,7 @@ $env:RUNTIME_MODE="async"
 python -m uvicorn backend.main:app --reload
 ```
 
-当前 async runtime 使用 in-process worker pool。进程重启会丢失尚未执行的内存队列任务，多进程部署不共享 worker pool；生产环境应替换 Redis/RQ/Celery 等 durable queue。
+当前 async runtime 默认使用 in-process worker pool；也可以通过 `TASK_QUEUE_BACKEND=rq` 切换到 Redis + RQ。in-process 适合本地 demo；RQ 适合更接近生产的长任务执行。
 
 ## Environment Variables
 
@@ -156,6 +156,10 @@ python -m uvicorn backend.main:app --reload
 | `CHECKPOINT_STORAGE` | `json` or `postgres` |
 | `DATABASE_URL` | SQLAlchemy database URL |
 | `RUNTIME_MODE` | `sync` or `async` |
+| `TASK_QUEUE_BACKEND` | `inprocess` or `rq`; default is `inprocess` |
+| `REDIS_URL` | Redis URL when `TASK_QUEUE_BACKEND=rq` |
+| `RQ_QUEUE_NAME` | RQ queue name, default `crisisagent` |
+| `RQ_JOB_TIMEOUT_SECONDS` | RQ job timeout |
 | `AUTH_ENABLED` | `false` for demo, `true` for RBAC |
 | `SECRET_KEY` | Required when `AUTH_ENABLED=true` |
 | `EMBEDDING_MODEL` | `hash` or `bge` |
@@ -305,7 +309,7 @@ python scripts\list_knowledge_documents.py
 Current regression result:
 
 ```text
-440 passed
+447 passed
 ```
 
 Run locally:
@@ -326,7 +330,7 @@ npm run build
 - PostgreSQL tables for sessions, checkpoints, traces, approvals, evaluations, audit logs and users.
 - Alembic migrations for production state and auth/knowledge tables.
 - JSON fallback remains available for local tests and demos.
-- Async runtime supports queued background execution, with documented in-process limitations.
+- Async runtime supports queued background execution through in-process fallback or optional Redis + RQ durable queue.
 - Auth/RBAC supports operator, legal reviewer and admin roles.
 - Human Review records reviewer identity and audit logs.
 - LLM layer records failure type, retry count, fallback flag and compact trace metadata.
@@ -349,7 +353,7 @@ v3.0.0 packages the project as a production-ready prototype:
 
 ## What Not To Overclaim
 
-- The async worker is in-process, not a true distributed queue.
+- The default async worker is in-process; Redis + RQ is optional and requires a separate worker process.
 - Embeddings are stored as JSON/list structures, not pgvector or ANN index.
 - Runtime metrics are lightweight in-app metrics, not Prometheus or OpenTelemetry.
 - Reranker v2 is hand-written domain-aware rules, not a trained Cross Encoder.

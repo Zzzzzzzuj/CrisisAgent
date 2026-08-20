@@ -42,7 +42,7 @@ python -m alembic upgrade head
 已知限制：
 
 - 当前 worker 是 in-process `ThreadPoolExecutor`。
-- 不是 Redis/RQ/Celery。
+- 默认不是 Redis/RQ/Celery；Phase 11 后 Redis + RQ 是可选增强路径。
 - 进程重启可能丢失尚未执行的内存队列任务。
 
 ## 4. Auth / RBAC
@@ -153,7 +153,7 @@ Runtime metrics 覆盖：
 当前测试结果：
 
 ```text
-440 passed
+447 passed
 ```
 
 Real DeepSeek + BGE minimal smoke：

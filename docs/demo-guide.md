@@ -144,10 +144,33 @@ python scripts\run_rag_ablation_demo.py
 
 ```powershell
 $env:RUNTIME_MODE="async"
+$env:TASK_QUEUE_BACKEND="inprocess"
 python -m uvicorn backend.main:app --reload
 ```
 
 创建 dynamic case 后，`POST /api/dynamic/run` 会快速返回 `queued`，再通过 `GET /api/dynamic/{session_id}` 查询状态变化。
+
+可选 Redis + RQ durable queue：
+
+```powershell
+docker compose up -d redis
+$env:RUNTIME_MODE="async"
+$env:TASK_QUEUE_BACKEND="rq"
+$env:REDIS_URL="redis://localhost:6379/0"
+$env:RQ_QUEUE_NAME="crisisagent"
+python scripts\run_rq_worker.py
+```
+
+另开一个 PowerShell 启动 backend：
+
+```powershell
+$env:RUNTIME_MODE="async"
+$env:TASK_QUEUE_BACKEND="rq"
+$env:REDIS_URL="redis://localhost:6379/0"
+python -m uvicorn backend.main:app --reload
+```
+
+`inprocess` 适合离线 demo，不需要 Redis；`rq` 适合更接近生产的长任务执行，任务进入 Redis/RQ，由独立 worker 消费。
 
 ### Demo 5：Auth / RBAC Review
 
@@ -263,7 +286,7 @@ $result.status
 Invoke-RestMethod "http://127.0.0.1:8000/api/dynamic/$($result.session_id)"
 ```
 
-注意：当前 worker 是 in-process worker pool，不是 Redis/RQ/Celery。
+注意：默认 worker 是 in-process worker pool；如果设置 `TASK_QUEUE_BACKEND=rq`，需要 Redis 和独立 RQ worker。
 
 ## 8. PostgreSQL Backend
 
@@ -369,4 +392,4 @@ Invoke-RestMethod http://127.0.0.1:8000/api/metrics/runtime
 4. 展示 RAG Ablation：同一 case 下 `RAG_ENABLED=false/true` 的 evidence 差异。
 5. 展示 Human Review：高风险 case 进入 WAITING_HUMAN，审核人 approve/reject 后有 audit log。
 6. 展示生产化：PostgreSQL、Alembic、Auth/RBAC、Guardrails、Observability。
-7. 展示诚实边界：async 是 in-process，metrics 不是 Prometheus，embedding 不是 pgvector。
+7. 展示诚实边界：默认 async 是 in-process，RQ 是可选增强；metrics 不是 Prometheus，embedding 不是 pgvector。

@@ -16,5 +16,19 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7
+    container_name: crisisagent-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - crisisagent_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   crisisagent_postgres_data:
+  crisisagent_redis_data:

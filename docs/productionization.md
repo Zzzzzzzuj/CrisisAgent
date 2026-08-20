@@ -120,13 +120,49 @@ In async mode, `POST /api/dynamic/run` only:
 - submits a background worker task
 - returns `session_id` immediately
 
-The current local implementation uses an in-process worker pool so the project can run without Redis during development. The queue boundary is isolated in `backend/core/runtime_tasks.py`, so it can be replaced with Redis/RQ or Celery later without changing Agent logic or API routes.
+The default local implementation uses an in-process worker pool so the project can run without Redis during development. Phase 11 adds an optional Redis + RQ backend behind the same queue boundary in `backend/core/runtime_tasks.py`, without changing Agent logic or API routes.
+
+Task queue backend:
+
+```env
+TASK_QUEUE_BACKEND=inprocess
+```
+
+Optional Redis + RQ:
+
+```env
+RUNTIME_MODE=async
+TASK_QUEUE_BACKEND=rq
+REDIS_URL=redis://localhost:6379/0
+RQ_QUEUE_NAME=crisisagent
+RQ_JOB_TIMEOUT_SECONDS=900
+```
+
+Start Redis:
+
+```bash
+docker compose up -d redis
+```
+
+Start worker:
+
+```bash
+python scripts/run_rq_worker.py
+```
+
+Start backend with the same queue config:
+
+```bash
+RUNTIME_MODE=async TASK_QUEUE_BACKEND=rq python -m uvicorn backend.main:app --reload
+```
+
+`inprocess` remains the default fallback and is used by ordinary local tests. `rq` is an optional durable queue path; tests that need real Redis should be treated as integration checks, not normal pytest requirements.
 
 Known limits of the in-process worker:
 
 - queued tasks that have not started can be lost if the backend process restarts
 - multiple backend processes do not share the same in-memory worker pool
-- production deployment should replace the local worker with Redis/RQ, Celery, or another durable queue
+- for production-like long-running tasks, prefer Redis + RQ or another durable queue
 
 Dynamic task states include:
 
@@ -453,6 +489,9 @@ Production environment checklist:
 CHECKPOINT_STORAGE=json|postgres
 DATABASE_URL=postgresql+psycopg://<user>:<password>@<host>:5432/crisis_agent
 RUNTIME_MODE=sync|async
+TASK_QUEUE_BACKEND=inprocess|rq
+REDIS_URL=redis://localhost:6379/0
+RQ_QUEUE_NAME=crisisagent
 RUNTIME_WORKERS=2
 AUTH_ENABLED=false|true
 SECRET_KEY=<strong-random-secret-required-when-auth-enabled>
@@ -487,10 +526,11 @@ Auth deployment checklist:
 
 Async runtime limitations:
 
-- Current async mode uses an in-process worker pool.
-- Process restart can lose queued tasks that have not started.
-- Multi-process deployments do not share the in-memory queue.
-- Production deployments should replace the in-process queue with Redis/RQ, Celery, or another durable worker system.
+- Default async mode uses an in-process worker pool.
+- Optional `TASK_QUEUE_BACKEND=rq` uses Redis + RQ and a separate worker process.
+- Process restart can lose queued tasks that have not started in `inprocess` mode.
+- Multi-process deployments do not share the in-memory queue in `inprocess` mode.
+- Production-like deployments should prefer Redis + RQ, Celery, or another durable worker system.
 
 Secret management:
 

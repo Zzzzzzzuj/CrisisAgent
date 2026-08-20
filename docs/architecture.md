@@ -54,7 +54,7 @@ stateDiagram-v2
 
 状态机校验防止无效状态跳转。
 
-边界说明：async runtime 当前是进程内 worker，不是 Redis/RQ/Celery 这类分布式队列；服务重启会丢失尚未执行的内存队列任务。
+边界说明：async runtime 默认是进程内 worker；也可以通过 `TASK_QUEUE_BACKEND=rq` 使用 Redis + RQ。in-process 模式下服务重启会丢失尚未执行的内存队列任务。
 
 ## 3. Dynamic Runtime
 
@@ -89,7 +89,7 @@ stateDiagram-v2
 - 这是进程内 worker，不是分布式队列。
 - 服务重启会丢失尚未执行的内存队列任务。
 - 多进程部署时 worker pool 不共享。
-- 生产环境应替换 Redis/RQ/Celery 等 durable queue。
+- 生产化长任务建议使用 Redis + RQ 或其他 durable queue，而不是默认 in-process worker。
 
 ## 5. Human Review
 

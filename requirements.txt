@@ -7,3 +7,5 @@ pytest
 SQLAlchemy
 alembic
 psycopg[binary]
+redis
+rq
