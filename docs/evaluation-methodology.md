@@ -23,7 +23,7 @@ python -m pytest tests -q
 当前回归结果：
 
 ```text
-468 passed
+482 passed
 ```
 
 ## 2. Runtime Tests

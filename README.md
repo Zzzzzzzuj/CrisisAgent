@@ -17,6 +17,7 @@ CrisisAgent 是一个面向企业危机响应场景的 AI Agent 应用原型。�
 - Auth / RBAC：`operator`、`legal_reviewer`、`admin` 三类角色，审核动作写入 audit log。
 - Observability：structured logging、runtime metrics、`/health`、`/ready`。
 - Dashboard：Vue3 前端展示 Crisis Case、风险等级、AI 声明、Human Review、Agent Trace、RAG/Gate Trace 和 Metrics。
+- Tool / Skill Layer：轻量 `AgentSkill` registry、Function Calling adapter、MCP mock adapter 和 A2A message schema，用于解释工具协议边界。
 
 ## Tech Stack
 
@@ -24,6 +25,7 @@ CrisisAgent 是一个面向企业危机响应场景的 AI Agent 应用原型。�
 - Runtime：自研轻量 Planner / Executor / AgentState / Checkpoint / Resume
 - LLM：OpenAI-compatible API，真实 smoke 使用 DeepSeek
 - RAG：Markdown fallback、Keyword Retriever、Hash/BGE Embedding、Hybrid Retriever、RuleBasedReranker
+- Tooling：AgentSkill、OpenAI-compatible Function Calling schema、MCP-compatible mock spec、A2A message schema
 - Database：PostgreSQL production path，JSON fallback for local tests/demo
 - Frontend：Vue3、Vite、Axios
 - Evaluation：pytest、离线 evaluator、Markdown report
@@ -75,6 +77,25 @@ flowchart TD
 ```
 
 Dynamic Runtime 位于 `backend/core/`，通过 `AgentState` 保存 `session_id`、`plan_id`、`event`、`results`、`trace`、`approval`、`metadata` 和 `failed_agents`。
+
+## Tool Calling / MCP / Skills Layer
+
+Phase 16 增加了一层轻量工具协议抽象，主要用于解释 AI Agent 工程里几个容易混淆的概念：
+
+- `AgentSkill`：项目内部的能力描述，包含 name、description、input/output schema、owner_agent、safety_level、enabled 和 version。
+- Function Calling adapter：把 `AgentSkill` 转成 OpenAI-compatible `tools=[{type:function,...}]` schema，并支持输入校验、按 skill name 执行和 `tool_call_trace`。
+- MCP adapter mock：把 `AgentSkill` 映射成 MCP-like tool/resource spec，并提供离线 mock call；当前不是完整 MCP runtime，也不连接真实 MCP server。
+- A2A schema：用 `AgentMessage` 描述 Agent 与 Agent 之间传递 task/context/ack 的消息格式；当前主流程仍使用 `AgentState`。
+
+内置 skills：
+
+- `legal_rag_search`
+- `session_lookup`
+- `runtime_metrics_query`
+- `guardrail_check`
+- `knowledge_document_search`
+
+详细说明见 `docs/tool-calling-mcp-skills.md`。
 
 ## Quick Start
 
@@ -372,7 +393,7 @@ python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embe
 Current regression result:
 
 ```text
-468 passed
+482 passed
 ```
 
 Run locally:
