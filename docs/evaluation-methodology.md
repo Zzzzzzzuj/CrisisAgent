@@ -23,7 +23,7 @@ python -m pytest tests -q
 当前回归结果：
 
 ```text
-465 passed
+468 passed
 ```
 
 ## 2. Runtime Tests
@@ -158,7 +158,46 @@ reports/rag_retrieval_eval_report.md
 
 当前 retrieval eval 是小型项目 holdout，不是公开 benchmark，也不能证明所有危机场景的泛化。
 
-## 9. E2E Regression
+## 9. RAG Bad Case Loop
+
+`scripts/analyze_rag_bad_cases.py` 把 retrieval evaluation 暴露出的失败样本沉淀成可持续跟踪的数据文件：
+
+```text
+data/rag_bad_cases.json
+```
+
+每个 bad case 记录实际检索失败类型和根因：
+
+- failure_type: `no_retrieval`、`wrong_source`、`low_score`、`stale_document`、`disabled_document_hit`、`rerank_misorder`、`insufficient_evidence`、`fallback_only`
+- root_cause: `query_rewrite`、`knowledge_gap`、`chunking_issue`、`embedding_issue`、`reranker_issue`、`metadata_filter_issue`
+- status: `open`、`fixed`、`wont_fix`
+
+报告输出：
+
+```text
+reports/rag_bad_cases_report.md
+```
+
+它的作用是回答“检索失败后怎么回流”，而不是直接提高指标。当前 bad cases 优先覆盖 Phase 14 中低命中的 false_advertising、labor_dispute、financial_rumor、product_recall 和 executive_scandal 等场景。
+
+## 10. Knowledge Ingestion Regression
+
+`scripts/run_knowledge_ingestion_regression.py` 是知识库导入后的离线回归检查，不调用真实 LLM，也不要求真实 PostgreSQL / pgvector。它验证：
+
+- document / chunk 数量
+- `chunk_id`
+- `document_version`
+- `source_category`
+- `document_status`
+- `is_enabled`
+- published + enabled 可检索
+- draft / disabled 不参与 Legal RAG 检索
+- embedding metadata 存在
+- Markdown / JSON fallback 可用
+
+它和 retrieval evaluation 的区别是：ingestion regression 关注“知识是否被正确导入和治理”；retrieval evaluation 关注“query 是否命中正确来源和证据”。
+
+## 11. E2E Regression
 
 Final E2E Regression 覆盖：
 
@@ -176,7 +215,7 @@ Final E2E Regression 覆盖：
 
 报告保留已知限制，包括 module-level state 的历史风险、Reranker 手写规则、Gate 仍有 FP/FN、真实网络稳定性未覆盖和当前没有完整 automatic retry。
 
-## 10. What The Evaluation Does Not Prove
+## 12. What The Evaluation Does Not Prove
 
 当前评测不能证明：
 

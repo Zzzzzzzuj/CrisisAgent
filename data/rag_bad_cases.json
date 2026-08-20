@@ -1,0 +1,98 @@
+[
+  {
+    "bad_case_id": "rag_bad_data_privacy_001",
+    "crisis_event": "用户登录 APP 后看到其他账号的订单地址和手机号截图，相关图片已经在社交平台传播，平台需要回应个人信息安全问题。",
+    "query": "个人信息异常可见、订单地址手机号截图传播，平台需要回应和核查。",
+    "expected_source_category": "data_privacy",
+    "actual_source_category": "crisis_response",
+    "failure_type": "wrong_source",
+    "root_cause": "embedding_issue",
+    "suggested_fix": "补充数据隐私知识 chunk 的用户通知、访问日志、影响范围排查表达，并在后续 retrieval evaluation 中验证 data_privacy top3 命中。",
+    "status": "open",
+    "linked_test_case": "rag_eval_data_privacy_001"
+  },
+  {
+    "bad_case_id": "rag_bad_service_outage_001",
+    "crisis_event": "晚高峰期间大量用户反馈支付页面持续转圈，部分订单重复扣费，商户端无法同步交易状态。",
+    "query": "支付页面转圈、重复扣费、商户端交易状态不同步，需要服务恢复和用户通知。",
+    "expected_source_category": "service_outage",
+    "actual_source_category": "service_outage",
+    "failure_type": "insufficient_evidence",
+    "root_cause": "knowledge_gap",
+    "suggested_fix": "补充 service_outage 文档中“故障”同义表达、重复扣费和订单核对证据，降低关键词缺失。",
+    "status": "open",
+    "linked_test_case": "rag_eval_service_outage_001"
+  },
+  {
+    "bad_case_id": "rag_bad_false_advertising_001",
+    "crisis_event": "某教育平台宣传页面称课程通过率接近百分百，学员质疑广告夸大效果并要求公开证明材料。",
+    "query": "宣传通过率接近百分百被质疑夸大，需要证明材料和广告整改。",
+    "expected_source_category": "false_advertising",
+    "actual_source_category": "crisis_response",
+    "failure_type": "wrong_source",
+    "root_cause": "knowledge_gap",
+    "suggested_fix": "新增 false_advertising 知识文档，覆盖宣传口径核查、证明材料、下架/更正和公开说明。",
+    "status": "open",
+    "linked_test_case": "rag_eval_false_advertising_001"
+  },
+  {
+    "bad_case_id": "rag_bad_labor_dispute_001",
+    "crisis_event": "多名员工在社交平台称公司长期拖欠加班费，并晒出排班记录，媒体开始联系公司求证。",
+    "query": "员工称拖欠加班费并晒排班记录，媒体求证，公司需要回应。",
+    "expected_source_category": "labor_dispute",
+    "actual_source_category": "crisis_response",
+    "failure_type": "wrong_source",
+    "root_cause": "knowledge_gap",
+    "suggested_fix": "新增 labor_dispute 知识文档，覆盖员工沟通、考勤薪酬核查、依法处理和媒体回应。",
+    "status": "open",
+    "linked_test_case": "rag_eval_labor_dispute_001"
+  },
+  {
+    "bad_case_id": "rag_bad_product_recall_001",
+    "crisis_event": "同型号儿童水杯被发现杯盖零件容易脱落，家长担心误吞风险，要求品牌公布批次和召回安排。",
+    "query": "儿童水杯杯盖零件脱落、误吞风险、批次和召回安排。",
+    "expected_source_category": "product_recall",
+    "actual_source_category": "product_quality",
+    "failure_type": "wrong_source",
+    "root_cause": "knowledge_gap",
+    "suggested_fix": "补充 product_recall 专项知识，区分普通质量问题与召回流程、批次范围和用户通知。",
+    "status": "open",
+    "linked_test_case": "rag_eval_product_recall_001"
+  },
+  {
+    "bad_case_id": "rag_bad_financial_rumor_001",
+    "crisis_event": "网上流传某消费品牌资金链紧张、供应商停止供货的消息，引发用户退款和合作方询问。",
+    "query": "资金链紧张传闻、供应商停止供货、用户退款和合作方询问。",
+    "expected_source_category": "financial_rumor",
+    "actual_source_category": "crisis_response",
+    "failure_type": "wrong_source",
+    "root_cause": "knowledge_gap",
+    "suggested_fix": "新增 financial_rumor 知识文档，覆盖传闻核实、经营信息边界、合作方沟通和公开澄清。",
+    "status": "open",
+    "linked_test_case": "rag_eval_financial_rumor_001"
+  },
+  {
+    "bad_case_id": "rag_bad_executive_scandal_001",
+    "crisis_event": "公司高管在公开活动中的争议表述被剪辑传播，用户发起抵制，合作方要求公司说明管理层态度。",
+    "query": "高管争议表述传播、用户抵制、合作方要求说明管理层态度。",
+    "expected_source_category": "executive_scandal",
+    "actual_source_category": "executive_misconduct",
+    "failure_type": "low_score",
+    "root_cause": "metadata_filter_issue",
+    "suggested_fix": "统一 executive_scandal 与 executive_misconduct 的 category alias 或在评测 gold label 中显式声明等价类别。",
+    "status": "open",
+    "linked_test_case": "rag_eval_executive_scandal_001"
+  },
+  {
+    "bad_case_id": "rag_bad_governance_disabled_001",
+    "crisis_event": "知识库中曾禁用的旧食品安全文档仍被人工报告误认为可用证据。",
+    "query": "验证 disabled 文档不会进入 Legal RAG evidence。",
+    "expected_source_category": "food_safety",
+    "actual_source_category": "food_safety",
+    "failure_type": "disabled_document_hit",
+    "root_cause": "metadata_filter_issue",
+    "suggested_fix": "保留 ingestion regression，持续验证 status=disabled 或 is_enabled=false 的文档不会被 load_published_chunks 返回。",
+    "status": "fixed",
+    "linked_test_case": "test_disabled_document_is_not_loaded_for_rag"
+  }
+]

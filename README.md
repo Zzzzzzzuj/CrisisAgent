@@ -307,6 +307,24 @@ python scripts\evaluate_rag_retrieval.py
 
 它和 RAG ablation 的区别是：retrieval evaluation 看“有没有搜到正确来源和证据”，ablation 看“开启/关闭 RAG 后 Legal Agent 输出和最终声明有什么差异”。当前数据集是小型项目 holdout，不是公开 benchmark。
 
+RAG bad case loop:
+
+```powershell
+python scripts\analyze_rag_bad_cases.py
+```
+
+这个脚本读取 `data/rag_bad_cases.json`，把 Phase 14 retrieval evaluation 暴露出的低命中样本沉淀成可跟踪的 bad case 台账，并按 `failure_type`、`root_cause`、`status` 聚合。报告输出：
+
+- `reports/rag_bad_cases_report.md`
+
+Knowledge ingestion regression:
+
+```powershell
+python scripts\run_knowledge_ingestion_regression.py
+```
+
+这个脚本离线验证知识库导入后的基本治理能力：document/chunk 数量、`chunk_id`、`document_version`、`source_category`、`status`、`is_enabled`、published/enabled 过滤、draft/disabled 不检索、embedding metadata 和 Markdown/JSON fallback。普通 demo 不依赖真实 PostgreSQL、pgvector 或真实 LLM。
+
 BGE readiness:
 
 ```powershell
@@ -354,7 +372,7 @@ python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embe
 Current regression result:
 
 ```text
-465 passed
+468 passed
 ```
 
 Run locally:
