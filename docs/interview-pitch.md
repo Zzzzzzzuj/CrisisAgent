@@ -82,10 +82,22 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 背诵版回答：长文本我会拆成 outline、分段生成、consistency check、final merge、guardrail、human review。特别是危机声明这种高风险文本，不能一边 streaming 一边直接给最终稿，因为后面可能出现法律措辞或事实定性问题。SSE 更适合展示进度，不应该替代最终审核。
 
-### 14. 你怎么验证项目不是只跑通一个 demo？
+### 14. Prompt 工程你是怎么做的？
 
-背诵版回答：我做了多层测试和评测。普通 pytest 当前是 491 passed；Evaluation 里有 Response V2、RAG Baseline、RAG Retrieval Eval、RAG Bad Case Loop、Knowledge Ingestion Regression、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
+背诵版回答：我把 Prompt 拆成 Role、Task、Context、Constraints、Output Schema 和 Examples。不同 Agent 的重点不同：Sentiment 看风险和情绪，Writer 看共情和公众表达，RedTeam 做攻击性审查，Legal 保守处理 RAG evidence 和法律风险，Decision 综合评分和最终声明。所有真实 LLM 路径都要求 JSON structured output，解析失败会进入 JSON repair 或 fallback trace。
 
-### 15. 这个项目最大的不足是什么？
+### 15. 你这个项目是不是 AI 写的？
+
+背诵版回答：我用了 AI 辅助开发，但不是让 AI 自由发挥。项目选题、Agent 拆分、技术路线、阶段验收、禁止修改范围、测试结果判断和 git diff review 都是人主导。AI 主要加速样板代码、测试、文档和重复性改造。每个阶段我都会明确“不要改 Agent 业务逻辑、Prompt 主语义、RAG 算法和 API”，最后用 pytest 和 diff 检查质量。
+
+### 16. 什么是代码知识库 Agent？你这个项目做到了吗？
+
+背诵版回答：代码知识库 Agent 的核心是把代码文件、模块职责、类函数和错误信息关联起来，帮助定位跨模块问题。我现在做的是轻量静态索引：`scripts/index_project_knowledge.py` 扫描 core、rag、agents、skills，输出 `data/code_knowledge_index.json`。它可以辅助解释 RAG evidence 丢字段、RQ worker 失败、pgvector fallback、guardrail 未触发这类跨模块问题。但我会明确说明它还不是完整代码 Agent，没有 semantic code search、自动 patch 或自主执行工具链。
+
+### 17. 你怎么验证项目不是只跑通一个 demo？
+
+背诵版回答：我做了多层测试和评测。普通 pytest 当前是 495 passed；Evaluation 里有 Response V2、RAG Baseline、RAG Retrieval Eval、RAG Bad Case Loop、Knowledge Ingestion Regression、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
+
+### 18. 这个项目最大的不足是什么？
 
 背诵版回答：第一，async 默认仍是 in-process，Redis + RQ 是可选增强但还没有 dead-letter queue；第二，pgvector 只是可选 backend，还没有做 ANN 对照和生产压测；第三，Reranker 是手写规则；第四，真实 LLM 输出仍有结构化不稳定，需要更强的 retry-with-format 或 provider response_format；第五，module-level RAG trace state 仍需继续收敛。

@@ -122,6 +122,26 @@ Invoke-RestMethod -Method Post `
 
 Follow-up 默认 mock/offline，不消耗真实 LLM，会基于原始 event、final statement、scores、agent trace 和 RAG evidence 生成回答。详细说明见 `docs/reasoning-mode-and-multiturn.md` 和 `docs/long-form-generation.md`。
 
+## Prompt Engineering & AI-assisted Development
+
+项目补充了面试可解释材料，说明 Prompt、AI IDE 协作和代码知识库 Agent 的工程边界：
+
+- `docs/prompt-engineering.md`：Role / Task / Context / Constraints / Output Schema / Examples，以及 Sentiment、Writer、RedTeam、Legal、Decision 各自的 prompt 设计重点。
+- `docs/ai-assisted-development.md`：说明哪些工作由人主导，哪些由 AI 加速，以及如何通过范围约束、pytest、小 commit 和 diff review 避免 AI 乱改。
+- `docs/code-knowledge-agent.md`：说明如何用静态 code index 辅助跨模块错误定位，以及它和真正 semantic code agent 的差距。
+
+生成轻量代码知识库索引：
+
+```powershell
+python scripts\index_project_knowledge.py
+```
+
+输出：
+
+```text
+data/code_knowledge_index.json
+```
+
 ## Quick Start
 
 ### Backend
@@ -418,7 +438,7 @@ python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embe
 Current regression result:
 
 ```text
-491 passed
+495 passed
 ```
 
 Run locally:

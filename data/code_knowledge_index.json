@@ -1,0 +1,2669 @@
+{
+  "summary": {
+    "indexed_files": 53,
+    "indexed_symbols": 306,
+    "modules": [
+      "backend/agents",
+      "backend/core",
+      "backend/rag",
+      "backend/skills"
+    ]
+  },
+  "files": [
+    {
+      "path": "backend/core/__init__.py",
+      "module": "backend/core",
+      "responsibility": "support module",
+      "classes": [],
+      "functions": [],
+      "imports": [
+        "backend.core.executor"
+      ]
+    },
+    {
+      "path": "backend/core/adapter.py",
+      "module": "backend/core",
+      "responsibility": "support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "build_agent_input",
+          "lineno": 4,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_writer_input",
+          "lineno": 21,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_redteam_input",
+          "lineno": 31,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_legal_input",
+          "lineno": 39,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_writer_v2_input",
+          "lineno": 48,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_decision_input",
+          "lineno": 57,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.core.state"
+      ]
+    },
+    {
+      "path": "backend/core/agent_loop.py",
+      "module": "backend/core",
+      "responsibility": "guardrail policy and safety checks",
+      "classes": [],
+      "functions": [
+        {
+          "name": "run_agent_loop",
+          "lineno": 14,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_planner_input",
+          "lineno": 96,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_record_loop_trace",
+          "lineno": 104,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_loop_result",
+          "lineno": 121,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.agents",
+        "backend.core.dynamic_runtime",
+        "backend.core.executor",
+        "backend.core.guardrail_runtime",
+        "backend.core.human",
+        "backend.core.plan_validator",
+        "backend.core.policy",
+        "backend.core.runtime_evaluator",
+        "backend.core.state",
+        "uuid"
+      ]
+    },
+    {
+      "path": "backend/core/checkpoint.py",
+      "module": "backend/core",
+      "responsibility": "checkpoint persistence and workflow resume",
+      "classes": [],
+      "functions": [
+        {
+          "name": "save_checkpoint",
+          "lineno": 15,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "load_checkpoint",
+          "lineno": 19,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "list_checkpoints",
+          "lineno": 23,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "delete_checkpoint",
+          "lineno": 27,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "list_audit_logs",
+          "lineno": 31,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_get_repository",
+          "lineno": 38,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.core.state",
+        "backend.db.repositories",
+        "backend.db.session",
+        "pathlib"
+      ]
+    },
+    {
+      "path": "backend/core/dynamic_runtime.py",
+      "module": "backend/core",
+      "responsibility": "dynamic runtime, execution orchestration and AgentState management",
+      "classes": [],
+      "functions": [
+        {
+          "name": "run_dynamic_agent",
+          "lineno": 11,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "initialize_dynamic_state",
+          "lineno": 50,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "execute_dynamic_state",
+          "lineno": 67,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "execute_dynamic_plan_for_state",
+          "lineno": 92,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "build_dynamic_result",
+          "lineno": 110,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_reasoning_mode_response",
+          "lineno": 145,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_runtime_registry",
+          "lineno": 154,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_decision_from_dynamic_results",
+          "lineno": 160,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_infer_category",
+          "lineno": 173,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_infer_risk_level",
+          "lineno": 183,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.agents",
+        "backend.core.executor",
+        "backend.core.guardrail_runtime",
+        "backend.core.plan_validator",
+        "backend.core.reasoning_mode",
+        "backend.core.state",
+        "uuid"
+      ]
+    },
+    {
+      "path": "backend/core/executor.py",
+      "module": "backend/core",
+      "responsibility": "dynamic runtime, execution orchestration and AgentState management",
+      "classes": [],
+      "functions": [
+        {
+          "name": "execute",
+          "lineno": 22,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_ensure_state",
+          "lineno": 72,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_adapt_payload_for_runner",
+          "lineno": 87,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_trace_item",
+          "lineno": 93,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_collect_agent_metadata",
+          "lineno": 113,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_collect_llm_metadata",
+          "lineno": 125,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_extract_result_metadata",
+          "lineno": 132,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_strip_result_metadata",
+          "lineno": 138,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_collect_trace_metadata",
+          "lineno": 146,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_now_iso",
+          "lineno": 160,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.agents",
+        "backend.core.adapter",
+        "backend.core.state",
+        "backend.llm.client",
+        "copy",
+        "datetime",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/core/followup.py",
+      "module": "backend/core",
+      "responsibility": "guardrail policy and safety checks",
+      "classes": [],
+      "functions": [
+        {
+          "name": "build_followup_response",
+          "lineno": 17,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_session_context",
+          "lineno": 44,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_rag_evidence_from_trace",
+          "lineno": 59,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_mock_followup_answer",
+          "lineno": 78,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "__future__",
+        "backend.core.state",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/core/guardrail_runtime.py",
+      "module": "backend/core",
+      "responsibility": "guardrail policy and safety checks",
+      "classes": [],
+      "functions": [
+        {
+          "name": "apply_guardrails_to_state",
+          "lineno": 5,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_extract_final_statement",
+          "lineno": 19,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.core.state",
+        "backend.guardrails"
+      ]
+    },
+    {
+      "path": "backend/core/human.py",
+      "module": "backend/core",
+      "responsibility": "support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "request_review",
+          "lineno": 7,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "approve",
+          "lineno": 33,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "reject",
+          "lineno": 59,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_update_approval",
+          "lineno": 85,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_human_trace",
+          "lineno": 112,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_ensure_waiting_human",
+          "lineno": 125,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_now_iso",
+          "lineno": 130,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.core.state",
+        "copy",
+        "datetime"
+      ]
+    },
+    {
+      "path": "backend/core/plan_validator.py",
+      "module": "backend/core",
+      "responsibility": "support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "validate_plan",
+          "lineno": 12,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_validate_agent_item",
+          "lineno": 30,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_add_dependencies",
+          "lineno": 37,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_plan_item",
+          "lineno": 44,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": []
+    },
+    {
+      "path": "backend/core/policy.py",
+      "module": "backend/core",
+      "responsibility": "guardrail policy and safety checks",
+      "classes": [],
+      "functions": [
+        {
+          "name": "evaluate_human_policy",
+          "lineno": 4,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_resolve_risk_level",
+          "lineno": 25,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_find_low_score_triggers",
+          "lineno": 34,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_find_guardrail_triggers",
+          "lineno": 49,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_find_llm_fallback_triggers",
+          "lineno": 59,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_reason",
+          "lineno": 67,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.core.state"
+      ]
+    },
+    {
+      "path": "backend/core/reasoning_mode.py",
+      "module": "backend/core",
+      "responsibility": "guardrail policy and safety checks",
+      "classes": [],
+      "functions": [
+        {
+          "name": "select_reasoning_mode",
+          "lineno": 8,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "reasoning_inputs_from_state",
+          "lineno": 71,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "apply_reasoning_mode_to_state",
+          "lineno": 111,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": []
+    },
+    {
+      "path": "backend/core/resume.py",
+      "module": "backend/core",
+      "responsibility": "checkpoint persistence and workflow resume",
+      "classes": [],
+      "functions": [
+        {
+          "name": "resume_agent_loop",
+          "lineno": 12,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_continue_agent_loop",
+          "lineno": 82,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_approved_for_resume",
+          "lineno": 152,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_approved_resume_policy",
+          "lineno": 156,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_next_iteration_number",
+          "lineno": 162,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.agents",
+        "backend.core.agent_loop",
+        "backend.core.checkpoint",
+        "backend.core.executor",
+        "backend.core.human",
+        "backend.core.plan_validator",
+        "backend.core.policy",
+        "backend.core.runtime_evaluator",
+        "backend.core.state"
+      ]
+    },
+    {
+      "path": "backend/core/runtime_evaluator.py",
+      "module": "backend/core",
+      "responsibility": "support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "evaluate_runtime_state",
+          "lineno": 4,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_extract_quality_scores",
+          "lineno": 26,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_score_issues",
+          "lineno": 31,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.core.state"
+      ]
+    },
+    {
+      "path": "backend/core/runtime_tasks.py",
+      "module": "backend/core",
+      "responsibility": "support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "get_runtime_mode",
+          "lineno": 19,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "is_async_runtime_enabled",
+          "lineno": 24,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "is_worker_initialized",
+          "lineno": 28,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_task_queue_backend",
+          "lineno": 34,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_redis_url",
+          "lineno": 39,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_rq_queue_name",
+          "lineno": 43,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "create_queued_dynamic_session",
+          "lineno": 47,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "submit_dynamic_session",
+          "lineno": 62,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "submit_resume_session",
+          "lineno": 76,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_task_status",
+          "lineno": 90,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "run_dynamic_session_task",
+          "lineno": 110,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "run_resume_session_task",
+          "lineno": 154,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "run_dynamic_sync",
+          "lineno": 169,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_mark_runtime_failed",
+          "lineno": 195,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_now_iso",
+          "lineno": 213,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_enqueue_rq_task",
+          "lineno": 217,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_rq_queue",
+          "lineno": 228,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_redis_connection",
+          "lineno": 238,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "check_rq_backend",
+          "lineno": 247,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_rq_configured",
+          "lineno": 275,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.core.checkpoint",
+        "backend.core.dynamic_runtime",
+        "backend.core.human",
+        "backend.core.policy",
+        "backend.core.resume",
+        "backend.core.runtime_evaluator",
+        "backend.core.state",
+        "concurrent.futures",
+        "datetime",
+        "os",
+        "redis",
+        "rq"
+      ]
+    },
+    {
+      "path": "backend/core/state.py",
+      "module": "backend/core",
+      "responsibility": "dynamic runtime, execution orchestration and AgentState management",
+      "classes": [
+        {
+          "name": "AgentState",
+          "lineno": 55,
+          "methods": [
+            "__init__",
+            "set_result",
+            "get_result",
+            "get_all_results",
+            "to_context",
+            "set_status",
+            "to_dict",
+            "from_dict",
+            "add_trace",
+            "mark_failed"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "validate_state_status",
+          "lineno": 36,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "validate_state_transition",
+          "lineno": 42,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "copy"
+      ]
+    },
+    {
+      "path": "backend/rag/__init__.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [],
+      "imports": []
+    },
+    {
+      "path": "backend/rag/base.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [
+        {
+          "name": "BaseRetriever",
+          "lineno": 6,
+          "methods": [
+            "retrieve"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [],
+      "imports": [
+        "abc",
+        "backend.rag.schemas"
+      ]
+    },
+    {
+      "path": "backend/rag/chunk_strategy.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "split_markdown_documents",
+          "lineno": 4,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_split_markdown_sections",
+          "lineno": 54,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_extract_section_title",
+          "lineno": 71,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_split_text_with_overlap",
+          "lineno": 78,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.schemas"
+      ]
+    },
+    {
+      "path": "backend/rag/document_loader.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "_extract_title",
+          "lineno": 9,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "load_documents",
+          "lineno": 17,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "load_chunks",
+          "lineno": 48,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_load_database_documents_if_available",
+          "lineno": 58,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_load_database_chunks_if_available",
+          "lineno": 67,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_infer_source_category",
+          "lineno": 76,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.knowledge_repository",
+        "backend.rag.schemas",
+        "backend.rag.text_splitter",
+        "pathlib"
+      ]
+    },
+    {
+      "path": "backend/rag/embedding.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [
+        {
+          "name": "EmbeddingModel",
+          "lineno": 5,
+          "methods": [
+            "embed"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "get_embedding_model",
+          "lineno": 11,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "__getattr__",
+          "lineno": 30,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "abc",
+        "backend.rag.embeddings.bge_embedding",
+        "backend.rag.embeddings.hash_embedding",
+        "os"
+      ]
+    },
+    {
+      "path": "backend/rag/embeddings/__init__.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [],
+      "imports": [
+        "backend.rag.embeddings.bge_embedding",
+        "backend.rag.embeddings.hash_embedding"
+      ]
+    },
+    {
+      "path": "backend/rag/embeddings/bge_embedding.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [
+        {
+          "name": "BGEEmbeddingModel",
+          "lineno": 4,
+          "methods": [
+            "__init__",
+            "embed",
+            "_load_model"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [],
+      "imports": [
+        "backend.rag.embedding",
+        "sentence_transformers"
+      ]
+    },
+    {
+      "path": "backend/rag/embeddings/hash_embedding.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [
+        {
+          "name": "HashEmbeddingModel",
+          "lineno": 11,
+          "methods": [
+            "__init__",
+            "embed"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "_tokenize",
+          "lineno": 31,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_stable_hash",
+          "lineno": 35,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize",
+          "lineno": 40,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.embedding",
+        "hashlib",
+        "math",
+        "re"
+      ]
+    },
+    {
+      "path": "backend/rag/factory.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "get_retriever",
+          "lineno": 8,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.base",
+        "backend.rag.hybrid_retriever",
+        "backend.rag.keyword_retriever",
+        "backend.rag.pipeline_retriever",
+        "backend.rag.vector_retriever"
+      ]
+    },
+    {
+      "path": "backend/rag/hybrid_retriever.py",
+      "module": "backend/rag",
+      "responsibility": "RAG retrieval, ranking or retrieval backend selection",
+      "classes": [
+        {
+          "name": "HybridRetriever",
+          "lineno": 7,
+          "methods": [
+            "__init__",
+            "retrieve",
+            "_merge_chunks"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "_chunk_key",
+          "lineno": 88,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_hybrid_chunk",
+          "lineno": 94,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_source_metadata",
+          "lineno": 122,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_format_context",
+          "lineno": 138,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.base",
+        "backend.rag.keyword_retriever",
+        "backend.rag.schemas",
+        "backend.rag.vector_retriever"
+      ]
+    },
+    {
+      "path": "backend/rag/keyword_retriever.py",
+      "module": "backend/rag",
+      "responsibility": "RAG retrieval, ranking or retrieval backend selection",
+      "classes": [
+        {
+          "name": "KeywordRetriever",
+          "lineno": 12,
+          "methods": [
+            "__init__",
+            "retrieve"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "_tokenize",
+          "lineno": 57,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_score_chunk",
+          "lineno": 67,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_contains_chinese",
+          "lineno": 79,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_format_context",
+          "lineno": 83,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_source_metadata",
+          "lineno": 90,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.base",
+        "backend.rag.document_loader",
+        "backend.rag.schemas",
+        "pathlib",
+        "re"
+      ]
+    },
+    {
+      "path": "backend/rag/knowledge_repository.py",
+      "module": "backend/rag",
+      "responsibility": "knowledge ingestion, governance and document/chunk metadata",
+      "classes": [
+        {
+          "name": "KnowledgeRepository",
+          "lineno": 20,
+          "methods": [
+            "__init__",
+            "ingest_file",
+            "list_documents",
+            "load_published_documents",
+            "load_published_chunks"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "load_published_documents_from_database",
+          "lineno": 172,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "load_published_chunks_from_database",
+          "lineno": 181,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_document_row_to_dict",
+          "lineno": 190,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_chunk_row_to_dict",
+          "lineno": 211,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_extract_title",
+          "lineno": 242,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_document_id",
+          "lineno": 250,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_content_hash",
+          "lineno": 256,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_status",
+          "lineno": 260,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.db.models",
+        "backend.db.session",
+        "backend.rag.chunk_strategy",
+        "backend.rag.embedding",
+        "backend.rag.pgvector_store",
+        "backend.rag.vector_backend",
+        "hashlib",
+        "pathlib",
+        "sqlalchemy",
+        "sqlalchemy.orm",
+        "sqlalchemy.orm.attributes"
+      ]
+    },
+    {
+      "path": "backend/rag/pgvector_store.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [
+        {
+          "name": "PgVectorStore",
+          "lineno": 11,
+          "methods": [
+            "__init__",
+            "search"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "upsert_pgvector_embedding",
+          "lineno": 86,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_format_pgvector",
+          "lineno": 128,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_row_to_chunk",
+          "lineno": 132,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_format_context",
+          "lineno": 159,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.db.session",
+        "backend.rag.schemas",
+        "backend.rag.vector_backend",
+        "sqlalchemy",
+        "sqlalchemy.orm",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/rag/pipeline_retriever.py",
+      "module": "backend/rag",
+      "responsibility": "RAG retrieval, ranking or retrieval backend selection",
+      "classes": [
+        {
+          "name": "RagPipelineRetriever",
+          "lineno": 13,
+          "methods": [
+            "__init__",
+            "retrieve"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "_with_pipeline_metadata",
+          "lineno": 61,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_filter_by_min_relevance",
+          "lineno": 86,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_final_relevance_score",
+          "lineno": 108,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_copy_chunk_with_query_metadata",
+          "lineno": 116,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_format_context",
+          "lineno": 141,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_merge_rewritten_chunks",
+          "lineno": 150,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_copy_chunk_with_metadata",
+          "lineno": 161,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_source_metadata",
+          "lineno": 188,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.logger",
+        "backend.rag.base",
+        "backend.rag.hybrid_retriever",
+        "backend.rag.keyword_retriever",
+        "backend.rag.query_rewriter",
+        "backend.rag.reranker",
+        "backend.rag.schemas"
+      ]
+    },
+    {
+      "path": "backend/rag/query_rewriter.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "rewrite_query",
+          "lineno": 21,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": []
+    },
+    {
+      "path": "backend/rag/reranker.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [
+        {
+          "name": "RuleBasedReranker",
+          "lineno": 74,
+          "methods": [
+            "rerank"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "rerank",
+          "lineno": 104,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_rerank_chunk",
+          "lineno": 108,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_title_match_score",
+          "lineno": 152,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_source_match_score",
+          "lineno": 156,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_infer_domains",
+          "lineno": 163,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_domain_consistency_score",
+          "lineno": 187,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_domain_adjustment",
+          "lineno": 197,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_keyword_overlap_score",
+          "lineno": 206,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_tokenize",
+          "lineno": 216,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_contains_chinese",
+          "lineno": 226,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_format_context",
+          "lineno": 230,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.schemas",
+        "re"
+      ]
+    },
+    {
+      "path": "backend/rag/retrieval_need_gate.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "evaluate_retrieval_need",
+          "lineno": 365,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_result",
+          "lineno": 454,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_auxiliary_text",
+          "lineno": 480,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_detect_current_incident",
+          "lineno": 489,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_has_strong_current_evidence",
+          "lineno": 521,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_detect_task_intent",
+          "lineno": 532,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_high_confidence_non_current_task",
+          "lineno": 560,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_has_ambiguous_enterprise_risk",
+          "lineno": 577,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_customer_service_lookup",
+          "lineno": 588,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_policy_learning",
+          "lineno": 596,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_content_editing",
+          "lineno": 604,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_preparedness",
+          "lineno": 608,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_future_hypothetical",
+          "lineno": 612,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_historical_analysis",
+          "lineno": 616,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_statistics_reporting",
+          "lineno": 620,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_training_learning",
+          "lineno": 624,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_information_lookup",
+          "lineno": 628,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_matched_positive_signals",
+          "lineno": 635,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_matched_negative_signals",
+          "lineno": 643,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_positive_signal_weight",
+          "lineno": 651,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_negative_signal_weight",
+          "lineno": 661,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_contains_any",
+          "lineno": 669,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_dedupe",
+          "lineno": 673,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": []
+    },
+    {
+      "path": "backend/rag/retriever.py",
+      "module": "backend/rag",
+      "responsibility": "RAG retrieval, ranking or retrieval backend selection",
+      "classes": [],
+      "functions": [
+        {
+          "name": "retrieve",
+          "lineno": 4,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.factory"
+      ]
+    },
+    {
+      "path": "backend/rag/schemas.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [
+        {
+          "name": "KnowledgeDocument",
+          "lineno": 6,
+          "methods": [
+            "to_dict"
+          ],
+          "doc": ""
+        },
+        {
+          "name": "KnowledgeChunk",
+          "lineno": 20,
+          "methods": [
+            "to_dict"
+          ],
+          "doc": ""
+        },
+        {
+          "name": "RetrievedChunk",
+          "lineno": 34,
+          "methods": [
+            "to_dict"
+          ],
+          "doc": ""
+        },
+        {
+          "name": "RetrievalResult",
+          "lineno": 58,
+          "methods": [
+            "to_dict"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [],
+      "imports": [
+        "dataclasses",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/rag/text_splitter.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "split_documents",
+          "lineno": 4,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.chunk_strategy"
+      ]
+    },
+    {
+      "path": "backend/rag/vector_backend.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [],
+      "functions": [
+        {
+          "name": "get_vector_backend",
+          "lineno": 9,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_pgvector_index_type",
+          "lineno": 16,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_pgvector_distance",
+          "lineno": 23,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "is_pgvector_backend_enabled",
+          "lineno": 30,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "os"
+      ]
+    },
+    {
+      "path": "backend/rag/vector_retriever.py",
+      "module": "backend/rag",
+      "responsibility": "RAG retrieval, ranking or retrieval backend selection",
+      "classes": [
+        {
+          "name": "VectorRetriever",
+          "lineno": 12,
+          "methods": [
+            "__init__",
+            "retrieve",
+            "_build_index"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "_mark_pgvector_fallback",
+          "lineno": 59,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.base",
+        "backend.rag.document_loader",
+        "backend.rag.embedding",
+        "backend.rag.pgvector_store",
+        "backend.rag.schemas",
+        "backend.rag.vector_backend",
+        "backend.rag.vector_store",
+        "pathlib"
+      ]
+    },
+    {
+      "path": "backend/rag/vector_store.py",
+      "module": "backend/rag",
+      "responsibility": "RAG support module",
+      "classes": [
+        {
+          "name": "VectorStore",
+          "lineno": 8,
+          "methods": [
+            "__init__",
+            "add",
+            "search"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "_validate_chunk",
+          "lineno": 66,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_cosine_similarity",
+          "lineno": 75,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_format_context",
+          "lineno": 89,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_source_metadata",
+          "lineno": 98,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.rag.schemas",
+        "copy",
+        "math",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/agents/__init__.py",
+      "module": "backend/agents",
+      "responsibility": "agent implementation and LLM/mock fallback behavior",
+      "classes": [],
+      "functions": [],
+      "imports": []
+    },
+    {
+      "path": "backend/agents/decision_agent.py",
+      "module": "backend/agents",
+      "responsibility": "agent implementation and LLM/mock fallback behavior",
+      "classes": [],
+      "functions": [
+        {
+          "name": "run",
+          "lineno": 14,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_mock",
+          "lineno": 42,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_llm",
+          "lineno": 73,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "call_llm",
+          "lineno": 98,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_decision_prompt",
+          "lineno": 118,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_decision_stability_requirements",
+          "lineno": 166,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_validate_output",
+          "lineno": 210,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_output",
+          "lineno": 239,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_extract_second_draft",
+          "lineno": 254,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.config",
+        "backend.llm",
+        "backend.llm.client",
+        "backend.llm.parser",
+        "backend.logger"
+      ]
+    },
+    {
+      "path": "backend/agents/legal_agent.py",
+      "module": "backend/agents",
+      "responsibility": "agent implementation and LLM/mock fallback behavior",
+      "classes": [],
+      "functions": [
+        {
+          "name": "run",
+          "lineno": 50,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_last_rag_info",
+          "lineno": 71,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_set_rag_info",
+          "lineno": 75,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_mock",
+          "lineno": 132,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_llm",
+          "lineno": 182,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "call_llm",
+          "lineno": 209,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_legal_prompt",
+          "lineno": 229,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_retrieve_legal_context",
+          "lineno": 267,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_rag_chunks",
+          "lineno": 373,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_attach_metadata",
+          "lineno": 403,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_is_rag_enabled",
+          "lineno": 415,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_evidence_chunks",
+          "lineno": 419,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_resolve_retrieval_backend",
+          "lineno": 465,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_evidence_summary",
+          "lineno": 484,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_resolve_retrieval_type",
+          "lineno": 511,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_resolve_rerank_enabled",
+          "lineno": 522,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_resolve_retrieval_fallback",
+          "lineno": 533,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_retrieval_query",
+          "lineno": 544,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_validate_output",
+          "lineno": 556,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_output",
+          "lineno": 575,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.config",
+        "backend.llm",
+        "backend.llm.client",
+        "backend.llm.parser",
+        "backend.logger",
+        "backend.rag.retrieval_need_gate",
+        "backend.rag.retriever",
+        "contextvars",
+        "copy",
+        "os"
+      ]
+    },
+    {
+      "path": "backend/agents/planner_agent.py",
+      "module": "backend/agents",
+      "responsibility": "agent implementation and LLM/mock fallback behavior",
+      "classes": [],
+      "functions": [
+        {
+          "name": "run",
+          "lineno": 35,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_needs_sentiment",
+          "lineno": 93,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_needs_legal",
+          "lineno": 99,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_add_plan_item",
+          "lineno": 105,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "uuid"
+      ]
+    },
+    {
+      "path": "backend/agents/redteam_agent.py",
+      "module": "backend/agents",
+      "responsibility": "agent implementation and LLM/mock fallback behavior",
+      "classes": [],
+      "functions": [
+        {
+          "name": "run",
+          "lineno": 13,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_mock",
+          "lineno": 31,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_llm",
+          "lineno": 59,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "call_llm",
+          "lineno": 78,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_redteam_prompt",
+          "lineno": 98,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_validate_output",
+          "lineno": 129,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_output",
+          "lineno": 148,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.config",
+        "backend.llm",
+        "backend.llm.client",
+        "backend.llm.parser",
+        "backend.logger"
+      ]
+    },
+    {
+      "path": "backend/agents/sentiment_agent.py",
+      "module": "backend/agents",
+      "responsibility": "agent implementation and LLM/mock fallback behavior",
+      "classes": [],
+      "functions": [
+        {
+          "name": "run",
+          "lineno": 33,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_last_tool_info",
+          "lineno": 58,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_set_tool_info",
+          "lineno": 62,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_mock",
+          "lineno": 80,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_llm",
+          "lineno": 105,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "call_llm",
+          "lineno": 127,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_sentiment_prompt",
+          "lineno": 147,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_agent_mode",
+          "lineno": 178,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_sentiment_tool",
+          "lineno": 182,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_get_sentiment_tool",
+          "lineno": 217,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_validate_llm_output",
+          "lineno": 226,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_public_emotion",
+          "lineno": 253,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_recommended_tone",
+          "lineno": 270,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_output",
+          "lineno": 296,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.llm",
+        "backend.llm.client",
+        "backend.llm.parser",
+        "backend.logger",
+        "backend.tools.registry",
+        "backend.tools.sentiment_tool",
+        "os",
+        "time"
+      ]
+    },
+    {
+      "path": "backend/agents/writer_agent.py",
+      "module": "backend/agents",
+      "responsibility": "agent implementation and LLM/mock fallback behavior",
+      "classes": [],
+      "functions": [
+        {
+          "name": "run",
+          "lineno": 28,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "generate_first_draft",
+          "lineno": 51,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_last_memory_info",
+          "lineno": 55,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "get_last_context_info",
+          "lineno": 64,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_set_context_info",
+          "lineno": 72,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_set_memory_info",
+          "lineno": 82,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_mock",
+          "lineno": 103,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_run_llm",
+          "lineno": 124,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "call_llm",
+          "lineno": 146,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_writer_prompt",
+          "lineno": 166,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_context",
+          "lineno": 200,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_retrieve_memory_context",
+          "lineno": 228,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_memory_query",
+          "lineno": 247,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_validate_first_draft_output",
+          "lineno": 259,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_first_draft_output",
+          "lineno": 271,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "generate_second_draft",
+          "lineno": 280,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_generate_second_draft_llm",
+          "lineno": 308,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_generate_second_draft_mock",
+          "lineno": 330,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_writer_v2_prompt",
+          "lineno": 368,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_writer_v2_stability_requirements",
+          "lineno": 409,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_validate_second_draft_output",
+          "lineno": 430,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_normalize_second_draft_output",
+          "lineno": 448,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_build_writer_v2_review_summary",
+          "lineno": 464,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_extract_first_statement",
+          "lineno": 477,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "backend.config",
+        "backend.context",
+        "backend.llm",
+        "backend.llm.client",
+        "backend.llm.parser",
+        "backend.logger",
+        "backend.memory.retriever"
+      ]
+    },
+    {
+      "path": "backend/skills/__init__.py",
+      "module": "backend/skills",
+      "responsibility": "tool calling, skill registry, MCP mock or A2A schema",
+      "classes": [],
+      "functions": [],
+      "imports": [
+        "backend.skills.builtins",
+        "backend.skills.registry",
+        "backend.skills.skill_schema"
+      ]
+    },
+    {
+      "path": "backend/skills/a2a_schema.py",
+      "module": "backend/skills",
+      "responsibility": "tool calling, skill registry, MCP mock or A2A schema",
+      "classes": [
+        {
+          "name": "AgentMessage",
+          "lineno": 10,
+          "methods": [
+            "to_dict"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "explain_a2a_vs_mcp",
+          "lineno": 35,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "typing",
+        "uuid"
+      ]
+    },
+    {
+      "path": "backend/skills/builtins.py",
+      "module": "backend/skills",
+      "responsibility": "tool calling, skill registry, MCP mock or A2A schema",
+      "classes": [],
+      "functions": [
+        {
+          "name": "create_default_registry",
+          "lineno": 15,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_legal_rag_search_skill",
+          "lineno": 27,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_session_lookup_skill",
+          "lineno": 58,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_runtime_metrics_query_skill",
+          "lineno": 84,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_guardrail_check_skill",
+          "lineno": 104,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_knowledge_document_search_skill",
+          "lineno": 134,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_execute_legal_rag_search",
+          "lineno": 163,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_execute_session_lookup",
+          "lineno": 173,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_execute_guardrail_check",
+          "lineno": 181,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_execute_knowledge_document_search",
+          "lineno": 191,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "__future__",
+        "backend.core.checkpoint",
+        "backend.guardrails.input_guardrail",
+        "backend.guardrails.output_guardrail",
+        "backend.observability.metrics",
+        "backend.rag.knowledge_repository",
+        "backend.rag.retriever",
+        "backend.skills.registry",
+        "backend.skills.skill_schema",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/skills/function_calling_adapter.py",
+      "module": "backend/skills",
+      "responsibility": "tool calling, skill registry, MCP mock or A2A schema",
+      "classes": [
+        {
+          "name": "FunctionCallingAdapter",
+          "lineno": 29,
+          "methods": [
+            "__init__",
+            "list_tools",
+            "validate_input",
+            "execute_tool_call"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "skill_to_openai_tool_schema",
+          "lineno": 11,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "registry_to_openai_tools",
+          "lineno": 22,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_tool_call_trace",
+          "lineno": 63,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_utc_now",
+          "lineno": 79,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "__future__",
+        "backend.skills.builtins",
+        "backend.skills.registry",
+        "backend.skills.skill_schema",
+        "datetime",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/skills/mcp_adapter.py",
+      "module": "backend/skills",
+      "responsibility": "tool calling, skill registry, MCP mock or A2A schema",
+      "classes": [
+        {
+          "name": "MCPToolSpec",
+          "lineno": 11,
+          "methods": [],
+          "doc": ""
+        },
+        {
+          "name": "MCPResourceSpec",
+          "lineno": 19,
+          "methods": [],
+          "doc": ""
+        },
+        {
+          "name": "MCPCallResult",
+          "lineno": 27,
+          "methods": [],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "skill_to_mcp_tool",
+          "lineno": 35,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "skill_to_mcp_resource",
+          "lineno": 51,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "mock_mcp_call",
+          "lineno": 59,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "__future__",
+        "backend.skills.skill_schema",
+        "dataclasses",
+        "datetime",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/skills/registry.py",
+      "module": "backend/skills",
+      "responsibility": "tool calling, skill registry, MCP mock or A2A schema",
+      "classes": [
+        {
+          "name": "SkillRegistry",
+          "lineno": 9,
+          "methods": [
+            "__init__",
+            "register",
+            "get",
+            "list_skills",
+            "validate_input",
+            "execute"
+          ],
+          "doc": ""
+        }
+      ],
+      "functions": [
+        {
+          "name": "validate_json_schema_payload",
+          "lineno": 78,
+          "async": false,
+          "doc": ""
+        },
+        {
+          "name": "_validate_type",
+          "lineno": 102,
+          "async": false,
+          "doc": ""
+        }
+      ],
+      "imports": [
+        "__future__",
+        "backend.skills.skill_schema",
+        "copy",
+        "typing"
+      ]
+    },
+    {
+      "path": "backend/skills/skill_schema.py",
+      "module": "backend/skills",
+      "responsibility": "tool calling, skill registry, MCP mock or A2A schema",
+      "classes": [
+        {
+          "name": "AgentSkill",
+          "lineno": 12,
+          "methods": [
+            "to_dict"
+          ],
+          "doc": ""
+        },
+        {
+          "name": "SkillExecutionResult",
+          "lineno": 39,
+          "methods": [],
+          "doc": ""
+        }
+      ],
+      "functions": [],
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "typing"
+      ]
+    }
+  ]
+}

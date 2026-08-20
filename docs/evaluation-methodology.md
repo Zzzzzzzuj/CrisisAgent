@@ -23,7 +23,7 @@ python -m pytest tests -q
 当前回归结果：
 
 ```text
-491 passed
+495 passed
 ```
 
 ## 2. Runtime Tests
@@ -215,7 +215,24 @@ Final E2E Regression 覆盖：
 
 报告保留已知限制，包括 module-level state 的历史风险、Reranker 手写规则、Gate 仍有 FP/FN、真实网络稳定性未覆盖和当前没有完整 automatic retry。
 
-## 12. What The Evaluation Does Not Prove
+## 12. Code Knowledge Index
+
+`scripts/index_project_knowledge.py` 是一个轻量静态代码知识库索引脚本。它扫描：
+
+- `backend/core`
+- `backend/rag`
+- `backend/agents`
+- `backend/skills`
+
+输出：
+
+```text
+data/code_knowledge_index.json
+```
+
+它提取文件路径、模块职责、类名、函数名和 imports，用于辅助解释跨模块错误追踪。它不使用 LLM、embedding、Redis、PostgreSQL 或 pgvector，因此普通 pytest 和离线 demo 可以运行。
+
+## 13. What The Evaluation Does Not Prove
 
 当前评测不能证明：
 
