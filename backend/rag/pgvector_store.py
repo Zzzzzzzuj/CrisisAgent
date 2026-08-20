@@ -34,12 +34,17 @@ class PgVectorStore:
                 c.document_id,
                 c.document_version,
                 c.source_category,
+                d.status AS document_status,
+                d.is_enabled,
+                d.source_name,
                 c.metadata,
                 {score_expr} AS score
             FROM knowledge_chunk_vectors AS v
             JOIN knowledge_chunks AS c ON c.chunk_id = v.chunk_id
             JOIN knowledge_documents AS d ON d.document_id = c.document_id
             WHERE d.published_status = 'published'
+              AND d.status = 'published'
+              AND d.is_enabled = TRUE
             ORDER BY {order_expr} ASC
             LIMIT :top_k
             """
@@ -67,6 +72,9 @@ class PgVectorStore:
                     "document_id": (chunk.metadata or {}).get("document_id"),
                     "document_version": (chunk.metadata or {}).get("document_version"),
                     "source_category": (chunk.metadata or {}).get("source_category"),
+                    "document_status": (chunk.metadata or {}).get("document_status"),
+                    "is_enabled": (chunk.metadata or {}).get("is_enabled"),
+                    "source_name": (chunk.metadata or {}).get("source_name"),
                     "retrieval_backend": "pgvector",
                     "vector_backend": "pgvector",
                 }
@@ -131,6 +139,9 @@ def _row_to_chunk(row: Any) -> RetrievedChunk:
             "document_id": row.get("document_id"),
             "document_version": row.get("document_version"),
             "source_category": row.get("source_category"),
+            "document_status": row.get("document_status"),
+            "is_enabled": row.get("is_enabled"),
+            "source_name": row.get("source_name") or row.get("source"),
         }
     )
     score = round(float(row.get("score") or 0.0), 4)

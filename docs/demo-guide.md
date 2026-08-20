@@ -223,6 +223,19 @@ Invoke-RestMethod http://127.0.0.1:8000/ready
 
 普通面试演示推荐保留 `VECTOR_BACKEND=json`。pgvector 是可选生产化增强，不是 `run_full_demo.py`、mock demo 或普通 pytest 的前置条件。
 
+知识库治理字段演示：
+
+```powershell
+python scripts\ingest_knowledge_base.py `
+  --path backend/rag/knowledge_base/data_privacy.md `
+  --source-category data_privacy `
+  --status published `
+  --enabled true
+python scripts\list_knowledge_documents.py
+```
+
+`status=draft` 或 `status=disabled` 的文档会保留在列表中，但不会进入 Legal RAG 检索。
+
 ## 5. Real LLM Demo
 
 真实 LLM demo 需要配置 OpenAI-compatible API，例如 DeepSeek：
@@ -406,4 +419,5 @@ Invoke-RestMethod http://127.0.0.1:8000/api/metrics/runtime
 4. 展示 RAG Ablation：同一 case 下 `RAG_ENABLED=false/true` 的 evidence 差异。
 5. 展示 Human Review：高风险 case 进入 WAITING_HUMAN，审核人 approve/reject 后有 audit log。
 6. 展示生产化：PostgreSQL、Alembic、Auth/RBAC、Guardrails、Observability。
-7. 展示诚实边界：默认 async 是 in-process，RQ 是可选增强；metrics 不是 Prometheus；embedding 默认是 JSON/list，pgvector 需要显式启用。
+7. 展示知识治理：Legal RAG 只检索 `published + enabled` 的知识，trace 里能看到 document status 和 source。
+8. 展示诚实边界：默认 async 是 in-process，RQ 是可选增强；metrics 不是 Prometheus；embedding 默认是 JSON/list，pgvector 需要显式启用。

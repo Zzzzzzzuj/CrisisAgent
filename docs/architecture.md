@@ -191,6 +191,8 @@ flowchart TD
 
 边界说明：默认 embedding 以 JSON/list 结构保存和读取；pgvector 是可选生产化增强，需要 PostgreSQL `vector` extension 和 `VECTOR_BACKEND=pgvector`。Knowledge management 用于可审计 ingestion 和 evidence trace，不等同于完整企业知识库管理后台。
 
+治理过滤：database-backed RAG 默认只检索 `status=published` 且 `is_enabled=true` 的文档；`draft` 和 `disabled` 文档仍可通过 listing 脚本审计，但不会进入 Legal Agent 检索上下文。
+
 ## 8. Guardrails
 
 Guardrails 位于 `backend/guardrails/`：
@@ -270,6 +272,8 @@ PostgreSQL production path 包含：
 - `knowledge_documents`
 - `knowledge_chunks`
 - `knowledge_chunk_vectors` optional pgvector storage
+
+Knowledge governance fields include `status`, `is_enabled`, `version`, `source_category`, `title`, `source_name`, `created_at`, and `updated_at`.
 
 迁移使用 Alembic：
 

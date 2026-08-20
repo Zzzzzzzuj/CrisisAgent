@@ -29,7 +29,18 @@ def load_documents(knowledge_base_dir: str | Path = KNOWLEDGE_BASE_DIR) -> list[
             title=_extract_title(content, path.stem),
             content=content,
         )
-        documents.append(document.to_dict())
+        data = document.to_dict()
+        data.update(
+            {
+                "source_name": path.name,
+                "source_category": _infer_source_category(path),
+                "status": "published",
+                "published_status": "published",
+                "is_enabled": True,
+                "retrieval_fallback": True,
+            }
+        )
+        documents.append(data)
 
     return documents
 
@@ -60,3 +71,19 @@ def _load_database_chunks_if_available() -> list[dict]:
         return load_published_chunks_from_database()
     except Exception:
         return []
+
+
+def _infer_source_category(path: Path) -> str:
+    name = path.stem.lower()
+    for category in (
+        "food_safety",
+        "data_privacy",
+        "service_outage",
+        "product_quality",
+        "executive_misconduct",
+        "legal_risk",
+        "crisis_response",
+    ):
+        if category in name:
+            return category
+    return "general"

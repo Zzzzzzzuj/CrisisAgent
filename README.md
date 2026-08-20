@@ -166,6 +166,8 @@ python -m uvicorn backend.main:app --reload
 | `VECTOR_BACKEND` | `json` or optional `pgvector`; default `json` |
 | `PGVECTOR_INDEX_TYPE` | Optional pgvector index hint: `ivfflat`, `hnsw`, or `none` |
 | `PGVECTOR_DISTANCE` | Optional distance metric: `cosine` or `l2` |
+| `KNOWLEDGE_DEFAULT_STATUS` | Documentation default for ingestion: `draft`, `published`, or `disabled` |
+| `KNOWLEDGE_DEFAULT_ENABLED` | Documentation default for ingestion enabled flag |
 | `HF_HOME` | Optional Hugging Face cache directory |
 | `VITE_API_BASE_URL` | Frontend API base URL |
 
@@ -262,6 +264,7 @@ Legal Agent 的 RAG 不是只在最终回答里“看起来用了知识库”，
 - `retrieval_query`：Legal Agent 实际送入检索器的 query。
 - `evidence_chunks`：最终进入 Legal 审核上下文的证据片段。
 - `chunk_id` / `document_id` / `document_version`：用于追踪证据来自哪份文档和哪个版本。
+- `document_status` / `is_enabled` / `source_name`：说明证据是否来自已发布且启用的知识文档。
 - `score` / `rerank_score`：检索分数和 rerank 后分数。
 - `evidence_summary`：用一句话说明本次 RAG evidence 如何进入法律审核。
 
@@ -306,6 +309,19 @@ Knowledge ingestion:
 python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base
 python scripts\list_knowledge_documents.py
 ```
+
+Governed ingestion:
+
+```powershell
+python scripts\ingest_knowledge_base.py `
+  --path backend/rag/knowledge_base/data_privacy.md `
+  --source-category data_privacy `
+  --status published `
+  --enabled true `
+  --version 2
+```
+
+Legal RAG only loads database knowledge where `status=published` and `is_enabled=true`. Draft or disabled documents remain visible in the listing script but do not enter Legal Agent retrieval.
 
 Optional pgvector vector backend:
 

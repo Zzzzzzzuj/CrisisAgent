@@ -55,6 +55,7 @@ class VectorStore:
                     "score": chunk.score,
                     "retrieval_backend": "json_vector",
                     "vector_backend": "json",
+                    "retrieval_fallback": (chunk.metadata or {}).get("retrieval_fallback", False),
                     **_source_metadata(chunk),
                 }
                 for chunk in retrieved_chunks
@@ -100,4 +101,7 @@ def _source_metadata(chunk: RetrievedChunk) -> dict:
         "document_id": metadata.get("document_id"),
         "document_version": metadata.get("document_version"),
         "source_category": metadata.get("source_category"),
+        "document_status": metadata.get("document_status"),
+        "is_enabled": metadata.get("is_enabled"),
+        "source_name": metadata.get("source_name"),
     }

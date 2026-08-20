@@ -93,4 +93,8 @@ def _source_metadata(chunk: RetrievedChunk) -> dict:
         "document_id": metadata.get("document_id"),
         "document_version": metadata.get("document_version"),
         "source_category": metadata.get("source_category"),
+        "document_status": metadata.get("document_status"),
+        "is_enabled": metadata.get("is_enabled"),
+        "source_name": metadata.get("source_name"),
+        "retrieval_fallback": metadata.get("retrieval_fallback", False),
     }

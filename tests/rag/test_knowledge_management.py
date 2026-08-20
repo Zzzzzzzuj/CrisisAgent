@@ -34,15 +34,24 @@ def test_knowledge_document_ingestion_creates_document_and_chunks(tmp_path, sess
 
     assert result["source"] == "data_privacy.md"
     assert result["version"] == 1
+    assert result["status"] == "published"
+    assert result["is_enabled"] is True
     assert result["published_status"] == "published"
     assert result["embedding_status"] == "embedded"
     assert result["chunk_count"] >= 1
     assert documents[0]["source_category"] == "data_privacy"
+    assert documents[0]["source_name"] == "data_privacy.md"
+    assert documents[0]["status"] == "published"
+    assert documents[0]["is_enabled"] is True
+    assert documents[0]["chunk_count"] >= 1
     assert chunks[0]["document_id"] == result["document_id"]
     assert chunks[0]["document_version"] == 1
     assert chunks[0]["source_category"] == "data_privacy"
     assert chunks[0]["embedding_status"] == "embedded"
     assert isinstance(chunks[0]["embedding"], list)
+    assert chunks[0]["metadata"]["document_status"] == "published"
+    assert chunks[0]["metadata"]["is_enabled"] is True
+    assert chunks[0]["metadata"]["source_name"] == "data_privacy.md"
 
 
 def test_knowledge_ingestion_bumps_version_when_content_changes(tmp_path, session_factory):
@@ -68,6 +77,29 @@ def test_markdown_fallback_still_loads_when_database_storage_is_disabled(monkeyp
     assert documents
     assert documents[0]["source"] == "data_privacy.md"
     assert documents[0]["content"].startswith("# Data Privacy")
+    assert documents[0]["status"] == "published"
+    assert documents[0]["is_enabled"] is True
+    assert documents[0]["retrieval_fallback"] is True
+
+
+def test_draft_document_is_not_loaded_for_rag(tmp_path, session_factory):
+    path = _write_markdown(tmp_path)
+    repository = KnowledgeRepository(session_factory=session_factory)
+
+    repository.ingest_file(path, source_category="data_privacy", status="draft")
+
+    assert repository.load_published_documents() == []
+    assert repository.load_published_chunks() == []
+
+
+def test_disabled_document_is_not_loaded_for_rag(tmp_path, session_factory):
+    path = _write_markdown(tmp_path)
+    repository = KnowledgeRepository(session_factory=session_factory)
+
+    repository.ingest_file(path, source_category="data_privacy", status="published", enabled=False)
+
+    assert repository.load_published_documents() == []
+    assert repository.load_published_chunks() == []
 
 
 def test_pgvector_ingestion_failure_keeps_json_embedding_fallback(monkeypatch, tmp_path, session_factory):
@@ -99,6 +131,9 @@ def test_legal_rag_trace_records_database_chunk_metadata(monkeypatch):
                 "document_id": "data_privacy-abc",
                 "document_version": 3,
                 "source_category": "data_privacy",
+                "document_status": "published",
+                "is_enabled": True,
+                "source_name": "data_privacy.md",
             }
         ],
         "chunks": [
@@ -113,6 +148,9 @@ def test_legal_rag_trace_records_database_chunk_metadata(monkeypatch):
                     "document_id": "data_privacy-abc",
                     "document_version": 3,
                     "source_category": "data_privacy",
+                    "document_status": "published",
+                    "is_enabled": True,
+                    "source_name": "data_privacy.md",
                     "retrieval_fallback": False,
                 },
             }
@@ -136,11 +174,17 @@ def test_legal_rag_trace_records_database_chunk_metadata(monkeypatch):
     assert chunk["document_id"] == "data_privacy-abc"
     assert chunk["document_version"] == 3
     assert chunk["source_category"] == "data_privacy"
+    assert chunk["document_status"] == "published"
+    assert chunk["is_enabled"] is True
+    assert chunk["source_name"] == "data_privacy.md"
     assert chunk["retrieval_query"].startswith("事件：")
     assert chunk["fallback_used"] is False
     assert source_detail["document_id"] == "data_privacy-abc"
     assert source_detail["document_version"] == 3
     assert source_detail["source_category"] == "data_privacy"
+    assert source_detail["document_status"] == "published"
+    assert source_detail["is_enabled"] is True
+    assert source_detail["source_name"] == "data_privacy.md"
 
 
 def _write_markdown(tmp_path: Path, body: str | None = None) -> Path:

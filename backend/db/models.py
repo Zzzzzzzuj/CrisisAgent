@@ -124,6 +124,7 @@ class KnowledgeDocument(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     document_id: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     source: Mapped[str] = mapped_column(String(255), default="", index=True)
+    source_name: Mapped[str] = mapped_column(String(255), default="")
     title: Mapped[str] = mapped_column(String(255), default="")
     source_category: Mapped[str] = mapped_column(String(128), default="general", index=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
@@ -131,6 +132,8 @@ class KnowledgeDocument(Base):
     content: Mapped[str] = mapped_column(Text, default="")
     embedding_status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     published_status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
+    status: Mapped[str] = mapped_column(String(32), default="published", index=True)
+    is_enabled: Mapped[bool] = mapped_column(default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 

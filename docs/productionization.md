@@ -411,7 +411,18 @@ python scripts/ingest_knowledge_base.py --path backend/rag/knowledge_base
 Ingest one file with an explicit category:
 
 ```bash
-python scripts/ingest_knowledge_base.py --path backend/rag/knowledge_base/data_privacy.md --category data_privacy
+python scripts/ingest_knowledge_base.py --path backend/rag/knowledge_base/data_privacy.md --source-category data_privacy
+```
+
+Ingest with governance fields:
+
+```bash
+python scripts/ingest_knowledge_base.py \
+  --path backend/rag/knowledge_base/data_privacy.md \
+  --source-category data_privacy \
+  --status published \
+  --enabled true \
+  --version 2
 ```
 
 List managed knowledge documents:
@@ -428,6 +439,8 @@ The ingestion pipeline records:
 - version
 - embedding status
 - published status
+- governance status
+- enabled flag
 - chunk ids
 - chunk embeddings
 
@@ -471,12 +484,22 @@ Legal Agent RAG trace now preserves retrieval audit fields for database-managed 
 - `document_version`
 - `chunk_id`
 - `source_category`
+- `document_status`
+- `is_enabled`
+- `source_name`
 - `retrieval_query`
 - `score`
 - `rerank_score`
 - `fallback_used`
 
 These fields are additive. Existing `sources`, `scores`, `rerank_scores`, `count`, and local Markdown fallback behavior remain available.
+
+Retrieval governance rule:
+
+- `draft` documents are listed but not retrieved by Legal RAG.
+- `disabled` documents are listed but not retrieved by Legal RAG.
+- only `status=published` and `is_enabled=true` documents enter database-backed RAG.
+- if DB knowledge is unavailable, Markdown fallback remains available and metadata marks `retrieval_fallback=true`.
 
 ## Observability and Deployment Readiness
 
@@ -526,6 +549,8 @@ DATABASE_URL=postgresql+psycopg://<user>:<password>@<host>:5432/crisis_agent
 VECTOR_BACKEND=json|pgvector
 PGVECTOR_INDEX_TYPE=ivfflat|hnsw|none
 PGVECTOR_DISTANCE=cosine|l2
+KNOWLEDGE_DEFAULT_STATUS=published
+KNOWLEDGE_DEFAULT_ENABLED=true
 RUNTIME_MODE=sync|async
 TASK_QUEUE_BACKEND=inprocess|rq
 REDIS_URL=redis://localhost:6379/0
