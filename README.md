@@ -294,6 +294,19 @@ python scripts\run_rag_ablation_demo.py
 
 这个脚本对同一个危机事件分别运行 `RAG_ENABLED=false` 和 `RAG_ENABLED=true`，对比 `final_statement`、`legal_risks`、`safe_points`、`guardrail_triggered` 和 evaluation scores。当前示例中 RAG 开启后命中 `food_safety.md`，并在 trace 中展示 3 个 evidence chunks；关闭 RAG 时 `rag_used=false` 且 evidence 为空。
 
+RAG retrieval evaluation:
+
+```powershell
+python scripts\evaluate_rag_retrieval.py
+```
+
+这个脚本读取 `data/rag_retrieval_eval_cases.json`，只评估检索本身是否命中期望 `source_category` 和关键词证据，不调用真实 LLM。输出报告位于：
+
+- `reports/rag_retrieval_eval_report.json`
+- `reports/rag_retrieval_eval_report.md`
+
+它和 RAG ablation 的区别是：retrieval evaluation 看“有没有搜到正确来源和证据”，ablation 看“开启/关闭 RAG 后 Legal Agent 输出和最终声明有什么差异”。当前数据集是小型项目 holdout，不是公开 benchmark。
+
 BGE readiness:
 
 ```powershell
@@ -341,7 +354,7 @@ python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embe
 Current regression result:
 
 ```text
-447 passed
+465 passed
 ```
 
 Run locally:

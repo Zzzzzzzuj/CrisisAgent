@@ -1,0 +1,575 @@
+{
+  "summary": {
+    "total_cases": 8,
+    "top1_source_hit_rate": 0.25,
+    "top3_source_hit_rate": 0.25,
+    "keyword_hit_rate": 0.125,
+    "fallback_rate": 0.0,
+    "average_score": 0.3119,
+    "average_rerank_score": 0.2135,
+    "backend_distribution": {
+      "markdown": 5,
+      "json_vector": 14
+    },
+    "failed_cases": [
+      "rag_eval_data_privacy_001",
+      "rag_eval_service_outage_001",
+      "rag_eval_false_advertising_001",
+      "rag_eval_labor_dispute_001",
+      "rag_eval_product_recall_001",
+      "rag_eval_financial_rumor_001",
+      "rag_eval_executive_scandal_001"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "rag_eval_food_safety_001",
+      "difficulty": "easy",
+      "crisis_event": "某食品品牌被消费者反映同批次糕点有异味，多人食用后出现胃部不适，门店需要说明核查和监管沟通安排。",
+      "expected_source_category": "food_safety",
+      "expected_document_hint": "food_safety.md",
+      "expected_keywords": [
+        "食品",
+        "批次",
+        "核查",
+        "监管"
+      ],
+      "actual_source_categories": [
+        "food_safety",
+        "food_safety",
+        "food_safety"
+      ],
+      "top1_source_hit": true,
+      "top3_source_hit": true,
+      "keyword_hits": [
+        "食品",
+        "批次",
+        "核查",
+        "监管"
+      ],
+      "keyword_hit": true,
+      "fallback_used": false,
+      "average_score": 0.3236,
+      "average_rerank_score": 0.3245,
+      "top_chunks": [
+        {
+          "chunk_id": null,
+          "source": "food_safety.md",
+          "title": "食品安全危机知识",
+          "source_category": "food_safety",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "food_safety.md",
+          "score": 0.375,
+          "rerank_score": 0.3481,
+          "fallback_used": false,
+          "retrieval_backend": "markdown",
+          "text_preview": "## 监管介入\n食品安全事件可能引发市场监管部门介入。企业应表达积极配合监管调查，并根据核查结果依法依规采取整改、召回、赔付或其他补救措施。"
+        },
+        {
+          "chunk_id": "food_safety.md#16",
+          "source": "food_safety.md",
+          "title": "食品安全危机知识",
+          "source_category": "food_safety",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "food_safety.md",
+          "score": 0.3227,
+          "rerank_score": 0.3168,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "# 食品安全危机知识"
+        },
+        {
+          "chunk_id": "food_safety.md#19",
+          "source": "food_safety.md",
+          "title": "食品安全危机知识",
+          "source_category": "food_safety",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "food_safety.md",
+          "score": 0.2732,
+          "rerank_score": 0.3086,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 消费者权益\n食品安全危机会直接影响消费者信任。回应中应明确理解消费者担忧，说明投诉受理、批次排查、产品检测和后续进展同步安排。"
+        }
+      ],
+      "failure_reason": "",
+      "notes": "显式食品安全事件，应命中食品安全知识。"
+    },
+    {
+      "case_id": "rag_eval_data_privacy_001",
+      "difficulty": "medium",
+      "crisis_event": "用户登录 APP 后看到其他账号的订单地址和手机号截图，相关图片已经在社交平台传播，平台需要回应个人信息安全问题。",
+      "expected_source_category": "data_privacy",
+      "expected_document_hint": "data_privacy.md",
+      "expected_keywords": [
+        "个人信息",
+        "用户",
+        "核查",
+        "通知"
+      ],
+      "actual_source_categories": [
+        "crisis_response",
+        "crisis_response",
+        "crisis_response"
+      ],
+      "top1_source_hit": false,
+      "top3_source_hit": false,
+      "keyword_hits": [
+        "核查"
+      ],
+      "keyword_hit": false,
+      "fallback_used": false,
+      "average_score": 0.3776,
+      "average_rerank_score": 0.2876,
+      "top_chunks": [
+        {
+          "chunk_id": null,
+          "source": "crisis_response.md",
+          "title": "危机回应规范",
+          "source_category": "crisis_response",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "crisis_response.md",
+          "score": 0.5,
+          "rerank_score": 0.3463,
+          "fallback_used": false,
+          "retrieval_backend": "markdown",
+          "text_preview": "## 初次回应\n初次回应应包括关注事件、理解公众担忧、启动核查、持续同步进展。语气应先共情，再说明行动，避免只做程序性表态。"
+        },
+        {
+          "chunk_id": "crisis_response.md#0",
+          "source": "crisis_response.md",
+          "title": "危机回应规范",
+          "source_category": "crisis_response",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "crisis_response.md",
+          "score": 0.3333,
+          "rerank_score": 0.2663,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "# 危机回应规范"
+        },
+        {
+          "chunk_id": "crisis_response.md#1",
+          "source": "crisis_response.md",
+          "title": "危机回应规范",
+          "source_category": "crisis_response",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "crisis_response.md",
+          "score": 0.2995,
+          "rerank_score": 0.2501,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 初次回应\n初次回应应包括关注事件、理解公众担忧、启动核查、持续同步进展。语气应先共情，再说明行动，避免只做程序性表态。"
+        }
+      ],
+      "failure_reason": "expected_source_category_not_in_top3",
+      "notes": "数据隐私事件，包含隐式泄露表达。"
+    },
+    {
+      "case_id": "rag_eval_service_outage_001",
+      "difficulty": "medium",
+      "crisis_event": "晚高峰期间大量用户反馈支付页面持续转圈，部分订单重复扣费，商户端无法同步交易状态。",
+      "expected_source_category": "service_outage",
+      "expected_document_hint": "service_outage.md",
+      "expected_keywords": [
+        "服务",
+        "故障",
+        "恢复",
+        "用户通知"
+      ],
+      "actual_source_categories": [
+        "service_outage",
+        "service_outage",
+        "service_outage"
+      ],
+      "top1_source_hit": true,
+      "top3_source_hit": true,
+      "keyword_hits": [
+        "服务",
+        "恢复",
+        "用户通知"
+      ],
+      "keyword_hit": false,
+      "fallback_used": false,
+      "average_score": 0.2493,
+      "average_rerank_score": 0.1882,
+      "top_chunks": [
+        {
+          "chunk_id": "service_outage.md#31",
+          "source": "service_outage.md",
+          "title": "服务故障危机知识",
+          "source_category": "service_outage",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "service_outage.md",
+          "score": 0.2682,
+          "rerank_score": 0.1985,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 服务异常确认\n当平台出现无法登录、交易失败、页面崩溃、访问失败或大面积卡顿时，企业应及时确认已关注服务异常，并说明正在排查。回应应优先关注用户和客户受到的影响。"
+        },
+        {
+          "chunk_id": "service_outage.md#33",
+          "source": "service_outage.md",
+          "title": "服务故障危机知识",
+          "source_category": "service_outage",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "service_outage.md",
+          "score": 0.2386,
+          "rerank_score": 0.1879,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 影响范围\n企业应评估受影响的用户、客户、区域、服务模块、订单或交易范围。影响范围尚未查清时，应使用谨慎表达，并承诺持续同步核查进展。"
+        },
+        {
+          "chunk_id": "service_outage.md#35",
+          "source": "service_outage.md",
+          "title": "服务故障危机知识",
+          "source_category": "service_outage",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "service_outage.md",
+          "score": 0.2411,
+          "rerank_score": 0.1781,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 用户通知与后续复盘\n企业应通过官方渠道向用户通知进展，恢复后说明补偿、延期、订单核对或客户支持安排。事后应进行复盘，完善监控、容量、应急预案和发布流程。"
+        }
+      ],
+      "failure_reason": "expected_keywords_missing",
+      "notes": "服务异常，不直接写宕机。"
+    },
+    {
+      "case_id": "rag_eval_false_advertising_001",
+      "difficulty": "hard",
+      "crisis_event": "某教育平台宣传页面称课程通过率接近百分百，学员质疑广告夸大效果并要求公开证明材料。",
+      "expected_source_category": "false_advertising",
+      "expected_document_hint": "false_advertising.md",
+      "expected_keywords": [
+        "宣传",
+        "广告",
+        "证明",
+        "整改"
+      ],
+      "actual_source_categories": [
+        "crisis_response",
+        "service_outage",
+        "crisis_response"
+      ],
+      "top1_source_hit": false,
+      "top3_source_hit": false,
+      "keyword_hits": [],
+      "keyword_hit": false,
+      "fallback_used": false,
+      "average_score": 0.3889,
+      "average_rerank_score": 0.1867,
+      "top_chunks": [
+        {
+          "chunk_id": null,
+          "source": "crisis_response.md",
+          "title": "危机回应规范",
+          "source_category": "crisis_response",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "crisis_response.md",
+          "score": 0.5,
+          "rerank_score": 0.24,
+          "fallback_used": false,
+          "retrieval_backend": "markdown",
+          "text_preview": "## 初次回应\n初次回应应包括关注事件、理解公众担忧、启动核查、持续同步进展。语气应先共情，再说明行动，避免只做程序性表态。"
+        },
+        {
+          "chunk_id": null,
+          "source": "service_outage.md",
+          "title": "服务故障危机知识",
+          "source_category": "service_outage",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "service_outage.md",
+          "score": 0.3333,
+          "rerank_score": 0.16,
+          "fallback_used": false,
+          "retrieval_backend": "markdown",
+          "text_preview": "## 影响范围\n企业应评估受影响的用户、客户、区域、服务模块、订单或交易范围。影响范围尚未查清时，应使用谨慎表达，并承诺持续同步核查进展。"
+        },
+        {
+          "chunk_id": "crisis_response.md#0",
+          "source": "crisis_response.md",
+          "title": "危机回应规范",
+          "source_category": "crisis_response",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "crisis_response.md",
+          "score": 0.3333,
+          "rerank_score": 0.16,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "# 危机回应规范"
+        }
+      ],
+      "failure_reason": "expected_source_category_not_in_top3",
+      "notes": "当前知识库可能缺少虚假宣传专项文档，用于暴露覆盖缺口。"
+    },
+    {
+      "case_id": "rag_eval_labor_dispute_001",
+      "difficulty": "hard",
+      "crisis_event": "多名员工在社交平台称公司长期拖欠加班费，并晒出排班记录，媒体开始联系公司求证。",
+      "expected_source_category": "labor_dispute",
+      "expected_document_hint": "labor_dispute.md",
+      "expected_keywords": [
+        "员工",
+        "加班",
+        "核查",
+        "沟通"
+      ],
+      "actual_source_categories": [],
+      "top1_source_hit": false,
+      "top3_source_hit": false,
+      "keyword_hits": [],
+      "keyword_hit": false,
+      "fallback_used": false,
+      "average_score": 0.0,
+      "average_rerank_score": 0.0,
+      "top_chunks": [],
+      "failure_reason": "no_retrieval_result",
+      "notes": "劳动争议专项覆盖测试。"
+    },
+    {
+      "case_id": "rag_eval_product_recall_001",
+      "difficulty": "medium",
+      "crisis_event": "同型号儿童水杯被发现杯盖零件容易脱落，家长担心误吞风险，要求品牌公布批次和召回安排。",
+      "expected_source_category": "product_recall",
+      "expected_document_hint": "product_recall.md",
+      "expected_keywords": [
+        "召回",
+        "批次",
+        "检测",
+        "用户"
+      ],
+      "actual_source_categories": [
+        "product_quality",
+        "food_safety"
+      ],
+      "top1_source_hit": false,
+      "top3_source_hit": false,
+      "keyword_hits": [
+        "批次",
+        "检测",
+        "用户"
+      ],
+      "keyword_hit": false,
+      "fallback_used": false,
+      "average_score": 0.2322,
+      "average_rerank_score": 0.1222,
+      "top_chunks": [
+        {
+          "chunk_id": "product_quality.md#25",
+          "source": "product_quality.md",
+          "title": "质量安全危机知识",
+          "source_category": "product_quality",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "product_quality.md",
+          "score": 0.2564,
+          "rerank_score": 0.1374,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 型号与批次核查\n涉及实物商品质量、安全隐患、零件脱落、电池异常、漏水或使用不适时，企业应核查具体型号、生产批次、销售渠道和用户反馈范围。回应应避免在事实未查清前直接确认全部问题。"
+        },
+        {
+          "chunk_id": "food_safety.md#19",
+          "source": "food_safety.md",
+          "title": "食品安全危机知识",
+          "source_category": "food_safety",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "food_safety.md",
+          "score": 0.2079,
+          "rerank_score": 0.107,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 消费者权益\n食品安全危机会直接影响消费者信任。回应中应明确理解消费者担忧，说明投诉受理、批次排查、产品检测和后续进展同步安排。"
+        }
+      ],
+      "failure_reason": "expected_source_category_not_in_top3",
+      "notes": "产品召回语义，可能与 product_quality 混淆。"
+    },
+    {
+      "case_id": "rag_eval_financial_rumor_001",
+      "difficulty": "hard",
+      "crisis_event": "网上流传某消费品牌资金链紧张、供应商停止供货的消息，引发用户退款和合作方询问。",
+      "expected_source_category": "financial_rumor",
+      "expected_document_hint": "financial_rumor.md",
+      "expected_keywords": [
+        "传言",
+        "资金",
+        "核实",
+        "公开说明"
+      ],
+      "actual_source_categories": [
+        "data_privacy",
+        "data_privacy"
+      ],
+      "top1_source_hit": false,
+      "top3_source_hit": false,
+      "keyword_hits": [
+        "核实"
+      ],
+      "keyword_hit": false,
+      "fallback_used": false,
+      "average_score": 0.2219,
+      "average_rerank_score": 0.1104,
+      "top_chunks": [
+        {
+          "chunk_id": "data_privacy.md#5",
+          "source": "data_privacy.md",
+          "title": "数据隐私危机知识",
+          "source_category": "data_privacy",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "data_privacy.md",
+          "score": 0.2364,
+          "rerank_score": 0.1174,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 初步响应\n涉及用户个人信息、隐私或数据安全的事件，应先表达重视用户权益和信息安全，说明企业已经启动核查。回应应避免在事实未查清前直接确认泄露范围，也不应简单否认用户担忧。"
+        },
+        {
+          "chunk_id": "data_privacy.md#6",
+          "source": "data_privacy.md",
+          "title": "数据隐私危机知识",
+          "source_category": "data_privacy",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "data_privacy.md",
+          "score": 0.2074,
+          "rerank_score": 0.1034,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 受影响数据与用户范围调查\n企业应排查可能涉及的数据类型、用户范围、时间窗口和受影响系统。常见信息包括手机号、地址、账号标识、身份信息、位置或人脸等敏感数据。调查结果应以已核实事实为准。"
+        }
+      ],
+      "failure_reason": "expected_source_category_not_in_top3",
+      "notes": "财务传闻专项覆盖测试。"
+    },
+    {
+      "case_id": "rag_eval_executive_scandal_001",
+      "difficulty": "medium",
+      "crisis_event": "公司高管在公开活动中的争议表述被剪辑传播，用户发起抵制，合作方要求公司说明管理层态度。",
+      "expected_source_category": "executive_scandal",
+      "expected_document_hint": "executive_misconduct.md",
+      "expected_keywords": [
+        "高管",
+        "表述",
+        "核实",
+        "道歉"
+      ],
+      "actual_source_categories": [
+        "crisis_response",
+        "executive_misconduct",
+        "executive_misconduct"
+      ],
+      "top1_source_hit": false,
+      "top3_source_hit": false,
+      "keyword_hits": [
+        "道歉"
+      ],
+      "keyword_hit": false,
+      "fallback_used": false,
+      "average_score": 0.3331,
+      "average_rerank_score": 0.2103,
+      "top_chunks": [
+        {
+          "chunk_id": null,
+          "source": "crisis_response.md",
+          "title": "危机回应规范",
+          "source_category": "crisis_response",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "crisis_response.md",
+          "score": 0.5,
+          "rerank_score": 0.2436,
+          "fallback_used": false,
+          "retrieval_backend": "markdown",
+          "text_preview": "## 初次回应\n初次回应应包括关注事件、理解公众担忧、启动核查、持续同步进展。语气应先共情，再说明行动，避免只做程序性表态。"
+        },
+        {
+          "chunk_id": "executive_misconduct.md#14",
+          "source": "executive_misconduct.md",
+          "title": "高管言行危机知识",
+          "source_category": "executive_misconduct",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "executive_misconduct.md",
+          "score": 0.2751,
+          "rerank_score": 0.2058,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 组织立场\n企业应清晰表达尊重用户、员工和公众的组织立场，说明公司不鼓励歧视、侮辱、傲慢或伤害公众情感的表达。回应应避免只强调个人行为而忽视管理责任。"
+        },
+        {
+          "chunk_id": "executive_misconduct.md#15",
+          "source": "executive_misconduct.md",
+          "title": "高管言行危机知识",
+          "source_category": "executive_misconduct",
+          "document_id": null,
+          "document_version": null,
+          "document_status": "published",
+          "is_enabled": true,
+          "source_name": "executive_misconduct.md",
+          "score": 0.2243,
+          "rerank_score": 0.1814,
+          "fallback_used": false,
+          "retrieval_backend": "json_vector",
+          "text_preview": "## 道歉、管理责任与整改\n如相关言行确有不当，企业应表达歉意，说明管理责任和改进措施。后续整改可以包括管理培训、沟通机制、内部规范复盘和持续公开进展。"
+        }
+      ],
+      "failure_reason": "expected_source_category_not_in_top3",
+      "notes": "高管争议事件；当前 KB 类别名可能是 executive_misconduct。"
+    }
+  ],
+  "empty_knowledge_base_hint": ""
+}

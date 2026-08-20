@@ -23,7 +23,7 @@ python -m pytest tests -q
 当前回归结果：
 
 ```text
-447 passed
+465 passed
 ```
 
 ## 2. Runtime Tests
@@ -129,7 +129,36 @@ PASS_WITH_LLM_FALLBACK_OBSERVED
 
 这个 demo 用于面试解释“RAG 开启后 Legal Agent 多了哪些证据和合规依据”。它不是大规模统计实验。
 
-## 8. E2E Regression
+## 8. RAG Retrieval Evaluation
+
+`scripts/evaluate_rag_retrieval.py` 是轻量离线检索评测，不调用真实 LLM，也不依赖 pgvector。它读取：
+
+```text
+data/rag_retrieval_eval_cases.json
+```
+
+每个 case 定义 crisis event、期望 source category、期望关键词、文档 hint 和难度。脚本调用现有 RAG retriever，统计：
+
+- top1 source hit rate
+- top3 source hit rate
+- keyword hit rate
+- fallback rate
+- average score
+- average rerank score
+- backend distribution
+
+输出：
+
+```text
+reports/rag_retrieval_eval_report.json
+reports/rag_retrieval_eval_report.md
+```
+
+它和 RAG ablation 的区别是：retrieval evaluation 只回答“检索是否命中正确来源和关键词证据”；RAG ablation 回答“RAG evidence 进入 Legal Agent 后，对 legal risks、safe points、final statement 和 evaluation 有什么影响”。
+
+当前 retrieval eval 是小型项目 holdout，不是公开 benchmark，也不能证明所有危机场景的泛化。
+
+## 9. E2E Regression
 
 Final E2E Regression 覆盖：
 
@@ -147,7 +176,7 @@ Final E2E Regression 覆盖：
 
 报告保留已知限制，包括 module-level state 的历史风险、Reranker 手写规则、Gate 仍有 FP/FN、真实网络稳定性未覆盖和当前没有完整 automatic retry。
 
-## 9. What The Evaluation Does Not Prove
+## 10. What The Evaluation Does Not Prove
 
 当前评测不能证明：
 

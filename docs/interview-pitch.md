@@ -44,7 +44,7 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 ### 5. 怎么证明 RAG 有用？
 
-背诵版回答：我不会只看最终回答来证明 RAG 有用，因为最终文本可能只是模型自己写得像。我的验证分两层：第一层看 trace，Legal Agent 会记录 `rag_used`、`retrieval_backend`、`retrieval_query`、`evidence_chunks`、chunk_id、document_id、version、score、rerank_score 和 `evidence_summary`，能看到法律审核具体参考了哪些证据。第二层做 ablation：`scripts/run_rag_ablation_demo.py` 会对同一个 case 分别运行 `RAG_ENABLED=false/true`，对比 `legal_risks`、`safe_points`、`final_statement`、guardrail 和 evaluation score。比如食品安全 case 关闭 RAG 时 `evidence_chunks_count=0`，开启后会命中 `food_safety.md` 并带出 evidence chunks。这样能证明 RAG evidence 真的进入了审核链路，而不是只展示一个好看的回答。
+背诵版回答：我不会只看最终回答来证明 RAG 有用，因为最终文本可能只是模型自己写得像。我的验证分三层：第一层看 trace，Legal Agent 会记录 `rag_used`、`retrieval_backend`、`retrieval_query`、`evidence_chunks`、chunk_id、document_id、version、score、rerank_score 和 `evidence_summary`。第二层跑 `scripts/evaluate_rag_retrieval.py`，只评估 retriever 是否命中期望 source category 和关键词证据。第三层做 ablation：`scripts/run_rag_ablation_demo.py` 对同一个 case 分别运行 `RAG_ENABLED=false/true`，对比 `legal_risks`、`safe_points`、`final_statement`、guardrail 和 evaluation score。这样能证明 RAG evidence 真的进入了审核链路，而不是只展示一个好看的回答。
 
 ### 6. 真实 LLM 输出不稳定怎么办？
 
@@ -64,7 +64,7 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 ### 10. 你怎么验证项目不是只跑通一个 demo？
 
-背诵版回答：我做了多层测试和评测。普通 pytest 当前是 447 passed；Evaluation 里有 Response V2、RAG Baseline、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
+背诵版回答：我做了多层测试和评测。普通 pytest 当前是 465 passed；Evaluation 里有 Response V2、RAG Baseline、RAG Retrieval Eval、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
 
 ### 11. 这个项目最大的不足是什么？
 
