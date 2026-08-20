@@ -67,7 +67,126 @@ python scripts\run_demo_cases.py
 - human gate 状态
 - final statement
 
-## 4. Real LLM Demo
+## 4. Recommended Demo Route
+
+推荐给 GitHub 访问者或面试官的演示路线：
+
+### Demo 模式 A：完全离线 mock demo
+
+适合面试现场、GitHub 快速复现和无数据库环境：
+
+- `AGENT_MODE=mock`
+- `CHECKPOINT_STORAGE=json`
+- `RUNTIME_MODE=sync`
+- 不消耗真实 LLM
+- 不依赖 PostgreSQL
+
+### Demo 1：Mock 完整流程
+
+```powershell
+$env:AGENT_MODE="mock"
+$env:CHECKPOINT_STORAGE="json"
+$env:RUNTIME_MODE="sync"
+python -m uvicorn backend.main:app --reload
+```
+
+另开一个 PowerShell 运行：
+
+```powershell
+$env:AGENT_MODE="mock"
+$env:CHECKPOINT_STORAGE="json"
+$env:RUNTIME_MODE="sync"
+python scripts\run_full_demo.py
+```
+
+`run_full_demo.py` 会依次检查：
+
+- backend health check
+- readiness check
+- runtime metrics check
+- mock dynamic workflow demo
+- RAG evidence demo
+- RAG ablation demo
+
+注意：`backend/db/session.py` 会读取 `backend/.env`。如果本机 `backend/.env` 里配置了 `CHECKPOINT_STORAGE=postgres`，但当前环境没有安装 `psycopg` 或数据库未启动，`/ready` 和 runtime metrics 会失败。离线 mock demo 推荐使用 `CHECKPOINT_STORAGE=json`。
+
+如果后端没有启动，脚本会提示：
+
+```text
+Start backend first: python -m uvicorn backend.main:app --reload
+```
+
+### Demo 2：RAG Evidence
+
+在 Dashboard 的 Case Detail 页面展开高级分析，查看 Legal Agent Trace：
+
+- `rag_used`
+- `retrieval_backend`
+- `retrieval_query`
+- `evidence_chunks`
+- `score`
+- `rerank_score`
+- `evidence_summary`
+
+### Demo 3：RAG Ablation
+
+```powershell
+python scripts\run_rag_ablation_demo.py
+```
+
+重点看：
+
+- `RAG_ENABLED=false` 时 `rag_used=false`、`evidence_chunks_count=0`。
+- `RAG_ENABLED=true` 时 `rag_used=true`、`evidence_chunks_count>0`。
+- 食品安全示例会命中 `food_safety.md`。
+
+### Demo 4：Async Runtime
+
+```powershell
+$env:RUNTIME_MODE="async"
+python -m uvicorn backend.main:app --reload
+```
+
+创建 dynamic case 后，`POST /api/dynamic/run` 会快速返回 `queued`，再通过 `GET /api/dynamic/{session_id}` 查询状态变化。
+
+### Demo 5：Auth / RBAC Review
+
+```powershell
+$env:AUTH_ENABLED="true"
+$env:SECRET_KEY="<strong-random-secret>"
+```
+
+登录后使用 `legal_reviewer` 或 `admin` token 执行 approve/reject。`operator` 只能创建和查看 case，不能审核。
+
+### Demo 6：Runtime Metrics / Ready Check
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/ready
+Invoke-RestMethod http://127.0.0.1:8000/api/metrics/runtime
+```
+
+Dashboard 首页也会展示 runtime metrics 卡片；如果 metrics API 暂不可用，不影响 case list 展示。
+
+### Demo 模式 B：PostgreSQL demo
+
+适合展示 checkpoint、trace、approval 和 audit log 落库：
+
+```powershell
+pip install -r requirements.txt
+$env:CHECKPOINT_STORAGE="postgres"
+$env:DATABASE_URL="postgresql+psycopg://<user>:<password>@localhost:5432/crisis_agent"
+python -m alembic upgrade head
+python -m uvicorn backend.main:app --reload
+```
+
+PostgreSQL demo 必须满足：
+
+- `requirements.txt` 中的 `psycopg[binary]` 已安装到当前虚拟环境。
+- `DATABASE_URL` 指向可连接数据库。
+- Alembic migration 已执行：`python -m alembic upgrade head`。
+- 如果 `/ready` 显示 `ModuleNotFoundError` 或 `postgres` backend 不可用，先检查依赖和数据库；若只是演示 Agent/RAG，可以切回 `CHECKPOINT_STORAGE=json`。
+
+## 5. Real LLM Demo
 
 真实 LLM demo 需要配置 OpenAI-compatible API，例如 DeepSeek：
 
@@ -84,7 +203,7 @@ python scripts\run_real_llm_demo.py
 
 真实 smoke 可能出现 LLM structured output 不稳定，系统会通过 JSON parsing、字段校验和 fallback 保持链路继续运行。面试中应明确区分“真实 LLM 请求成功”和“触发 mock fallback 后流程成功”。
 
-## 5. 如何验证 RAG 真的生效
+## 6. 如何验证 RAG 真的生效
 
 RAG 展示不要只看最终声明是否更像样，而要看 Legal Agent trace 里的 evidence 是否真的进入了审核过程。
 
@@ -116,7 +235,7 @@ python scripts\run_rag_ablation_demo.py
 guardrail 和 evaluation score。
 ```
 
-## 6. Async Runtime
+## 7. Async Runtime
 
 切换异步模式：
 
@@ -146,7 +265,7 @@ Invoke-RestMethod "http://127.0.0.1:8000/api/dynamic/$($result.session_id)"
 
 注意：当前 worker 是 in-process worker pool，不是 Redis/RQ/Celery。
 
-## 7. PostgreSQL Backend
+## 8. PostgreSQL Backend
 
 使用 Docker Compose：
 
@@ -176,7 +295,7 @@ Invoke-RestMethod http://127.0.0.1:8000/api/dynamic/sessions
 
 PostgreSQL 路径用于证明 checkpoint、trace、approval 和 audit log 可以落库；普通 pytest 仍默认走 JSON fallback。
 
-## 8. Auth Enabled
+## 9. Auth Enabled
 
 默认：
 
@@ -216,7 +335,7 @@ Invoke-RestMethod -Method Post `
 
 `operator` 不能 approve/reject；`legal_reviewer` 和 `admin` 可以。
 
-## 9. Readiness and Metrics
+## 10. Readiness and Metrics
 
 Readiness：
 
@@ -242,7 +361,7 @@ Invoke-RestMethod http://127.0.0.1:8000/api/metrics/runtime
 - `approval_count`
 - `rejection_count`
 
-## 10. Suggested Interview Demo Script
+## 11. Suggested Interview Demo Script
 
 1. 用一句话说明项目：企业危机响应 Agent 平台，不是单 Prompt 生成公关稿。
 2. 展示 Dynamic Runtime：Planner -> Validator -> Executor -> AgentState。

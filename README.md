@@ -202,6 +202,27 @@ Invoke-RestMethod -Method Post `
 
 ## Demo
 
+## Recommended Demo Path
+
+推荐演示顺序：
+
+面试或 GitHub 复现时，建议先走完全离线 mock demo，不消耗真实 LLM，也不依赖 PostgreSQL：
+
+1. 使用 mock/json/sync 启动 backend：
+   ```powershell
+   $env:AGENT_MODE="mock"
+   $env:CHECKPOINT_STORAGE="json"
+   $env:RUNTIME_MODE="sync"
+   python -m uvicorn backend.main:app --reload
+   ```
+2. 一键检查核心 demo：`python scripts\run_full_demo.py`
+3. 打开 Dashboard：`cd frontend && npm run dev`
+4. 在 Case Detail 展示 Human Review、Agent Trace、RAG Evidence、Guardrail 和 Metrics。
+
+`run_full_demo.py` 默认使用 mock/offline 模式，不消耗真实 LLM。它会依次检查 `/health`、`/ready`、`/api/metrics/runtime`，然后运行 mock dynamic workflow、RAG evidence demo 和 RAG ablation demo。
+
+如果你的本地 `backend/.env` 正在使用 `CHECKPOINT_STORAGE=postgres`，请先确认 PostgreSQL 依赖和数据库可用；只做离线 mock demo 时建议临时改为 `CHECKPOINT_STORAGE=json`。PostgreSQL demo 需要安装 `psycopg[binary]`，项目已在 `requirements.txt` 中声明，可通过 `pip install -r requirements.txt` 安装。
+
 Mock demo:
 
 ```powershell
