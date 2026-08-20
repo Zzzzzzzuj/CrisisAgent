@@ -70,10 +70,22 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 背诵版回答：我在项目里补了一层轻量 Skill abstraction。`AgentSkill` 是项目内部的能力描述，比如 `legal_rag_search`、`session_lookup`、`runtime_metrics_query`、`guardrail_check`。Function Calling 是把这些 skill 暴露给 LLM 的 schema，告诉模型能调什么函数、参数是什么；MCP 更像 Agent 连接外部 tool/resource server 的协议，所以我做了 MCP-compatible mock adapter，但没有接真实 MCP SDK；A2A 是 Agent 和 Agent 之间交换任务和上下文，项目里用 `AgentMessage` 表达这个 schema。简单说：Function Calling 偏模型调函数，MCP 偏 Agent 调工具/资源，Skill 是项目内部能力抽象，A2A 是 Agent 间通信。
 
-### 11. 你怎么验证项目不是只跑通一个 demo？
+### 11. fast / standard / strict 推理模式怎么设计？
 
-背诵版回答：我做了多层测试和评测。普通 pytest 当前是 482 passed；Evaluation 里有 Response V2、RAG Baseline、RAG Retrieval Eval、RAG Bad Case Loop、Knowledge Ingestion Regression、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
+背诵版回答：我没有直接重写 workflow，而是先做了一个 reasoning mode selector。它根据 risk_level、guardrail_triggered、RAG evidence 数量和置信度、LLM fallback、用户是否要求严格审核来选择 fast、standard 或 strict。fast 用于低风险轻量处理；standard 走正常多 Agent 流程；strict 用于高风险或不稳定输出，建议强制 Legal RAG、Guardrail 和 Human Review。当前它作为 AgentState metadata 和 API 返回中的 planning hint，不破坏原来的 `/api/dynamic/run`。
 
-### 12. 这个项目最大的不足是什么？
+### 12. 多轮 follow-up 怎么利用 session state？
+
+背诵版回答：我新增了 `/api/dynamic/{session_id}/followup`，它不是重新跑一遍 Agent，而是读取已有 session 的 original event、final_statement、scores、agent_trace、RAG evidence 和 guardrail metadata，生成 clarification、rewrite、media_qna、internal_action、regulator_response 这几类 mock follow-up。这样可以解释多轮对话不是无状态聊天，而是基于同一个 crisis session 的上下文继续处理。
+
+### 13. 长文本生成为什么不直接一次性生成？
+
+背诵版回答：长文本我会拆成 outline、分段生成、consistency check、final merge、guardrail、human review。特别是危机声明这种高风险文本，不能一边 streaming 一边直接给最终稿，因为后面可能出现法律措辞或事实定性问题。SSE 更适合展示进度，不应该替代最终审核。
+
+### 14. 你怎么验证项目不是只跑通一个 demo？
+
+背诵版回答：我做了多层测试和评测。普通 pytest 当前是 491 passed；Evaluation 里有 Response V2、RAG Baseline、RAG Retrieval Eval、RAG Bad Case Loop、Knowledge Ingestion Regression、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
+
+### 15. 这个项目最大的不足是什么？
 
 背诵版回答：第一，async 默认仍是 in-process，Redis + RQ 是可选增强但还没有 dead-letter queue；第二，pgvector 只是可选 backend，还没有做 ANN 对照和生产压测；第三，Reranker 是手写规则；第四，真实 LLM 输出仍有结构化不稳定，需要更强的 retry-with-format 或 provider response_format；第五，module-level RAG trace state 仍需继续收敛。

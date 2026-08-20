@@ -16,9 +16,11 @@ from backend.auth import (
 )
 from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import run_dynamic_agent
+from backend.core.followup import build_followup_response
 from backend.core.guardrail_runtime import apply_guardrails_to_state
 from backend.core.human import approve, reject
 from backend.core.policy import evaluate_human_policy
+from backend.core.reasoning_mode import apply_reasoning_mode_to_state
 from backend.core.runtime_evaluator import evaluate_runtime_state
 from backend.core.state import COMPLETED, RUNNING, AgentState
 from backend.core.resume import resume_agent_loop
@@ -126,6 +128,7 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
     if is_async_runtime_enabled():
         state = create_queued_dynamic_session(event, created_by=current_user)
         submit_dynamic_session(state.session_id)
+        reasoning = state.metadata.get("reasoning_mode", {})
         return {
             "session_id": state.session_id,
             "plan_id": state.plan_id,
@@ -136,12 +139,19 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
             "execution_trace": [],
             "results": {},
             "failed_agents": [],
+            "selected_reasoning_mode": reasoning.get("selected_reasoning_mode"),
+            "reasoning_mode_reason": reasoning.get("reasoning_mode_reason", []),
+            "recommended_execution_policy": reasoning.get("recommended_execution_policy", {}),
         }
 
     result = run_dynamic_agent(event)
     state = _state_from_dynamic_result(result)
     _record_created_by(state, current_user)
     apply_guardrails_to_state(state)
+    apply_reasoning_mode_to_state(
+        state,
+        user_requested_strict_review=bool(request.get("strict_review", False)),
+    )
     evaluation = evaluate_runtime_state(state)
     policy = evaluate_human_policy(state, evaluation)
 
@@ -164,6 +174,9 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
         "approval": dict(state.approval),
         "evaluation": evaluation,
         "policy": policy,
+        "selected_reasoning_mode": state.metadata.get("reasoning_mode", {}).get("selected_reasoning_mode"),
+        "reasoning_mode_reason": state.metadata.get("reasoning_mode", {}).get("reasoning_mode_reason", []),
+        "recommended_execution_policy": state.metadata.get("reasoning_mode", {}).get("recommended_execution_policy", {}),
     }
 
 
@@ -195,6 +208,24 @@ def get_dynamic_session(session_id: str, current_user: dict | None = Depends(get
     data = state.to_dict()
     data["trace"] = _enhance_trace(data.get("trace", []))
     return data
+
+
+@app.post("/api/dynamic/{session_id}/followup")
+def dynamic_followup(
+    session_id: str,
+    request: dict,
+    current_user: dict | None = Depends(get_current_user),
+) -> dict:
+    state = _load_dynamic_state_or_404(session_id)
+    _ensure_session_access(state, current_user)
+    try:
+        return build_followup_response(
+            state,
+            question=str(request.get("question", "")),
+            followup_type=str(request.get("followup_type", "clarification")),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/dynamic/{session_id}/approve")

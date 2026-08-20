@@ -97,6 +97,31 @@ Phase 16 增加了一层轻量工具协议抽象，主要用于解释 AI Agent �
 
 详细说明见 `docs/tool-calling-mcp-skills.md`。
 
+## Reasoning Mode & Multi-turn Follow-up
+
+Phase 17 增加轻量 reasoning mode selector，用来解释不同风险下的执行策略，但不改变现有 Agent 主流程：
+
+- `fast`：低风险、无明显 RAG evidence 需求，减少审查深度。
+- `standard`：正常多 Agent 流程，Legal RAG 由 Gate 控制。
+- `strict`：高风险、Guardrail 命中、LLM fallback、低 RAG confidence 或用户要求严格审核时，建议强制 Legal RAG/Guardrail/Human Review。
+
+Dynamic Runtime 会记录：
+
+- `selected_reasoning_mode`
+- `reasoning_mode_reason`
+- `recommended_execution_policy`
+
+多轮 follow-up：
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8000/api/dynamic/<session_id>/followup `
+  -Body (@{ question="如果媒体追问下一步怎么办？"; followup_type="media_qna" } | ConvertTo-Json) `
+  -ContentType "application/json"
+```
+
+Follow-up 默认 mock/offline，不消耗真实 LLM，会基于原始 event、final statement、scores、agent trace 和 RAG evidence 生成回答。详细说明见 `docs/reasoning-mode-and-multiturn.md` 和 `docs/long-form-generation.md`。
+
 ## Quick Start
 
 ### Backend
@@ -393,7 +418,7 @@ python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embe
 Current regression result:
 
 ```text
-482 passed
+491 passed
 ```
 
 Run locally:
