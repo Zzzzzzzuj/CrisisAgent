@@ -36,14 +36,25 @@ Dynamic Runtime 的核心是把 Agent 调用从“函数链”拆成可检查状
 
 `AgentState` 的状态包括：
 
-```text
-CREATED -> QUEUED -> RUNNING -> WAITING_HUMAN -> COMPLETED
-                                      |              |
-                                      v              v
-                                   REJECTED        FAILED
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> QUEUED: "RUNTIME_MODE=async"
+    CREATED --> RUNNING: "RUNTIME_MODE=sync"
+    QUEUED --> RUNNING: "in-process worker picks task"
+    RUNNING --> WAITING_HUMAN: "policy requires review"
+    RUNNING --> COMPLETED: "no review needed"
+    RUNNING --> FAILED: "agent/runtime exception"
+    WAITING_HUMAN --> RUNNING: "approve + resume"
+    WAITING_HUMAN --> REJECTED: "reject"
+    COMPLETED --> [*]
+    FAILED --> [*]
+    REJECTED --> [*]
 ```
 
 状态机校验防止无效状态跳转。
+
+边界说明：async runtime 当前是进程内 worker，不是 Redis/RQ/Celery 这类分布式队列；服务重启会丢失尚未执行的内存队列任务。
 
 ## 3. Dynamic Runtime
 
@@ -93,6 +104,24 @@ Human Review 由 `backend/core/policy.py` 和 `backend/core/human.py` 驱动。
 
 `approve` / `reject` 会更新 `AgentState.approval`，写入 trace，并通过 checkpoint repository 持久化。
 
+```mermaid
+flowchart TD
+    A["Dynamic Runtime finishes agents"] --> B["Runtime Evaluation"]
+    B --> C["Human Policy"]
+    C --> D{"Review Required?"}
+    D -->|no| E["COMPLETED"]
+    D -->|yes| F["WAITING_HUMAN checkpoint"]
+    F --> G["legal_reviewer / admin"]
+    G --> H{"Decision"}
+    H -->|approve| I["Approval record"]
+    H -->|reject| J["Rejection record"]
+    I --> K["Audit Log"]
+    J --> K
+    I --> L["Resume Agent Loop"]
+    L --> E
+    J --> M["REJECTED"]
+```
+
 ## 6. Checkpoint / Resume
 
 `backend/core/checkpoint.py` 提供统一接口：
@@ -139,6 +168,26 @@ RAG trace 区分：
 
 当前没有使用 pgvector、ANN index、BM25、RRF 或 Cross Encoder。
 
+## 7.1 RAG Knowledge Management Flow
+
+```mermaid
+flowchart TD
+    A["Markdown / txt document"] --> B["Ingestion script"]
+    B --> C["Parse document"]
+    C --> D["Chunk splitter"]
+    D --> E["Embedding generation"]
+    E --> F["knowledge_documents"]
+    E --> G["knowledge_chunks"]
+    G --> H["Published DB knowledge"]
+    H --> I["RAG Retriever"]
+    J["No DB knowledge or DB unavailable"] --> K["Markdown fallback"]
+    K --> I
+    I --> L["Legal Agent evidence_chunks"]
+    L --> M["Trace: chunk_id, document_id, version, score, rerank_score"]
+```
+
+边界说明：当前 embedding 以 JSON/list 结构保存和读取，不是 pgvector，也没有 ANN 索引。Knowledge management 用于可审计 ingestion 和 evidence trace，不等同于完整企业知识库管理后台。
+
 ## 8. Guardrails
 
 Guardrails 位于 `backend/guardrails/`：
@@ -156,6 +205,22 @@ Guardrails 位于 `backend/guardrails/`：
 - 跳过人工审核暗示
 
 Guardrail 命中后不会自动修改 Agent 输出，而是进入 Human Review。
+
+```mermaid
+flowchart TD
+    A["User event"] --> B["Input Guardrail"]
+    B --> C["Dynamic Runtime"]
+    C --> D["Agents produce final statement"]
+    D --> E["Output Guardrail"]
+    E --> F["Runtime Evaluation"]
+    F --> G["Human Policy"]
+    G --> H{"Any trigger?"}
+    H -->|guardrail hit / high risk / fallback / low score| I["WAITING_HUMAN"]
+    H -->|no trigger| J["COMPLETED"]
+    I --> K["Reviewer approve/reject"]
+    B --> L["metadata.guardrails.input"]
+    E --> M["metadata.guardrails.output"]
+```
 
 ## 9. Auth / RBAC
 

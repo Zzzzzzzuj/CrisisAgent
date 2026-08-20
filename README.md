@@ -30,38 +30,48 @@ CrisisAgent 是一个面向企业危机响应场景的 AI Agent 应用原型。�
 
 ## Architecture
 
+### Business Agent Flow
+
 ```mermaid
 flowchart TD
-    A["User Crisis Event"] --> B["FastAPI"]
-    B --> C["Dynamic Runtime"]
-    C --> D["Planner"]
-    D --> E["Plan Validator"]
-    E --> F["Executor"]
-    F --> G["AgentState"]
-    G --> H["Sentiment / Writer / RedTeam / Legal / Writer_v2 / Decision"]
-    H --> I["Runtime Evaluation"]
-    I --> J["Human Policy"]
-    J --> K{"Human Review?"}
-    K -->|yes| L["WAITING_HUMAN"]
-    K -->|no| M["COMPLETED"]
-    L --> N["approve / reject"]
-    N --> O["Checkpoint / Resume"]
-    O --> F
-    G --> P["JSON or PostgreSQL Persistence"]
-    G --> Q["Trace / Metrics / Dashboard"]
-
-    H --> R["Legal Agent"]
-    R --> S["Retrieval Need Gate v3"]
-    S -->|need_rag=false| T["Skip Retriever"]
-    S -->|need_rag=true| U["RAG Pipeline"]
-    U --> V["Keyword + Vector + Hybrid"]
-    V --> W["Domain-Aware Reranker v2"]
+    A["Crisis Event"] --> B["Sentiment Agent"]
+    B --> C["Writer Agent"]
+    C --> D["RedTeam Agent"]
+    D --> E["Legal Agent + RAG Evidence"]
+    E --> F["Writer v2"]
+    F --> G["Decision Agent"]
+    G --> H{"Human Review?"}
+    H -->|approve| I["Final Statement"]
+    H -->|reject| J["Rejected / Revision Needed"]
+    H --> K["Audit Log"]
+    E --> L["Evidence Trace: chunks, scores, source"]
+    G --> M["Evaluation Scores"]
 ```
 
 Fixed workflow 仍保留在 `backend/workflow.py`，顺序固定为：
 
 ```text
 Sentiment -> Writer v1 -> RedTeam -> Legal -> Writer v2 -> Decision
+```
+
+### Engineering Architecture
+
+```mermaid
+flowchart TD
+    A["Vue Dashboard"] --> B["FastAPI API Layer"]
+    B --> C["Dynamic Runtime / Async Runtime"]
+    C --> D["Planner / Executor / AgentState"]
+    D --> E["LLM Client"]
+    D --> F["RAG Retriever"]
+    D --> G["Guardrails"]
+    D --> H["Checkpoint Repository"]
+    H --> I["PostgreSQL: sessions, checkpoints, audit, knowledge"]
+    H --> J["JSON fallback for local demo/tests"]
+    F --> K["Knowledge Base: Markdown or DB documents"]
+    D --> L["Observability / Metrics / Readiness"]
+    L --> M["Lightweight runtime metrics, not Prometheus"]
+    C --> N["In-process worker, not distributed queue"]
+    F --> O["JSON/list embedding storage, not pgvector / ANN"]
 ```
 
 Dynamic Runtime 位于 `backend/core/`，通过 `AgentState` 保存 `session_id`、`plan_id`、`event`、`results`、`trace`、`approval`、`metadata` 和 `failed_agents`。
