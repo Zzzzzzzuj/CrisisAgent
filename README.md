@@ -97,6 +97,14 @@ Phase 16 增加了一层轻量工具协议抽象，主要用于解释 AI Agent �
 
 详细说明见 `docs/tool-calling-mcp-skills.md`。
 
+Tool-Using Legal Agent experiment:
+
+```powershell
+python scripts\run_tool_using_legal_demo.py
+```
+
+该 demo 展示受控 ReAct / Function Calling 思路：高风险事件必须调用 `legal_rag_search` 和 `guardrail_check`，低风险事件可以跳过 Legal RAG 但必须记录原因。它不会替换原 Legal Agent，不调用真实 MCP server，也不会让 LLM 自主执行 approve/reject/publish。详细说明见 `docs/tool-using-agent-design.md`。
+
 ## Reasoning Mode & Multi-turn Follow-up
 
 Phase 17 增加轻量 reasoning mode selector，用来解释不同风险下的执行策略，但不改变现有 Agent 主流程：
@@ -438,7 +446,7 @@ python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embe
 Current regression result:
 
 ```text
-495 passed
+505 passed
 ```
 
 Run locally:

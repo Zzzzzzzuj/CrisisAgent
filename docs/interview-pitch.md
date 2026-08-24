@@ -70,34 +70,38 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 背诵版回答：我在项目里补了一层轻量 Skill abstraction。`AgentSkill` 是项目内部的能力描述，比如 `legal_rag_search`、`session_lookup`、`runtime_metrics_query`、`guardrail_check`。Function Calling 是把这些 skill 暴露给 LLM 的 schema，告诉模型能调什么函数、参数是什么；MCP 更像 Agent 连接外部 tool/resource server 的协议，所以我做了 MCP-compatible mock adapter，但没有接真实 MCP SDK；A2A 是 Agent 和 Agent 之间交换任务和上下文，项目里用 `AgentMessage` 表达这个 schema。简单说：Function Calling 偏模型调函数，MCP 偏 Agent 调工具/资源，Skill 是项目内部能力抽象，A2A 是 Agent 间通信。
 
-### 11. fast / standard / strict 推理模式怎么设计？
+### 11. 从固定 workflow 到可控 Tool-Using Agent 怎么做？
+
+背诵版回答：我没有把系统改成完全自主 Agent，因为危机公关是高风险场景，不能让模型自由跳过 Legal、Guardrail 或 Human Review。我做的是可控 Tool-Using Legal Agent 实验：先根据 event、sentiment、redteam 生成结构化 tool plan，再通过 Function Calling Adapter 执行 `legal_rag_search`、`guardrail_check`、`knowledge_document_search` 等 skill，最后把 observation 汇总成 legal_risks、safe_points 和 revision_advice。高风险 plan 必须包含 Legal RAG 和 Guardrail，approve/reject/publish 这类敏感动作被 tool policy 禁止由 LLM 自主调用。
+
+### 12. fast / standard / strict 推理模式怎么设计？
 
 背诵版回答：我没有直接重写 workflow，而是先做了一个 reasoning mode selector。它根据 risk_level、guardrail_triggered、RAG evidence 数量和置信度、LLM fallback、用户是否要求严格审核来选择 fast、standard 或 strict。fast 用于低风险轻量处理；standard 走正常多 Agent 流程；strict 用于高风险或不稳定输出，建议强制 Legal RAG、Guardrail 和 Human Review。当前它作为 AgentState metadata 和 API 返回中的 planning hint，不破坏原来的 `/api/dynamic/run`。
 
-### 12. 多轮 follow-up 怎么利用 session state？
+### 13. 多轮 follow-up 怎么利用 session state？
 
 背诵版回答：我新增了 `/api/dynamic/{session_id}/followup`，它不是重新跑一遍 Agent，而是读取已有 session 的 original event、final_statement、scores、agent_trace、RAG evidence 和 guardrail metadata，生成 clarification、rewrite、media_qna、internal_action、regulator_response 这几类 mock follow-up。这样可以解释多轮对话不是无状态聊天，而是基于同一个 crisis session 的上下文继续处理。
 
-### 13. 长文本生成为什么不直接一次性生成？
+### 14. 长文本生成为什么不直接一次性生成？
 
 背诵版回答：长文本我会拆成 outline、分段生成、consistency check、final merge、guardrail、human review。特别是危机声明这种高风险文本，不能一边 streaming 一边直接给最终稿，因为后面可能出现法律措辞或事实定性问题。SSE 更适合展示进度，不应该替代最终审核。
 
-### 14. Prompt 工程你是怎么做的？
+### 15. Prompt 工程你是怎么做的？
 
 背诵版回答：我把 Prompt 拆成 Role、Task、Context、Constraints、Output Schema 和 Examples。不同 Agent 的重点不同：Sentiment 看风险和情绪，Writer 看共情和公众表达，RedTeam 做攻击性审查，Legal 保守处理 RAG evidence 和法律风险，Decision 综合评分和最终声明。所有真实 LLM 路径都要求 JSON structured output，解析失败会进入 JSON repair 或 fallback trace。
 
-### 15. 你这个项目是不是 AI 写的？
+### 16. 你这个项目是不是 AI 写的？
 
 背诵版回答：我用了 AI 辅助开发，但不是让 AI 自由发挥。项目选题、Agent 拆分、技术路线、阶段验收、禁止修改范围、测试结果判断和 git diff review 都是人主导。AI 主要加速样板代码、测试、文档和重复性改造。每个阶段我都会明确“不要改 Agent 业务逻辑、Prompt 主语义、RAG 算法和 API”，最后用 pytest 和 diff 检查质量。
 
-### 16. 什么是代码知识库 Agent？你这个项目做到了吗？
+### 17. 什么是代码知识库 Agent？你这个项目做到了吗？
 
 背诵版回答：代码知识库 Agent 的核心是把代码文件、模块职责、类函数和错误信息关联起来，帮助定位跨模块问题。我现在做的是轻量静态索引：`scripts/index_project_knowledge.py` 扫描 core、rag、agents、skills，输出 `data/code_knowledge_index.json`。它可以辅助解释 RAG evidence 丢字段、RQ worker 失败、pgvector fallback、guardrail 未触发这类跨模块问题。但我会明确说明它还不是完整代码 Agent，没有 semantic code search、自动 patch 或自主执行工具链。
 
-### 17. 你怎么验证项目不是只跑通一个 demo？
+### 18. 你怎么验证项目不是只跑通一个 demo？
 
-背诵版回答：我做了多层测试和评测。普通 pytest 当前是 495 passed；Evaluation 里有 Response V2、RAG Baseline、RAG Retrieval Eval、RAG Bad Case Loop、Knowledge Ingestion Regression、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
+背诵版回答：我做了多层测试和评测。普通 pytest 当前是 505 passed；Evaluation 里有 Response V2、RAG Baseline、RAG Retrieval Eval、RAG Bad Case Loop、Knowledge Ingestion Regression、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
 
-### 18. 这个项目最大的不足是什么？
+### 19. 这个项目最大的不足是什么？
 
 背诵版回答：第一，async 默认仍是 in-process，Redis + RQ 是可选增强但还没有 dead-letter queue；第二，pgvector 只是可选 backend，还没有做 ANN 对照和生产压测；第三，Reranker 是手写规则；第四，真实 LLM 输出仍有结构化不稳定，需要更强的 retry-with-format 或 provider response_format；第五，module-level RAG trace state 仍需继续收敛。
