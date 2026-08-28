@@ -342,6 +342,8 @@ Legal Agent 的 RAG 不是只在最终回答里“看起来用了知识库”，
 - `score` / `rerank_score`：检索分数和 rerank 后分数。
 - `evidence_summary`：用一句话说明本次 RAG evidence 如何进入法律审核。
 
+RAG Evidence Quality Gate 会基于 `evidence_chunks` 做轻量质量判断：如果 evidence 为空、检索 fallback、score/rerank_score 低、`source_category` 不匹配或 context pollution 过高，会标记 `low_confidence=true` 并建议进入 Human Review。它不替换 Legal Agent，也不改变 RAG 算法，只把证据质量变成可解释、可审计的安全信号。
+
 RAG on/off 对比 demo：
 
 ```powershell
