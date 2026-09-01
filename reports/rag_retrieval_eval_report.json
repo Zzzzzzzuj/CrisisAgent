@@ -7,6 +7,7 @@
     "fallback_rate": 0.0,
     "average_score": 0.3119,
     "average_rerank_score": 0.2135,
+    "context_pollution_rate": 0.7143,
     "backend_distribution": {
       "markdown": 5,
       "json_vector": 14
@@ -25,8 +26,11 @@
     {
       "case_id": "rag_eval_food_safety_001",
       "difficulty": "easy",
+      "event": "某食品品牌被消费者反映同批次糕点有异味，多人食用后出现胃部不适，门店需要说明核查和监管沟通安排。",
       "crisis_event": "某食品品牌被消费者反映同批次糕点有异味，多人食用后出现胃部不适，门店需要说明核查和监管沟通安排。",
+      "expected_need_retrieval": true,
       "expected_source_category": "food_safety",
+      "expected_human_review": true,
       "expected_document_hint": "food_safety.md",
       "expected_keywords": [
         "食品",
@@ -41,6 +45,8 @@
       ],
       "top1_source_hit": true,
       "top3_source_hit": true,
+      "context_precision": 1.0,
+      "context_pollution_rate": 0.0,
       "keyword_hits": [
         "食品",
         "批次",
@@ -107,8 +113,11 @@
     {
       "case_id": "rag_eval_data_privacy_001",
       "difficulty": "medium",
+      "event": "用户登录 APP 后看到其他账号的订单地址和手机号截图，相关图片已经在社交平台传播，平台需要回应个人信息安全问题。",
       "crisis_event": "用户登录 APP 后看到其他账号的订单地址和手机号截图，相关图片已经在社交平台传播，平台需要回应个人信息安全问题。",
+      "expected_need_retrieval": true,
       "expected_source_category": "data_privacy",
+      "expected_human_review": true,
       "expected_document_hint": "data_privacy.md",
       "expected_keywords": [
         "个人信息",
@@ -123,6 +132,8 @@
       ],
       "top1_source_hit": false,
       "top3_source_hit": false,
+      "context_precision": 0.0,
+      "context_pollution_rate": 1.0,
       "keyword_hits": [
         "核查"
       ],
@@ -186,8 +197,11 @@
     {
       "case_id": "rag_eval_service_outage_001",
       "difficulty": "medium",
+      "event": "晚高峰期间大量用户反馈支付页面持续转圈，部分订单重复扣费，商户端无法同步交易状态。",
       "crisis_event": "晚高峰期间大量用户反馈支付页面持续转圈，部分订单重复扣费，商户端无法同步交易状态。",
+      "expected_need_retrieval": true,
       "expected_source_category": "service_outage",
+      "expected_human_review": true,
       "expected_document_hint": "service_outage.md",
       "expected_keywords": [
         "服务",
@@ -202,6 +216,8 @@
       ],
       "top1_source_hit": true,
       "top3_source_hit": true,
+      "context_precision": 1.0,
+      "context_pollution_rate": 0.0,
       "keyword_hits": [
         "服务",
         "恢复",
@@ -267,8 +283,11 @@
     {
       "case_id": "rag_eval_false_advertising_001",
       "difficulty": "hard",
+      "event": "某教育平台宣传页面称课程通过率接近百分百，学员质疑广告夸大效果并要求公开证明材料。",
       "crisis_event": "某教育平台宣传页面称课程通过率接近百分百，学员质疑广告夸大效果并要求公开证明材料。",
+      "expected_need_retrieval": true,
       "expected_source_category": "false_advertising",
+      "expected_human_review": true,
       "expected_document_hint": "false_advertising.md",
       "expected_keywords": [
         "宣传",
@@ -283,6 +302,8 @@
       ],
       "top1_source_hit": false,
       "top3_source_hit": false,
+      "context_precision": 0.0,
+      "context_pollution_rate": 1.0,
       "keyword_hits": [],
       "keyword_hit": false,
       "fallback_used": false,
@@ -344,8 +365,11 @@
     {
       "case_id": "rag_eval_labor_dispute_001",
       "difficulty": "hard",
+      "event": "多名员工在社交平台称公司长期拖欠加班费，并晒出排班记录，媒体开始联系公司求证。",
       "crisis_event": "多名员工在社交平台称公司长期拖欠加班费，并晒出排班记录，媒体开始联系公司求证。",
+      "expected_need_retrieval": true,
       "expected_source_category": "labor_dispute",
+      "expected_human_review": true,
       "expected_document_hint": "labor_dispute.md",
       "expected_keywords": [
         "员工",
@@ -356,6 +380,8 @@
       "actual_source_categories": [],
       "top1_source_hit": false,
       "top3_source_hit": false,
+      "context_precision": null,
+      "context_pollution_rate": null,
       "keyword_hits": [],
       "keyword_hit": false,
       "fallback_used": false,
@@ -368,8 +394,11 @@
     {
       "case_id": "rag_eval_product_recall_001",
       "difficulty": "medium",
+      "event": "同型号儿童水杯被发现杯盖零件容易脱落，家长担心误吞风险，要求品牌公布批次和召回安排。",
       "crisis_event": "同型号儿童水杯被发现杯盖零件容易脱落，家长担心误吞风险，要求品牌公布批次和召回安排。",
+      "expected_need_retrieval": true,
       "expected_source_category": "product_recall",
+      "expected_human_review": true,
       "expected_document_hint": "product_recall.md",
       "expected_keywords": [
         "召回",
@@ -383,6 +412,8 @@
       ],
       "top1_source_hit": false,
       "top3_source_hit": false,
+      "context_precision": 0.0,
+      "context_pollution_rate": 1.0,
       "keyword_hits": [
         "批次",
         "检测",
@@ -432,8 +463,11 @@
     {
       "case_id": "rag_eval_financial_rumor_001",
       "difficulty": "hard",
+      "event": "网上流传某消费品牌资金链紧张、供应商停止供货的消息，引发用户退款和合作方询问。",
       "crisis_event": "网上流传某消费品牌资金链紧张、供应商停止供货的消息，引发用户退款和合作方询问。",
+      "expected_need_retrieval": true,
       "expected_source_category": "financial_rumor",
+      "expected_human_review": true,
       "expected_document_hint": "financial_rumor.md",
       "expected_keywords": [
         "传言",
@@ -447,6 +481,8 @@
       ],
       "top1_source_hit": false,
       "top3_source_hit": false,
+      "context_precision": 0.0,
+      "context_pollution_rate": 1.0,
       "keyword_hits": [
         "核实"
       ],
@@ -494,8 +530,11 @@
     {
       "case_id": "rag_eval_executive_scandal_001",
       "difficulty": "medium",
+      "event": "公司高管在公开活动中的争议表述被剪辑传播，用户发起抵制，合作方要求公司说明管理层态度。",
       "crisis_event": "公司高管在公开活动中的争议表述被剪辑传播，用户发起抵制，合作方要求公司说明管理层态度。",
+      "expected_need_retrieval": true,
       "expected_source_category": "executive_scandal",
+      "expected_human_review": true,
       "expected_document_hint": "executive_misconduct.md",
       "expected_keywords": [
         "高管",
@@ -510,6 +549,8 @@
       ],
       "top1_source_hit": false,
       "top3_source_hit": false,
+      "context_precision": 0.0,
+      "context_pollution_rate": 1.0,
       "keyword_hits": [
         "道歉"
       ],

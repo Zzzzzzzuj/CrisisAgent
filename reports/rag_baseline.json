@@ -1,0 +1,16 @@
+{
+  "total_cases": 8,
+  "top1_source_hit_rate": 0.25,
+  "top3_source_hit_rate": 0.25,
+  "keyword_hit_rate": 0.125,
+  "fallback_rate": 0.0,
+  "average_score": 0.3119,
+  "average_rerank_score": 0.2135,
+  "context_pollution_rate": 0.7143,
+  "backend_distribution": {
+    "markdown": 5,
+    "json_vector": 14
+  },
+  "generated_at": "2026-09-01T00:00:00+08:00",
+  "notes": "Small project-owned fixed evaluation set for Legal RAG regression checks. Metrics are used to detect regressions after knowledge base, query rewrite, chunking, reranker, or retriever changes. They are not a public benchmark and do not represent production online performance."
+}

@@ -11,6 +11,7 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - fallback_rate: 0.0
 - average_score: 0.3119
 - average_rerank_score: 0.2135
+- context_pollution_rate: 0.7143
 - backend_distribution: {'markdown': 5, 'json_vector': 14}
 
 ## Cases
@@ -22,6 +23,8 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - actual_source_categories: ['food_safety', 'food_safety', 'food_safety']
 - top1_source_hit: True
 - top3_source_hit: True
+- context_precision: 1.0
+- context_pollution_rate: 0.0
 - keyword_hits: ['食品', '批次', '核查', '监管']
 - fallback_used: False
 - failure_reason: none
@@ -39,6 +42,8 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - actual_source_categories: ['crisis_response', 'crisis_response', 'crisis_response']
 - top1_source_hit: False
 - top3_source_hit: False
+- context_precision: 0.0
+- context_pollution_rate: 1.0
 - keyword_hits: ['核查']
 - fallback_used: False
 - failure_reason: expected_source_category_not_in_top3
@@ -56,6 +61,8 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - actual_source_categories: ['service_outage', 'service_outage', 'service_outage']
 - top1_source_hit: True
 - top3_source_hit: True
+- context_precision: 1.0
+- context_pollution_rate: 0.0
 - keyword_hits: ['服务', '恢复', '用户通知']
 - fallback_used: False
 - failure_reason: expected_keywords_missing
@@ -73,6 +80,8 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - actual_source_categories: ['crisis_response', 'service_outage', 'crisis_response']
 - top1_source_hit: False
 - top3_source_hit: False
+- context_precision: 0.0
+- context_pollution_rate: 1.0
 - keyword_hits: []
 - fallback_used: False
 - failure_reason: expected_source_category_not_in_top3
@@ -90,6 +99,8 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - actual_source_categories: []
 - top1_source_hit: False
 - top3_source_hit: False
+- context_precision: None
+- context_pollution_rate: None
 - keyword_hits: []
 - fallback_used: False
 - failure_reason: no_retrieval_result
@@ -104,6 +115,8 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - actual_source_categories: ['product_quality', 'food_safety']
 - top1_source_hit: False
 - top3_source_hit: False
+- context_precision: 0.0
+- context_pollution_rate: 1.0
 - keyword_hits: ['批次', '检测', '用户']
 - fallback_used: False
 - failure_reason: expected_source_category_not_in_top3
@@ -120,6 +133,8 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - actual_source_categories: ['data_privacy', 'data_privacy']
 - top1_source_hit: False
 - top3_source_hit: False
+- context_precision: 0.0
+- context_pollution_rate: 1.0
 - keyword_hits: ['核实']
 - fallback_used: False
 - failure_reason: expected_source_category_not_in_top3
@@ -136,6 +151,8 @@ This is a lightweight offline Legal RAG retrieval benchmark. It does not call a 
 - actual_source_categories: ['crisis_response', 'executive_misconduct', 'executive_misconduct']
 - top1_source_hit: False
 - top3_source_hit: False
+- context_precision: 0.0
+- context_pollution_rate: 1.0
 - keyword_hits: ['道歉']
 - fallback_used: False
 - failure_reason: expected_source_category_not_in_top3

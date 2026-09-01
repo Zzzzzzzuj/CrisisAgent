@@ -50,6 +50,10 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 背诵版回答：我没有只保留成功 demo。Phase 14 的 retrieval evaluation 发现 false_advertising、labor_dispute、financial_rumor 等类别命中不足后，我把它们沉淀到 `data/rag_bad_cases.json`，每条记录 failure_type、root_cause、suggested_fix 和 linked_test_case。然后用 `scripts/analyze_rag_bad_cases.py` 生成 bad case report，判断问题是知识缺失、query rewrite、embedding、reranker 还是 metadata filter。知识更新后再跑 `scripts/run_knowledge_ingestion_regression.py`，验证 published/enabled 能检索、draft/disabled 不检索、chunk metadata 和 fallback 都正常。
 
+### 5.1.1 改了 RAG 后怎么防止退化？
+
+背诵版回答：我给 Legal RAG 做了固定评测集和 baseline regression。`data/rag_retrieval_eval_cases.json` 覆盖 food_safety、data_privacy、service_outage、false_advertising、labor_dispute、product_recall、financial_rumor、executive_scandal 等类别，`reports/rag_baseline.json` 保存当前基线。每次改知识库、query rewrite、chunk、rerank 或 retriever 后，运行 `scripts/run_rag_regression.py`，对比 top3 source hit rate、fallback rate 和 context pollution rate。如果明显低于基线就返回失败。这个评估不调用真实 LLM，也不会把小型自建评测集夸成公开 benchmark。
+
 ### 5.2 RAG 证据质量差时怎么办？
 
 背诵版回答：我不会把“检索到了内容”直接等同于“证据可靠”。项目新增了 RAG Evidence Quality Gate，它只读取 Legal Agent 已有的 `evidence_chunks` metadata，不重排、不重新检索。如果 evidence 为空、fallback_used=true、score/rerank_score 低、source_category 不匹配或 context pollution rate 过高，就标记 `low_confidence=true`，并建议进入 Human Review。这样 Legal Agent 可以继续生成审查建议，但 trace 会明确告诉审核人：这次 RAG evidence 置信度不足，不能盲目依赖。

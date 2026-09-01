@@ -66,7 +66,8 @@ def main() -> int:
 
 
 def _evaluate_case(case: dict, retriever: Any, top_k: int) -> dict:
-    retrieval = retriever.retrieve(case["crisis_event"], top_k=top_k)
+    event = case.get("event") or case["crisis_event"]
+    retrieval = retriever.retrieve(event, top_k=top_k)
     retrieval_dict = retrieval.to_dict() if hasattr(retrieval, "to_dict") else dict(retrieval)
     chunks = retrieval_dict.get("chunks", [])
     top_chunks = [_chunk_summary(chunk) for chunk in chunks[:top_k]]
@@ -89,13 +90,18 @@ def _evaluate_case(case: dict, retriever: Any, top_k: int) -> dict:
     return {
         "case_id": case["case_id"],
         "difficulty": case["difficulty"],
-        "crisis_event": case["crisis_event"],
+        "event": event,
+        "crisis_event": event,
+        "expected_need_retrieval": case.get("expected_need_retrieval", True),
         "expected_source_category": expected_category,
+        "expected_human_review": case.get("expected_human_review"),
         "expected_document_hint": case["expected_document_hint"],
         "expected_keywords": case.get("expected_keywords", []),
         "actual_source_categories": actual_categories,
         "top1_source_hit": top1_source_hit,
         "top3_source_hit": top3_source_hit,
+        "context_precision": _context_precision(expected_category, actual_categories),
+        "context_pollution_rate": _context_pollution_rate(expected_category, actual_categories),
         "keyword_hits": keyword_hits,
         "keyword_hit": len(keyword_hits) == len(case.get("expected_keywords", [])),
         "fallback_used": fallback_used,
@@ -113,11 +119,12 @@ def _chunk_summary(chunk: dict) -> dict:
     retrieval_backend = metadata.get("retrieval_backend")
     if not retrieval_backend:
         retrieval_backend = "markdown" if str(chunk.get("source", "")).endswith(".md") else "unknown"
+    source_category = metadata.get("source_category") or chunk.get("source_category")
     return {
         "chunk_id": chunk.get("chunk_id"),
         "source": chunk.get("source"),
         "title": chunk.get("title"),
-        "source_category": metadata.get("source_category"),
+        "source_category": source_category,
         "document_id": metadata.get("document_id"),
         "document_version": metadata.get("document_version"),
         "document_status": metadata.get("document_status"),
@@ -154,6 +161,11 @@ def _summarize(cases: list[dict]) -> dict:
         for chunk in case["top_chunks"]
         if isinstance(chunk.get("rerank_score"), (int, float))
     ]
+    pollution_rates = [
+        case["context_pollution_rate"]
+        for case in cases
+        if case.get("context_pollution_rate") is not None
+    ]
     return {
         "total_cases": total,
         "top1_source_hit_rate": _rate(case["top1_source_hit"] for case in cases),
@@ -162,6 +174,7 @@ def _summarize(cases: list[dict]) -> dict:
         "fallback_rate": _rate(case["fallback_used"] for case in cases),
         "average_score": round(mean(scores), 4) if scores else 0.0,
         "average_rerank_score": round(mean(rerank_scores), 4) if rerank_scores else 0.0,
+        "context_pollution_rate": round(mean(pollution_rates), 4) if pollution_rates else None,
         "backend_distribution": _backend_distribution(cases),
         "failed_cases": [
             case["case_id"]
@@ -176,6 +189,20 @@ def _rate(flags) -> float:
     if not values:
         return 0.0
     return round(sum(1 for value in values if value) / len(values), 4)
+
+
+def _context_precision(expected_category: str, actual_categories: list[str]) -> float | None:
+    if not actual_categories:
+        return None
+    matches = sum(1 for category in actual_categories if category == expected_category)
+    return round(matches / len(actual_categories), 4)
+
+
+def _context_pollution_rate(expected_category: str, actual_categories: list[str]) -> float | None:
+    precision = _context_precision(expected_category, actual_categories)
+    if precision is None:
+        return None
+    return round(1 - precision, 4)
 
 
 def _backend_distribution(cases: list[dict]) -> dict:
@@ -228,6 +255,7 @@ def _render_markdown(result: dict) -> str:
         f"- fallback_rate: {summary['fallback_rate']}",
         f"- average_score: {summary['average_score']}",
         f"- average_rerank_score: {summary['average_rerank_score']}",
+        f"- context_pollution_rate: {summary.get('context_pollution_rate')}",
         f"- backend_distribution: {summary['backend_distribution']}",
         "",
         "## Cases",
@@ -243,6 +271,8 @@ def _render_markdown(result: dict) -> str:
                 f"- actual_source_categories: {case['actual_source_categories']}",
                 f"- top1_source_hit: {case['top1_source_hit']}",
                 f"- top3_source_hit: {case['top3_source_hit']}",
+                f"- context_precision: {case.get('context_precision')}",
+                f"- context_pollution_rate: {case.get('context_pollution_rate')}",
                 f"- keyword_hits: {case['keyword_hits']}",
                 f"- fallback_used: {case['fallback_used']}",
                 f"- failure_reason: {case['failure_reason'] or 'none'}",

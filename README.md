@@ -383,6 +383,14 @@ python scripts\evaluate_rag_retrieval.py
 
 它和 RAG ablation 的区别是：retrieval evaluation 看“有没有搜到正确来源和证据”，ablation 看“开启/关闭 RAG 后 Legal Agent 输出和最终声明有什么差异”。当前数据集是小型项目 holdout，不是公开 benchmark。
 
+RAG baseline regression:
+
+```powershell
+python scripts\run_rag_regression.py
+```
+
+项目保留 `reports/rag_baseline.json` 作为固定评测集基线。每次修改知识库、query rewrite、chunk、rerank 或 retriever 后，可以运行 regression check，对比 `top3_source_hit_rate`、`fallback_rate`、`context_pollution_rate` 等指标是否明显退化。这个脚本默认离线运行，不调用真实 LLM。
+
 RAG bad case loop:
 
 ```powershell
