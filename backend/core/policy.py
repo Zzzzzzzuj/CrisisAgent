@@ -13,6 +13,7 @@ def evaluate_human_policy(state: AgentState, evaluation: dict) -> dict:
     low_score_triggers = _find_low_score_triggers(state)
     triggers.extend(low_score_triggers)
     triggers.extend(_find_guardrail_triggers(state))
+    triggers.extend(_find_rag_evidence_quality_triggers(state))
     triggers.extend(_find_llm_fallback_triggers(state))
 
     return {
@@ -61,6 +62,20 @@ def _find_llm_fallback_triggers(state: AgentState) -> list[str]:
         llm = item.get("llm") if isinstance(item, dict) else None
         if isinstance(llm, dict) and llm.get("fallback_used"):
             return ["llm_fallback"]
+    return []
+
+
+def _find_rag_evidence_quality_triggers(state: AgentState) -> list[str]:
+    for item in state.trace:
+        rag = item.get("rag") if isinstance(item, dict) else None
+        if not isinstance(rag, dict):
+            continue
+        evidence_quality = rag.get("evidence_quality")
+        if (
+            isinstance(evidence_quality, dict)
+            and evidence_quality.get("should_trigger_human_review") is True
+        ):
+            return ["rag_evidence_low_confidence"]
     return []
 
 

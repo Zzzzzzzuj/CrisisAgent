@@ -24,6 +24,8 @@ def _chunk(
 def test_no_evidence_marks_low_confidence_and_human_review():
     result = evaluate_rag_evidence_quality([])
 
+    assert result["evaluated"] is True
+    assert result["status"] == "evaluated"
     assert result["quality"] == "low"
     assert result["low_confidence"] is True
     assert result["should_trigger_human_review"] is True
@@ -38,6 +40,16 @@ def test_fallback_used_marks_low_confidence():
     assert result["low_confidence"] is True
     assert result["should_trigger_human_review"] is True
     assert "fallback_used" in result["reasons"]
+
+
+def test_fallback_with_no_evidence_records_both_reasons():
+    result = evaluate_rag_evidence_quality([], fallback_used=True)
+
+    assert result["quality"] == "low"
+    assert result["low_confidence"] is True
+    assert result["should_trigger_human_review"] is True
+    assert "fallback_used" in result["reasons"]
+    assert "no_evidence" in result["reasons"]
 
 
 def test_low_score_records_reason():

@@ -172,6 +172,7 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         "event": request.event,
         "draft": first_draft_output["statement"],
         "redteam_review": redteam_output,
+        "sentiment_analysis": sentiment_output,
     }
     legal_output = _record_step(
         trace=trace,

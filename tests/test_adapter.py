@@ -42,7 +42,13 @@ def test_adapter_builds_redteam_input_schema_from_writer_result():
 
 
 def test_adapter_builds_legal_input_schema_from_writer_and_redteam_results():
-    state = AgentState(session_id="session-1", plan_id="plan-1", event="test event")
+    state = AgentState(
+        session_id="session-1",
+        plan_id="plan-1",
+        event="test event",
+        metadata={"planner_input": {"category": "food_safety"}},
+    )
+    state.set_result("sentiment", {"risk_level": "high"})
     state.set_result("writer", {"statement": "draft statement"})
     state.set_result("redteam", {"issues": ["issue"], "suggestions": ["fix"]})
 
@@ -52,6 +58,9 @@ def test_adapter_builds_legal_input_schema_from_writer_and_redteam_results():
         "event": "test event",
         "draft": "draft statement",
         "redteam_review": {"issues": ["issue"], "suggestions": ["fix"]},
+        "sentiment_analysis": {"risk_level": "high"},
+        "planner_input": {"category": "food_safety"},
+        "category": "food_safety",
     }
 
 

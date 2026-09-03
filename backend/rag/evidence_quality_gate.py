@@ -25,20 +25,24 @@ def evaluate_rag_evidence_quality(
     context_precision: float | None = None
     context_pollution_rate: float | None = None
 
+    if fallback_used:
+        reasons.append("fallback_used")
+        low_confidence = True
+
     if evidence_count == 0:
+        if "no_evidence" not in reasons:
+            reasons.append("no_evidence")
         return {
+            "evaluated": True,
+            "status": "evaluated",
             "quality": "low",
             "low_confidence": True,
-            "reasons": ["no_evidence"],
+            "reasons": reasons,
             "evidence_count": 0,
             "context_precision": None,
             "context_pollution_rate": None,
             "should_trigger_human_review": True,
         }
-
-    if fallback_used:
-        reasons.append("fallback_used")
-        low_confidence = True
 
     low_score_count = 0
     low_rerank_score_count = 0
@@ -91,6 +95,8 @@ def evaluate_rag_evidence_quality(
 
     quality = _classify_quality(reasons, low_confidence)
     return {
+        "evaluated": True,
+        "status": "evaluated",
         "quality": quality,
         "low_confidence": low_confidence,
         "reasons": reasons,

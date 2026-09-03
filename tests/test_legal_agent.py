@@ -70,6 +70,8 @@ def test_legal_agent_mock_mode_returns_expected_schema(monkeypatch):
     assert rag_info["gate"] == {}
     assert rag_info["retrieval_skipped"] is False
     assert rag_info["retrieval_executed"] is False
+    assert rag_info["evidence_quality"]["evaluated"] is False
+    assert rag_info["evidence_quality"]["status"] == "not_applicable"
 
 
 def test_legal_agent_gate_skip_does_not_call_retriever(monkeypatch):
@@ -95,6 +97,12 @@ def test_legal_agent_gate_skip_does_not_call_retriever(monkeypatch):
     assert rag_info["retrieval_skipped"] is True
     assert rag_info["retrieval_executed"] is False
     assert rag_info["retrieval_status"] == "skipped_by_gate"
+    assert rag_info["evidence_quality"] == {
+        "evaluated": False,
+        "status": "not_applicable",
+        "reason": "retrieval_skipped",
+        "should_trigger_human_review": False,
+    }
 
 
 def test_legal_agent_gate_allows_retriever_once_and_records_hit(monkeypatch):
@@ -140,6 +148,9 @@ def test_legal_agent_gate_allows_retriever_once_and_records_hit(monkeypatch):
     assert rag_info["evidence_chunks"][0]["chunk_id"] == "legal-1"
     assert rag_info["evidence_chunks"][0]["score"] == 0.9
     assert rag_info["evidence_chunks"][0]["rerank_score"] == 0.95
+    assert rag_info["evidence_quality"]["evaluated"] is True
+    assert rag_info["evidence_quality"]["quality"] == "high"
+    assert rag_info["evidence_quality"]["low_confidence"] is False
     assert "Legal Agent used" in rag_info["evidence_summary"]
 
 
@@ -166,6 +177,12 @@ def test_legal_agent_rag_enabled_false_skips_retrieval(monkeypatch):
     assert rag_info["retrieval_skipped"] is True
     assert rag_info["retrieval_executed"] is False
     assert rag_info["evidence_chunks"] == []
+    assert rag_info["evidence_quality"] == {
+        "evaluated": False,
+        "status": "not_applicable",
+        "reason": "disabled",
+        "should_trigger_human_review": False,
+    }
     assert "RAG was disabled" in rag_info["evidence_summary"]
 
 
@@ -190,6 +207,10 @@ def test_legal_agent_gate_allowed_empty_retrieval_is_distinct_from_gate_skip(mon
     assert rag_info["retrieval_skipped"] is False
     assert rag_info["retrieval_executed"] is True
     assert rag_info["retrieval_status"] == "executed_no_hit"
+    assert rag_info["evidence_quality"]["quality"] == "low"
+    assert rag_info["evidence_quality"]["low_confidence"] is True
+    assert "no_evidence" in rag_info["evidence_quality"]["reasons"]
+    assert rag_info["evidence_quality"]["should_trigger_human_review"] is True
 
 
 def test_legal_agent_llm_gate_skip_continues_with_empty_context(monkeypatch):
@@ -434,6 +455,9 @@ def test_legal_agent_records_rag_miss_when_retriever_fails(monkeypatch):
     assert rag_info["count"] == 0
     assert rag_info["fallback_used"] is True
     assert rag_info["retrieval_status"] == "retrieval_error"
+    assert rag_info["evidence_quality"]["quality"] == "low"
+    assert "fallback_used" in rag_info["evidence_quality"]["reasons"]
+    assert "no_evidence" in rag_info["evidence_quality"]["reasons"]
 
 
 def test_legal_agent_continues_with_empty_legal_context_when_rag_returns_no_results(monkeypatch):
@@ -481,3 +505,67 @@ def test_legal_agent_continues_with_empty_legal_context_when_rag_returns_no_resu
     assert rag_info["sources"] == []
     assert rag_info["chunks"] == []
     assert rag_info["count"] == 0
+    assert rag_info["evidence_quality"]["quality"] == "low"
+    assert rag_info["evidence_quality"]["should_trigger_human_review"] is True
+
+
+def test_legal_agent_records_low_quality_for_low_scores(monkeypatch):
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
+    monkeypatch.setattr(
+        legal_agent,
+        "retrieve",
+        lambda query, top_k=3: {
+            "context": "[food_safety.md]\ncontext",
+            "sources": [{"source": "food_safety.md", "score": 0.05, "rerank_score": 0.04}],
+            "chunks": [
+                {
+                    "chunk_id": "food-1",
+                    "source": "food_safety.md",
+                    "score": 0.05,
+                    "rerank_score": 0.04,
+                    "metadata": {"source_category": "food_safety"},
+                    "text": "context",
+                }
+            ],
+        },
+    )
+
+    legal_agent._retrieve_legal_context({**TEST_PAYLOAD, "category": "food_safety"})
+
+    evidence_quality = legal_agent.get_last_rag_info()["evidence_quality"]
+    assert evidence_quality["quality"] == "low"
+    assert evidence_quality["low_confidence"] is True
+    assert "low_score" in evidence_quality["reasons"]
+    assert "low_rerank_score" in evidence_quality["reasons"]
+    assert evidence_quality["should_trigger_human_review"] is True
+
+
+def test_legal_agent_records_low_quality_for_source_category_mismatch(monkeypatch):
+    monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: _gate_result(True))
+    monkeypatch.setattr(
+        legal_agent,
+        "retrieve",
+        lambda query, top_k=3: {
+            "context": "[service_outage.md]\ncontext",
+            "sources": [{"source": "service_outage.md", "score": 0.9, "rerank_score": 0.9}],
+            "chunks": [
+                {
+                    "chunk_id": "service-1",
+                    "source": "service_outage.md",
+                    "score": 0.9,
+                    "rerank_score": 0.9,
+                    "metadata": {"source_category": "service_outage"},
+                    "text": "context",
+                }
+            ],
+        },
+    )
+
+    legal_agent._retrieve_legal_context({**TEST_PAYLOAD, "category": "food_safety"})
+
+    evidence_quality = legal_agent.get_last_rag_info()["evidence_quality"]
+    assert evidence_quality["quality"] == "low"
+    assert evidence_quality["context_precision"] == 0.0
+    assert evidence_quality["context_pollution_rate"] == 1.0
+    assert "source_category_mismatch" in evidence_quality["reasons"]
+    assert "high_context_pollution" in evidence_quality["reasons"]

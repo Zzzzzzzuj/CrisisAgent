@@ -7,6 +7,7 @@ from backend.llm import LLMClient
 from backend.llm.client import get_last_llm_trace, record_llm_fallback
 from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
+from backend.rag.evidence_quality_gate import evaluate_rag_evidence_quality
 from backend.rag.retrieval_need_gate import evaluate_retrieval_need
 from backend.rag.retriever import retrieve
 
@@ -35,6 +36,12 @@ _DEFAULT_RAG_INFO = {
     "retrieval_skipped": False,
     "retrieval_executed": False,
     "retrieval_status": "not_started",
+    "evidence_quality": {
+        "evaluated": False,
+        "status": "not_applicable",
+        "reason": "not_started",
+        "should_trigger_human_review": False,
+    },
 }
 _LAST_RAG_INFO = deepcopy(_DEFAULT_RAG_INFO)
 _RAG_INFO_CONTEXT: ContextVar[dict] = ContextVar("legal_rag_info_context", default=deepcopy(_DEFAULT_RAG_INFO))
@@ -86,6 +93,7 @@ def _set_rag_info(
     retrieval_skipped: bool = False,
     retrieval_executed: bool = False,
     retrieval_status: str = "not_started",
+    evidence_quality: dict | None = None,
 ) -> None:
     chunks = chunks or []
     gate = gate or {}
@@ -99,6 +107,11 @@ def _set_rag_info(
         retrieval_backend=retrieval_backend,
         evidence_chunks=evidence_chunks,
         gate=gate,
+    )
+    evidence_quality_info = (
+        deepcopy(evidence_quality)
+        if evidence_quality is not None
+        else _not_applicable_evidence_quality(retrieval_status)
     )
     # sources/count describe unique source files; scores describe final retrieved chunks.
     rag_info = {
@@ -123,6 +136,7 @@ def _set_rag_info(
             "retrieval_skipped": retrieval_skipped,
             "retrieval_executed": retrieval_executed,
             "retrieval_status": retrieval_status,
+            "evidence_quality": evidence_quality_info,
     }
     _LAST_RAG_INFO.clear()
     _LAST_RAG_INFO.update(deepcopy(rag_info))
@@ -266,6 +280,7 @@ legal_context: {legal_context}
 
 def _retrieve_legal_context(payload: dict) -> str:
     query = _build_retrieval_query(payload)
+    expected_source_category = _resolve_expected_source_category(payload)
     if not _is_rag_enabled():
         _set_rag_info(
             enabled=False,
@@ -275,6 +290,7 @@ def _retrieve_legal_context(payload: dict) -> str:
             retrieval_skipped=True,
             retrieval_executed=False,
             retrieval_status="disabled",
+            evidence_quality=_not_applicable_evidence_quality("disabled"),
         )
         logger.info("%s RAG disabled by RAG_ENABLED=false", AGENT_NAME)
         return ""
@@ -295,6 +311,7 @@ def _retrieve_legal_context(payload: dict) -> str:
             retrieval_skipped=True,
             retrieval_executed=False,
             retrieval_status="skipped_by_gate",
+            evidence_quality=_not_applicable_evidence_quality("retrieval_skipped"),
         )
         logger.info("%s RAG skipped by retrieval need gate: %s", AGENT_NAME, gate)
         return ""
@@ -308,6 +325,11 @@ def _retrieve_legal_context(payload: dict) -> str:
             exc.__class__.__name__,
             str(exc),
         )
+        evidence_quality = evaluate_rag_evidence_quality(
+            evidence_chunks=[],
+            expected_source_category=expected_source_category,
+            fallback_used=True,
+        )
         _set_rag_info(
             enabled=True,
             hit=False,
@@ -318,6 +340,7 @@ def _retrieve_legal_context(payload: dict) -> str:
             retrieval_executed=True,
             fallback_used=True,
             retrieval_status="retrieval_error",
+            evidence_quality=evidence_quality,
         )
         return ""
 
@@ -351,6 +374,13 @@ def _retrieve_legal_context(payload: dict) -> str:
                     "pgvector_fallback_used": source.get("pgvector_fallback_used", False),
                 }
             )
+    fallback_used = _resolve_retrieval_fallback(retrieval_result)
+    evidence_chunks = _build_evidence_chunks(chunks, source_details)
+    evidence_quality = evaluate_rag_evidence_quality(
+        evidence_chunks=evidence_chunks,
+        expected_source_category=expected_source_category,
+        fallback_used=fallback_used,
+    )
     _set_rag_info(
         enabled=True,
         hit=bool(source_names),
@@ -360,11 +390,12 @@ def _retrieve_legal_context(payload: dict) -> str:
         chunks=chunks,
         retrieval_type=_resolve_retrieval_type(retrieval_result),
         rerank_enabled=_resolve_rerank_enabled(retrieval_result),
-        fallback_used=_resolve_retrieval_fallback(retrieval_result),
+        fallback_used=fallback_used,
         gate=gate,
         retrieval_skipped=False,
         retrieval_executed=True,
         retrieval_status="executed_with_hits" if source_names else "executed_no_hit",
+        evidence_quality=evidence_quality,
     )
     logger.info("%s RAG retrieved %s sources: %s", AGENT_NAME, len(sources), sources)
     return retrieval_result.get("context", "")
@@ -398,6 +429,15 @@ def _normalize_rag_chunks(chunks: list[dict], retrieval_query: str = "") -> list
             }
         )
     return normalized_chunks
+
+
+def _not_applicable_evidence_quality(reason: str) -> dict:
+    return {
+        "evaluated": False,
+        "status": "not_applicable",
+        "reason": reason,
+        "should_trigger_human_review": False,
+    }
 
 
 def _attach_metadata(output: dict, llm_trace: dict | None = None) -> dict:
@@ -539,6 +579,24 @@ def _resolve_retrieval_fallback(retrieval_result: dict) -> bool:
         isinstance(source, dict) and source.get("retrieval_fallback")
         for source in retrieval_result.get("sources", [])
     )
+
+
+def _resolve_expected_source_category(payload: dict) -> str | None:
+    direct_category = payload.get("expected_source_category") or payload.get("source_category") or payload.get("category")
+    if direct_category:
+        return str(direct_category)
+
+    for key in ("sentiment_analysis", "sentiment_result"):
+        sentiment = payload.get(key)
+        if isinstance(sentiment, dict):
+            category = sentiment.get("source_category") or sentiment.get("category")
+            if category:
+                return str(category)
+
+    planner_input = payload.get("planner_input")
+    if isinstance(planner_input, dict) and planner_input.get("category"):
+        return str(planner_input["category"])
+    return None
 
 
 def _build_retrieval_query(payload: dict) -> str:

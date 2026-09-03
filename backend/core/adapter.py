@@ -38,10 +38,14 @@ def _build_redteam_input(state: AgentState) -> dict:
 
 def _build_legal_input(state: AgentState) -> dict:
     writer_result = state.get_result("writer") or {}
+    planner_input = state.metadata.get("planner_input", {})
     return {
         "event": state.event,
         "draft": writer_result.get("statement", ""),
         "redteam_review": state.get_result("redteam") or {},
+        "sentiment_analysis": state.get_result("sentiment") or {},
+        "planner_input": planner_input,
+        "category": planner_input.get("category") if isinstance(planner_input, dict) else None,
     }
 
 

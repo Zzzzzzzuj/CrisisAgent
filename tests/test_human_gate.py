@@ -114,6 +114,79 @@ def test_policy_uses_quality_failure_for_human_review():
     assert "low_legal_safety" in policy["triggers"]
 
 
+def test_policy_uses_rag_evidence_low_confidence_for_human_review():
+    state = AgentState(session_id="session-rag-low", plan_id="plan-1", event="event")
+    state.set_result("sentiment", {"risk_level": "low"})
+    state.set_result(
+        "decision",
+        {
+            "final_statement": "ok",
+            "scores": {
+                "legal_safety": 8,
+                "empathy": 8,
+                "robustness": 8,
+            },
+        },
+    )
+    state.add_trace(
+        {
+            "agent": "legal",
+            "status": "success",
+            "rag": {
+                "evidence_quality": {
+                    "evaluated": True,
+                    "quality": "low",
+                    "low_confidence": True,
+                    "should_trigger_human_review": True,
+                    "reasons": ["high_context_pollution"],
+                }
+            },
+        }
+    )
+
+    policy = evaluate_human_policy(state, {"passed": True, "issues": []})
+
+    assert policy["required"] is True
+    assert "rag_evidence_low_confidence" in policy["triggers"]
+    assert "rag_evidence_low_confidence" in policy["reason"]
+
+
+def test_policy_ignores_not_applicable_rag_evidence_quality():
+    state = AgentState(session_id="session-rag-skip", plan_id="plan-1", event="event")
+    state.set_result("sentiment", {"risk_level": "low"})
+    state.set_result(
+        "decision",
+        {
+            "final_statement": "ok",
+            "scores": {
+                "legal_safety": 8,
+                "empathy": 8,
+                "robustness": 8,
+            },
+        },
+    )
+    state.add_trace(
+        {
+            "agent": "legal",
+            "status": "success",
+            "rag": {
+                "retrieval_status": "skipped_by_gate",
+                "evidence_quality": {
+                    "evaluated": False,
+                    "status": "not_applicable",
+                    "reason": "retrieval_skipped",
+                    "should_trigger_human_review": False,
+                },
+            },
+        }
+    )
+
+    policy = evaluate_human_policy(state, {"passed": True, "issues": []})
+
+    assert policy["required"] is False
+    assert "rag_evidence_low_confidence" not in policy["triggers"]
+
+
 def _successful_execution(state: AgentState, risk_level: str):
     state.set_result("sentiment", {"risk_level": risk_level})
     state.set_result(
