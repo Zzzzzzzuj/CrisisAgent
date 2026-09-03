@@ -12,6 +12,7 @@ __pycache__/
 
 # Evaluation generated outputs
 evaluation/outputs/
+output/
 
 # Test/cache files
 .pytest_cache/
