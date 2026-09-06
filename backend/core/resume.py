@@ -121,7 +121,12 @@ def _continue_agent_loop(
         iterations.append(iteration_result)
 
         if policy_result.get("required"):
-            request_review(state, policy_result.get("reason", "Human review required."))
+            request_review(
+                state,
+                policy_result.get("reason", "Human review required."),
+                policy_result=policy_result,
+                evaluation=evaluation,
+            )
             return _build_loop_result(
                 state=state,
                 iterations=iterations,
@@ -154,9 +159,56 @@ def _is_approved_for_resume(status: str, decision: str | None) -> bool:
 
 
 def _approved_resume_policy(state, evaluation: dict) -> dict:
-    if state.approval.get("decision") == "approved":
+    if state.approval.get("decision") != "approved":
+        return evaluate_human_policy(state, evaluation)
+
+    approved_scope = state.approval.get("approved_review_scope")
+    if not isinstance(approved_scope, dict):
+        approved_scope = state.approval.get("pending_review_scope")
+    if not isinstance(approved_scope, dict):
+        return evaluate_human_policy(state, evaluation)
+
+    trace_start_index = approved_scope.get("approved_trace_count")
+    if not isinstance(trace_start_index, int):
+        trace_count = approved_scope.get("trace_count")
+        if not isinstance(trace_count, int):
+            return evaluate_human_policy(state, evaluation)
+        trace_start_index = trace_count + 1
+
+    trace_policy = evaluate_human_policy(
+        state,
+        evaluation,
+        trace_start_index=trace_start_index,
+        include_state_triggers=False,
+        include_trace_triggers=True,
+    )
+    if trace_policy.get("required"):
+        return trace_policy
+
+    state_policy = evaluate_human_policy(
+        state,
+        evaluation,
+        include_state_triggers=True,
+        include_trace_triggers=False,
+    )
+    if not state_policy.get("required"):
         return {"required": False, "reason": "", "triggers": []}
-    return evaluate_human_policy(state, evaluation)
+
+    approved_triggers = set(approved_scope.get("triggers", []))
+    if not approved_triggers:
+        return {"required": False, "reason": "", "triggers": []}
+
+    unapproved_triggers = [
+        trigger for trigger in state_policy.get("triggers", []) if trigger not in approved_triggers
+    ]
+    if unapproved_triggers:
+        return {
+            "required": True,
+            "reason": "Human review required: " + ", ".join(unapproved_triggers),
+            "triggers": unapproved_triggers,
+        }
+
+    return {"required": False, "reason": "", "triggers": []}
 
 
 def _next_iteration_number(state) -> int:

@@ -1,20 +1,29 @@
 from backend.core.state import AgentState
 
 
-def evaluate_human_policy(state: AgentState, evaluation: dict) -> dict:
+def evaluate_human_policy(
+    state: AgentState,
+    evaluation: dict,
+    trace_start_index: int = 0,
+    include_state_triggers: bool = True,
+    include_trace_triggers: bool = True,
+) -> dict:
     triggers = []
 
-    if _resolve_risk_level(state) == "high":
-        triggers.append("high_risk")
+    if include_state_triggers:
+        if _resolve_risk_level(state) == "high":
+            triggers.append("high_risk")
 
-    if not evaluation.get("passed", False):
-        triggers.append("quality_failed")
+        if not evaluation.get("passed", False):
+            triggers.append("quality_failed")
 
-    low_score_triggers = _find_low_score_triggers(state)
-    triggers.extend(low_score_triggers)
-    triggers.extend(_find_guardrail_triggers(state))
-    triggers.extend(_find_rag_evidence_quality_triggers(state))
-    triggers.extend(_find_llm_fallback_triggers(state))
+        low_score_triggers = _find_low_score_triggers(state)
+        triggers.extend(low_score_triggers)
+        triggers.extend(_find_guardrail_triggers(state))
+
+    if include_trace_triggers:
+        triggers.extend(_find_rag_evidence_quality_triggers(state, trace_start_index))
+        triggers.extend(_find_llm_fallback_triggers(state, trace_start_index))
 
     return {
         "required": bool(triggers),
@@ -57,16 +66,16 @@ def _find_guardrail_triggers(state: AgentState) -> list[str]:
     return triggers
 
 
-def _find_llm_fallback_triggers(state: AgentState) -> list[str]:
-    for item in state.trace:
+def _find_llm_fallback_triggers(state: AgentState, trace_start_index: int = 0) -> list[str]:
+    for item in state.trace[max(trace_start_index, 0) :]:
         llm = item.get("llm") if isinstance(item, dict) else None
         if isinstance(llm, dict) and llm.get("fallback_used"):
             return ["llm_fallback"]
     return []
 
 
-def _find_rag_evidence_quality_triggers(state: AgentState) -> list[str]:
-    for item in state.trace:
+def _find_rag_evidence_quality_triggers(state: AgentState, trace_start_index: int = 0) -> list[str]:
+    for item in state.trace[max(trace_start_index, 0) :]:
         rag = item.get("rag") if isinstance(item, dict) else None
         if not isinstance(rag, dict):
             continue

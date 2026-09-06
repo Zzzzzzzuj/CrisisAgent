@@ -174,6 +174,254 @@ def test_approved_low_quality_rag_checkpoint_does_not_repeat_human_review(tmp_pa
     assert result["iterations"][0]["policy"]["triggers"] == []
 
 
+def test_approved_resume_rechecks_new_low_quality_rag_evidence(tmp_path):
+    checkpoint_path = tmp_path / "checkpoints.json"
+    state = AgentState(
+        session_id="session-new-rag-risk",
+        plan_id="old-plan",
+        event=TEST_EVENT,
+        metadata={"planner_input": {"event": TEST_EVENT, "category": "food_safety", "risk_level": "low"}},
+    )
+    state.set_result("sentiment", {"risk_level": "low"})
+    state.add_trace(
+        {
+            "agent": "legal",
+            "reason": "legal review",
+            "start_time": "start",
+            "end_time": "end",
+            "status": "success",
+            "output": {"legal_risks": ["old risk"]},
+            "error": None,
+            "rag": {
+                "retrieval_status": "executed_no_hit",
+                "evidence_quality": {
+                    "evaluated": True,
+                    "quality": "low",
+                    "low_confidence": True,
+                    "reasons": ["no_evidence"],
+                    "evidence_count": 0,
+                    "context_precision": None,
+                    "context_pollution_rate": None,
+                    "should_trigger_human_review": True,
+                },
+            },
+        }
+    )
+    request_review(state, reason="Human review required: rag_evidence_low_confidence")
+    approve(state, reviewer="alice", comment="Reviewed original low-quality RAG risk.")
+    save_checkpoint(state, checkpoint_path)
+
+    def executor(plan, restored_state, agent_registry=None):
+        restored_state.add_trace(
+            {
+                "agent": "legal",
+                "reason": "legal review",
+                "start_time": "resume-start",
+                "end_time": "resume-end",
+                "status": "success",
+                "output": {"legal_risks": ["new risk"]},
+                "error": None,
+                "rag": {
+                    "retrieval_status": "executed_with_hits",
+                    "evidence_quality": {
+                        "evaluated": True,
+                        "quality": "low",
+                        "low_confidence": True,
+                        "reasons": ["low_score"],
+                        "evidence_count": 1,
+                        "context_precision": 1.0,
+                        "context_pollution_rate": 0.0,
+                        "should_trigger_human_review": True,
+                    },
+                },
+            }
+        )
+        restored_state.set_result(
+            "decision",
+            {
+                "final_statement": "needs another review",
+                "scores": {
+                    "legal_safety": 8,
+                    "empathy": 8,
+                    "robustness": 8,
+                },
+            },
+        )
+        return {
+            "plan_id": plan["plan_id"],
+            "executed_agents": ["legal", "decision"],
+            "results": restored_state.get_all_results(),
+            "failed_agents": [],
+            "execution_trace": list(restored_state.trace),
+        }
+
+    result = resume_agent_loop(
+        "session-new-rag-risk",
+        checkpoint_path=checkpoint_path,
+        planner=lambda payload: _plan("resume-new-rag-plan"),
+        validator=lambda plan: plan,
+        executor=executor,
+        evaluator=lambda restored_state: {"passed": True, "issues": []},
+    )
+
+    assert result["status"] == "waiting_human"
+    assert result["stopped_reason"] == "human_review_required"
+    assert result["state_status"] == WAITING_HUMAN
+    assert result["iterations"][0]["policy"]["required"] is True
+    assert result["iterations"][0]["policy"]["triggers"] == ["rag_evidence_low_confidence"]
+
+
+def test_second_approval_completes_when_resume_has_no_new_risk(tmp_path):
+    checkpoint_path = tmp_path / "checkpoints.json"
+    state = AgentState(
+        session_id="session-second-approval",
+        plan_id="old-plan",
+        event=TEST_EVENT,
+        metadata={"planner_input": {"event": TEST_EVENT, "category": "food_safety", "risk_level": "low"}},
+    )
+    state.add_trace(
+        {
+            "agent": "legal",
+            "status": "success",
+            "rag": {
+                "evidence_quality": {
+                    "evaluated": True,
+                    "quality": "low",
+                    "low_confidence": True,
+                    "should_trigger_human_review": True,
+                    "reasons": ["low_score"],
+                }
+            },
+        }
+    )
+    request_review(state, reason="Human review required: rag_evidence_low_confidence")
+    approve(state, reviewer="alice", comment="Reviewed original evidence.")
+    state.add_trace(
+        {
+            "agent": "legal",
+            "status": "success",
+            "rag": {
+                "evidence_quality": {
+                    "evaluated": True,
+                    "quality": "low",
+                    "low_confidence": True,
+                    "should_trigger_human_review": True,
+                    "reasons": ["low_rerank_score"],
+                }
+            },
+        }
+    )
+    request_review(
+        state,
+        reason="Human review required: rag_evidence_low_confidence",
+        policy_result={
+            "required": True,
+            "reason": "Human review required: rag_evidence_low_confidence",
+            "triggers": ["rag_evidence_low_confidence"],
+        },
+        evaluation={"passed": True, "issues": []},
+    )
+    approve(state, reviewer="bob", comment="Reviewed second evidence.")
+    save_checkpoint(state, checkpoint_path)
+
+    def executor(plan, restored_state, agent_registry=None):
+        restored_state.set_result(
+            "decision",
+            {
+                "final_statement": "ok",
+                "scores": {
+                    "legal_safety": 8,
+                    "empathy": 8,
+                    "robustness": 8,
+                },
+            },
+        )
+        return {
+            "plan_id": plan["plan_id"],
+            "executed_agents": ["decision"],
+            "results": restored_state.get_all_results(),
+            "failed_agents": [],
+            "execution_trace": list(restored_state.trace),
+        }
+
+    result = resume_agent_loop(
+        "session-second-approval",
+        checkpoint_path=checkpoint_path,
+        planner=lambda payload: _plan("resume-after-second-approval"),
+        validator=lambda plan: plan,
+        executor=executor,
+        evaluator=lambda restored_state: {"passed": True, "issues": []},
+    )
+
+    assert result["status"] == "completed"
+    assert result["iterations"][0]["policy"]["required"] is False
+    assert result["approval"]["reviewer"] == "bob"
+
+
+def test_legacy_approved_checkpoint_without_scope_does_not_skip_new_risk(tmp_path):
+    checkpoint_path = tmp_path / "checkpoints.json"
+    state = AgentState(
+        session_id="session-legacy-no-scope",
+        plan_id="old-plan",
+        event=TEST_EVENT,
+        metadata={"planner_input": {"event": TEST_EVENT, "category": "food_safety", "risk_level": "low"}},
+    )
+    state.approval = {
+        "required": False,
+        "decision": "approved",
+        "reviewer": "legacy-reviewer",
+    }
+    state.set_status(WAITING_HUMAN)
+    save_checkpoint(state, checkpoint_path)
+
+    def executor(plan, restored_state, agent_registry=None):
+        restored_state.add_trace(
+            {
+                "agent": "legal",
+                "status": "success",
+                "rag": {
+                    "evidence_quality": {
+                        "evaluated": True,
+                        "quality": "low",
+                        "low_confidence": True,
+                        "should_trigger_human_review": True,
+                        "reasons": ["fallback_used"],
+                    }
+                },
+            }
+        )
+        restored_state.set_result(
+            "decision",
+            {
+                "final_statement": "needs review",
+                "scores": {
+                    "legal_safety": 8,
+                    "empathy": 8,
+                    "robustness": 8,
+                },
+            },
+        )
+        return {
+            "plan_id": plan["plan_id"],
+            "executed_agents": ["legal", "decision"],
+            "results": restored_state.get_all_results(),
+            "failed_agents": [],
+            "execution_trace": list(restored_state.trace),
+        }
+
+    result = resume_agent_loop(
+        "session-legacy-no-scope",
+        checkpoint_path=checkpoint_path,
+        planner=lambda payload: _plan("resume-legacy-no-scope"),
+        validator=lambda plan: plan,
+        executor=executor,
+        evaluator=lambda restored_state: {"passed": True, "issues": []},
+    )
+
+    assert result["status"] == "waiting_human"
+    assert result["iterations"][0]["policy"]["triggers"] == ["rag_evidence_low_confidence"]
+
+
 def test_waiting_human_with_approved_decision_can_resume(tmp_path):
     checkpoint_path = tmp_path / "checkpoints.json"
     state = AgentState(session_id="session-approved-waiting", plan_id="plan-1", event=TEST_EVENT)

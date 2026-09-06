@@ -158,7 +158,12 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
     if policy.get("required"):
         from backend.core.human import request_review
 
-        request_review(state, policy.get("reason", "Human review required."))
+        request_review(
+            state,
+            policy.get("reason", "Human review required."),
+            policy_result=policy,
+            evaluation=evaluation,
+        )
         status = "waiting_human"
     else:
         state.status = COMPLETED

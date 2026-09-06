@@ -65,7 +65,12 @@ def run_agent_loop(
         iterations.append(iteration_result)
 
         if policy_result.get("required"):
-            request_review(state, policy_result.get("reason", "Human review required."))
+            request_review(
+                state,
+                policy_result.get("reason", "Human review required."),
+                policy_result=policy_result,
+                evaluation=evaluation,
+            )
             return _build_loop_result(
                 state=state,
                 iterations=iterations,

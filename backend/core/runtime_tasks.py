@@ -125,7 +125,12 @@ def run_dynamic_session_task(session_id: str) -> dict:
         state.metadata["policy"] = policy
 
         if policy.get("required"):
-            request_review(state, policy.get("reason", "Human review required."))
+            request_review(
+                state,
+                policy.get("reason", "Human review required."),
+                policy_result=policy,
+                evaluation=evaluation,
+            )
             status = "waiting_human"
         else:
             state.set_status(COMPLETED)
@@ -175,7 +180,12 @@ def run_dynamic_sync(event: str) -> dict:
     state.metadata["policy"] = policy
 
     if policy.get("required"):
-        request_review(state, policy.get("reason", "Human review required."))
+        request_review(
+            state,
+            policy.get("reason", "Human review required."),
+            policy_result=policy,
+            evaluation=evaluation,
+        )
         status = "waiting_human"
     else:
         state.set_status(COMPLETED)
