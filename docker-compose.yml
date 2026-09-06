@@ -1,7 +1,50 @@
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crisisagent-backend
+    environment:
+      AGENT_MODE: mock
+      CHECKPOINT_STORAGE: json
+      RUNTIME_MODE: sync
+      TASK_QUEUE_BACKEND: inprocess
+      EMBEDDING_MODEL: hash
+      VECTOR_BACKEND: json
+      AUTH_ENABLED: "false"
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "8000:8000"
+    volumes:
+      - crisisagent_demo_checkpoints:/app/backend/core/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: crisisagent-frontend
+    environment:
+      VITE_API_BASE_URL: http://127.0.0.1:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   postgres:
     image: postgres:16
     container_name: crisisagent-postgres
+    profiles: ["postgres"]
     environment:
       POSTGRES_DB: crisis_agent
       POSTGRES_USER: crisis_agent
@@ -19,6 +62,7 @@ services:
   redis:
     image: redis:7
     container_name: crisisagent-redis
+    profiles: ["redis", "rq"]
     ports:
       - "6379:6379"
     volumes:
@@ -30,5 +74,6 @@ services:
       retries: 5
 
 volumes:
+  crisisagent_demo_checkpoints:
   crisisagent_postgres_data:
   crisisagent_redis_data:

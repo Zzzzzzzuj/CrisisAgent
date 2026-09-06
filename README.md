@@ -316,6 +316,83 @@ Invoke-RestMethod -Method Post `
 
 如果你的本地 `backend/.env` 正在使用 `CHECKPOINT_STORAGE=postgres`，请先确认 PostgreSQL 依赖和数据库可用；只做离线 mock demo 时建议临时改为 `CHECKPOINT_STORAGE=json`。PostgreSQL demo 需要安装 `psycopg[binary]`，项目已在 `requirements.txt` 中声明，可通过 `pip install -r requirements.txt` 安装。
 
+## Docker Local Demo
+
+最小 Docker 路径默认是离线模拟演示：
+
+- `AGENT_MODE=mock`
+- `CHECKPOINT_STORAGE=json`
+- `RUNTIME_MODE=sync`
+- `TASK_QUEUE_BACKEND=inprocess`
+- `EMBEDDING_MODEL=hash`
+- 不需要真实 LLM Key
+- 不下载 BGE
+- 不启动 PostgreSQL 或 Redis
+
+准备示例配置：
+
+```powershell
+Copy-Item .env.example .env.local.example
+```
+
+构建并启动前后端：
+
+```powershell
+docker compose up --build
+```
+
+浏览器访问：
+
+```text
+http://localhost:5173
+```
+
+后端健康检查：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health
+Invoke-RestMethod http://127.0.0.1:8000/ready
+```
+
+执行一个模拟 Dynamic Runtime 任务：
+
+```powershell
+$body = @{ event = "某食品品牌被曝光使用过期原料，消费者要求监管介入。" } | ConvertTo-Json
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8000/api/dynamic/run `
+  -Body $bytes `
+  -ContentType "application/json; charset=utf-8"
+```
+
+查看会话列表：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/dynamic/sessions
+```
+
+查看日志：
+
+```powershell
+docker compose logs -f backend
+docker compose logs -f frontend
+```
+
+停止服务但保留演示 checkpoint 数据卷：
+
+```powershell
+docker compose down
+```
+
+如果需要可选 PostgreSQL 或 Redis/RQ：
+
+```powershell
+docker compose --profile postgres up -d postgres
+docker compose --profile redis up -d redis
+```
+
+注意：前端浏览器访问后端必须使用 `http://127.0.0.1:8000` 或 `http://localhost:8000`，不要使用容器内部服务名 `backend`，因为用户浏览器无法解析 Compose 内部 DNS 名称。
+
 Mock demo:
 
 ```powershell
