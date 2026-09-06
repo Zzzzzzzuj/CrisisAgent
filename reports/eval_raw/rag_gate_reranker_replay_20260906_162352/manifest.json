@@ -1,0 +1,70 @@
+{
+  "run_id": "20260906_162352",
+  "generated_at": "2026-09-06T16:24:03.666779+08:00",
+  "current_commit": "247ffef",
+  "current_commit_full": "247ffef2dc0bfd41b724d5e383dd85f2d80a7ecc",
+  "branch": "main",
+  "git_status_short_before_artifacts": "?? reports/eval_raw/",
+  "python_executable": ".venv\\Scripts\\python.exe",
+  "python_version": "3.11.1 (tags/v3.11.1:a7a450f, Dec  6 2022, 19:58:39) [MSC v.1934 64 bit (AMD64)]",
+  "dependencies": {
+    "sentence-transformers": "5.7.0",
+    "torch": "2.13.0",
+    "transformers": "5.14.1"
+  },
+  "environment": {
+    "HF_HOME": "<local-hf-cache-dir>",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "AGENT_MODE": "llm",
+    "CHECKPOINT_STORAGE": "postgres",
+    "VECTOR_BACKEND": null
+  },
+  "model": {
+    "bge_model": "BAAI/bge-small-zh",
+    "bge_fallback_used": false,
+    "deepseek_or_llm_called": false
+  },
+  "commands": [
+    ".venv\\Scripts\\python.exe evaluation/rag_gate_challenge_v3_evaluator.py --save-report disabled (via imported run_challenge_evaluation)",
+    ".venv\\Scripts\\python.exe evaluation/rag_retrieval_holdout_v1_evaluator.py --save-report disabled (via imported run_holdout_evaluation)"
+  ],
+  "parameters": {
+    "gate_top_k": 5,
+    "gate_min_rerank_score": 0.1,
+    "retrieval_top_k": 5,
+    "retrieval_min_rerank_score": 0.1,
+    "retrieval_gate_applied_in_holdout": false,
+    "dedupe_level": "source"
+  },
+  "hashes": {
+    "datasets_and_protocols": {
+      "evaluation/rag_gate_challenge_v3.json": "5e4c74cf110feab3979c46644aa6b2511c4c4acdb6dfb005fecb9ca2628b7d1a",
+      "evaluation/reports/rag_gate_challenge_v3_protocol.md": "d6c31ccb0d228a7ef4e8cf47eed4d658cf11ad444c16f2a136b11d338d43470c",
+      "evaluation/rag_retrieval_holdout_v1.json": "ce57de4788217e11830ea0ee84d4d9fa426d1c97dc6d8a13278883d5c43a82d7",
+      "evaluation/reports/rag_retrieval_holdout_v1_protocol.md": "8a5c57f972576b546a9b9c0237276b5ac084e4e392f8ea239d98e782fd9c7269"
+    },
+    "knowledge_base": {
+      "backend/rag/knowledge_base/crisis_response.md": "11fcf4a2dca746149e832709cc9542e3ff88c602d74a7d1bea94ad212a130c6a",
+      "backend/rag/knowledge_base/data_privacy.md": "9fbeb41f492f6b6565d5e2bfb4d6092fed090dbee6290096465b2e30a0b48ff1",
+      "backend/rag/knowledge_base/executive_misconduct.md": "2ac56ea02471e89f02a97b16a3101a972fb6e844a31240b64784af16bdcdac5f",
+      "backend/rag/knowledge_base/food_safety.md": "eb599eb174de72105791f4a08091625aba5437e447586b3f886cf09cdfb3c2a8",
+      "backend/rag/knowledge_base/legal_risk_rules.md": "7490def8272b9df55bd4879f2865e869c547eec8fe65c0e820602acc79c16ae2",
+      "backend/rag/knowledge_base/product_quality.md": "ce694d4c5d866dc4adef42cb46e104df210637cb903ea9d0c17ebfee3a0e02b2",
+      "backend/rag/knowledge_base/service_outage.md": "db7b8f11c25c327d1e43c59136dee13ec9f2e9d91bcc5453fdd1af86bdd37eb4"
+    },
+    "evaluator_code": {
+      "evaluation/rag_gate_challenge_v3_evaluator.py": "d50995060878adf3148ca3ba47b275181d3a954a0d97050b02d3b8ce3d592615",
+      "evaluation/rag_retrieval_holdout_v1_evaluator.py": "f587da6bab9161724d2b4043ab914ff4ab011718e956f0576bdc196f2d636506",
+      "evaluation/rag_metrics_v2.py": "f456750a38f3e998e4c37958da00f0de9f8fb5108c358258070bab21166318b8",
+      "backend/rag/retrieval_need_gate.py": "8b3d15f18129fcd57865b908f531abcd3be618c98ffab876817b1024c4352bd9",
+      "backend/rag/reranker.py": "e862187ad28f0e02e9d72a708181e967807bdac0c8bbbc4f4503e14180ea7e31"
+    }
+  },
+  "output_files": {
+    "gate_jsonl": "reports\\eval_raw\\rag_gate_reranker_replay_20260906_162352\\gate_challenge_v3_cases.jsonl",
+    "reranker_jsonl": "reports\\eval_raw\\rag_gate_reranker_replay_20260906_162352\\reranker_holdout_v1_cases.jsonl",
+    "summary_json": "reports\\eval_raw\\rag_gate_reranker_replay_20260906_162352\\summary.json",
+    "summary_md": "reports\\eval_raw\\rag_gate_reranker_replay_20260906_162352\\summary.md"
+  }
+}

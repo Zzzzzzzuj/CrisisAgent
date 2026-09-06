@@ -1,0 +1,570 @@
+{
+  "run_id": "20260906_162352",
+  "nature": "Regression replay on previously used/frozen datasets; not a new first holdout.",
+  "historical": {
+    "gate": {
+      "TP": 19,
+      "FN": 1,
+      "TN": 17,
+      "FP": 3,
+      "tpr": 0.95,
+      "tnr": 0.85
+    },
+    "retrieval": {
+      "old_recall_at_3": 0.9,
+      "v2_recall_at_3": 0.9,
+      "old_context_pollution_rate": 0.4722,
+      "v2_context_pollution_rate": 0.3222
+    }
+  },
+  "gate_evaluator_summary": {
+    "TP": 19,
+    "TN": 17,
+    "FP": 3,
+    "FN": 1,
+    "tpr": 0.95,
+    "tnr": 0.85,
+    "fpr": 0.15,
+    "fnr": 0.05,
+    "accuracy": 0.9,
+    "hard_negative_reject_rate": 0.8333,
+    "hard_negative_reject_count": 10,
+    "positive_by_category": {
+      "food_safety": 1.0,
+      "data_privacy": 0.75,
+      "service_outage": 1.0,
+      "product_quality": 1.0,
+      "executive_misconduct": 1.0
+    },
+    "negative_by_type": {
+      "unrelated": 1.0,
+      "business_non_crisis": 0.75,
+      "hard_negative": 0.8333
+    },
+    "negative_reject_counts": {
+      "unrelated": 4,
+      "business_non_crisis": 3,
+      "hard_negative": 10
+    },
+    "current_incident_positive_pass_rate": 1.0,
+    "current_incident_positive_count": 15,
+    "non_current_hard_negative_reject_rate": 0.8333,
+    "non_current_hard_negative_count": 12
+  },
+  "gate_recalculated_from_jsonl": {
+    "TP": 19,
+    "FN": 1,
+    "TN": 17,
+    "FP": 3,
+    "tpr": 0.95,
+    "tnr": 0.85,
+    "total_cases": 40
+  },
+  "reranker_evaluator_summary": {
+    "old": {
+      "total_cases": 30,
+      "recall_at_1": 0.6667,
+      "recall_at_3": 0.9,
+      "recall_at_5": 0.9,
+      "precision_at_1": 0.6667,
+      "precision_at_3": 0.3,
+      "precision_at_5": 0.18,
+      "mrr": 0.7778,
+      "source_category_match": 0.4611,
+      "context_pollution_rate": 0.4722,
+      "acceptable_top1_count": 20,
+      "acceptable_top3_count": 27,
+      "pollution_case_count": 25,
+      "wrong_rank_distribution": {
+        "rank1": 4,
+        "rank2": 21,
+        "rank3": 13,
+        "rank4": 0,
+        "rank5": 0
+      },
+      "confusion_pairs": {
+        "service_outage->product_quality.md": 5,
+        "food_safety->product_quality.md": 4,
+        "data_privacy->service_outage.md": 4,
+        "product_quality->data_privacy.md": 4,
+        "food_safety->service_outage.md": 3,
+        "product_quality->food_safety.md": 3,
+        "food_safety->executive_misconduct.md": 2,
+        "service_outage->data_privacy.md": 2,
+        "product_quality->executive_misconduct.md": 2,
+        "food_safety->data_privacy.md": 1,
+        "data_privacy->executive_misconduct.md": 1,
+        "data_privacy->food_safety.md": 1,
+        "service_outage->food_safety.md": 1,
+        "product_quality->service_outage.md": 1,
+        "executive_misconduct->data_privacy.md": 1,
+        "executive_misconduct->service_outage.md": 1,
+        "executive_misconduct->food_safety.md": 1,
+        "executive_misconduct->product_quality.md": 1
+      }
+    },
+    "reranker_v2": {
+      "total_cases": 30,
+      "recall_at_1": 0.7,
+      "recall_at_3": 0.9,
+      "recall_at_5": 0.9,
+      "precision_at_1": 0.7,
+      "precision_at_3": 0.3,
+      "precision_at_5": 0.18,
+      "mrr": 0.7944,
+      "source_category_match": 0.6278,
+      "context_pollution_rate": 0.3222,
+      "acceptable_top1_count": 21,
+      "acceptable_top3_count": 27,
+      "pollution_case_count": 16,
+      "wrong_rank_distribution": {
+        "rank1": 5,
+        "rank2": 12,
+        "rank3": 8,
+        "rank4": 0,
+        "rank5": 0
+      },
+      "confusion_pairs": {
+        "food_safety->service_outage.md": 3,
+        "data_privacy->service_outage.md": 3,
+        "product_quality->data_privacy.md": 3,
+        "food_safety->product_quality.md": 2,
+        "service_outage->data_privacy.md": 2,
+        "service_outage->product_quality.md": 2,
+        "product_quality->food_safety.md": 2,
+        "food_safety->data_privacy.md": 1,
+        "data_privacy->executive_misconduct.md": 1,
+        "data_privacy->food_safety.md": 1,
+        "product_quality->service_outage.md": 1,
+        "executive_misconduct->data_privacy.md": 1,
+        "executive_misconduct->service_outage.md": 1,
+        "executive_misconduct->food_safety.md": 1,
+        "executive_misconduct->product_quality.md": 1
+      }
+    },
+    "comparison": {
+      "metric_differences": {
+        "recall_at_1": 0.0333,
+        "recall_at_3": 0.0,
+        "recall_at_5": 0.0,
+        "precision_at_1": 0.0333,
+        "precision_at_3": 0.0,
+        "precision_at_5": 0.0,
+        "mrr": 0.0166,
+        "source_category_match": 0.1667,
+        "context_pollution_rate": -0.15,
+        "acceptable_top1_count": 1,
+        "acceptable_top3_count": 0,
+        "pollution_case_count": -9
+      },
+      "pollution_relative_reduction": 0.3177,
+      "top3_retrieval_regressions": [
+        {
+          "case_id": "retrieval_holdout_v1_product_quality_004",
+          "category": "product_quality",
+          "event": "某批次婴儿推车在使用中出现刹车失灵反馈，门店要求总部给出检查流程、维修指引和家长沟通话术。",
+          "acceptable_sources": [
+            "product_quality.md"
+          ],
+          "old_top3": [
+            "product_quality.md",
+            "executive_misconduct.md",
+            "food_safety.md"
+          ],
+          "v2_top3": [
+            "food_safety.md"
+          ]
+        }
+      ],
+      "new_top3_regression_count": 1,
+      "improvement_cases": [
+        {
+          "case_id": "retrieval_holdout_v1_product_quality_001",
+          "category": "product_quality",
+          "event": "同型号智能水杯被多名用户反馈底座发热和轻微变形，电商评论区开始集中质疑安全性，品牌需要安排检测和售后方案。",
+          "acceptable_sources": [
+            "product_quality.md"
+          ],
+          "old_top3": [
+            "crisis_response.md",
+            "data_privacy.md",
+            "food_safety.md"
+          ],
+          "v2_top3": [
+            "product_quality.md"
+          ]
+        }
+      ],
+      "pollution_improvement_cases": [
+        {
+          "case_id": "retrieval_holdout_v1_food_safety_001",
+          "category": "food_safety",
+          "event": "连锁甜品店的新款奶油蛋糕在周末售出后，多名顾客反馈腹痛和呕吐，门店正在整理批次记录、冷链温度和对外回应口径。",
+          "acceptable_sources": [
+            "food_safety.md"
+          ],
+          "old_top3": [
+            "food_safety.md",
+            "product_quality.md",
+            "executive_misconduct.md"
+          ],
+          "v2_top3": [
+            "food_safety.md"
+          ],
+          "old_forbidden_sources": [
+            "executive_misconduct.md",
+            "product_quality.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_food_safety_003",
+          "category": "food_safety",
+          "event": "某饮料门店员工发现同批次杯装果茶出现沉淀和刺鼻气味，短视频评论区已有消费者询问是否还能饮用。",
+          "acceptable_sources": [
+            "food_safety.md"
+          ],
+          "old_top3": [
+            "food_safety.md",
+            "executive_misconduct.md",
+            "product_quality.md"
+          ],
+          "v2_top3": [
+            "food_safety.md"
+          ],
+          "old_forbidden_sources": [
+            "executive_misconduct.md",
+            "product_quality.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_data_privacy_001",
+          "category": "data_privacy",
+          "event": "部分用户登录会员中心后看到了其他账号的收货地址和手机号截图，相关图片已经在社群传播，平台需要说明排查和保护措施。",
+          "acceptable_sources": [
+            "data_privacy.md"
+          ],
+          "old_top3": [
+            "crisis_response.md",
+            "data_privacy.md",
+            "service_outage.md"
+          ],
+          "v2_top3": [
+            "data_privacy.md"
+          ],
+          "old_forbidden_sources": [
+            "service_outage.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_service_outage_001",
+          "category": "service_outage",
+          "event": "晚高峰期间支付页面长时间转圈，部分订单重复扣款，商户无法完成收款，平台需要发布服务恢复和补偿说明。",
+          "acceptable_sources": [
+            "service_outage.md"
+          ],
+          "old_top3": [
+            "service_outage.md",
+            "product_quality.md"
+          ],
+          "v2_top3": [
+            "service_outage.md"
+          ],
+          "old_forbidden_sources": [
+            "product_quality.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_service_outage_003",
+          "category": "service_outage",
+          "event": "订票系统在活动开售后频繁报错，用户排队资格被重置，社交平台要求公司解释技术排查和后续处理。",
+          "acceptable_sources": [
+            "service_outage.md"
+          ],
+          "old_top3": [
+            "service_outage.md",
+            "product_quality.md"
+          ],
+          "v2_top3": [
+            "service_outage.md"
+          ],
+          "old_forbidden_sources": [
+            "product_quality.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_service_outage_004",
+          "category": "service_outage",
+          "event": "外卖平台部分区域骑手端无法接单，用户端仍显示预计送达时间，商家投诉订单堆积，需要对外说明故障处置。",
+          "acceptable_sources": [
+            "service_outage.md"
+          ],
+          "old_top3": [
+            "service_outage.md",
+            "food_safety.md"
+          ],
+          "v2_top3": [
+            "service_outage.md"
+          ],
+          "old_forbidden_sources": [
+            "food_safety.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_service_outage_005",
+          "category": "service_outage",
+          "event": "多地门店的会员结算系统同一时间离线，收银员只能手写登记，顾客排队抱怨，技术团队正在确认恢复时间。",
+          "acceptable_sources": [
+            "service_outage.md"
+          ],
+          "old_top3": [
+            "service_outage.md",
+            "product_quality.md"
+          ],
+          "v2_top3": [
+            "service_outage.md"
+          ],
+          "old_forbidden_sources": [
+            "product_quality.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_product_quality_001",
+          "category": "product_quality",
+          "event": "同型号智能水杯被多名用户反馈底座发热和轻微变形，电商评论区开始集中质疑安全性，品牌需要安排检测和售后方案。",
+          "acceptable_sources": [
+            "product_quality.md"
+          ],
+          "old_top3": [
+            "crisis_response.md",
+            "data_privacy.md",
+            "food_safety.md"
+          ],
+          "v2_top3": [
+            "product_quality.md"
+          ],
+          "old_forbidden_sources": [
+            "data_privacy.md",
+            "food_safety.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_product_quality_002",
+          "category": "product_quality",
+          "event": "儿童学习灯使用几周后陆续出现外壳开裂，家长群要求品牌说明批次、材质和退换安排。",
+          "acceptable_sources": [
+            "product_quality.md"
+          ],
+          "old_top3": [
+            "product_quality.md",
+            "executive_misconduct.md"
+          ],
+          "v2_top3": [
+            "product_quality.md"
+          ],
+          "old_forbidden_sources": [
+            "executive_misconduct.md"
+          ],
+          "v2_forbidden_sources": []
+        },
+        {
+          "case_id": "retrieval_holdout_v1_product_quality_004",
+          "category": "product_quality",
+          "event": "某批次婴儿推车在使用中出现刹车失灵反馈，门店要求总部给出检查流程、维修指引和家长沟通话术。",
+          "acceptable_sources": [
+            "product_quality.md"
+          ],
+          "old_top3": [
+            "product_quality.md",
+            "executive_misconduct.md",
+            "food_safety.md"
+          ],
+          "v2_top3": [
+            "food_safety.md"
+          ],
+          "old_forbidden_sources": [
+            "executive_misconduct.md",
+            "food_safety.md"
+          ],
+          "v2_forbidden_sources": [
+            "food_safety.md"
+          ]
+        }
+      ],
+      "newly_introduced_pollution": [],
+      "per_domain_old": {
+        "data_privacy": {
+          "recall_at_1": 0.3333,
+          "recall_at_3": 0.8333,
+          "mrr": 0.5833,
+          "source_category_match": 0.5833,
+          "context_pollution_rate": 0.3611
+        },
+        "executive_misconduct": {
+          "recall_at_1": 0.5,
+          "recall_at_3": 0.8333,
+          "mrr": 0.6667,
+          "source_category_match": 0.5555,
+          "context_pollution_rate": 0.25
+        },
+        "food_safety": {
+          "recall_at_1": 0.6667,
+          "recall_at_3": 1.0,
+          "mrr": 0.8055,
+          "source_category_match": 0.3889,
+          "context_pollution_rate": 0.5833
+        },
+        "product_quality": {
+          "recall_at_1": 0.8333,
+          "recall_at_3": 0.8333,
+          "mrr": 0.8333,
+          "source_category_match": 0.3333,
+          "context_pollution_rate": 0.6111
+        },
+        "service_outage": {
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "mrr": 1.0,
+          "source_category_match": 0.4444,
+          "context_pollution_rate": 0.5556
+        }
+      },
+      "per_domain_v2": {
+        "data_privacy": {
+          "recall_at_1": 0.5,
+          "recall_at_3": 0.8333,
+          "mrr": 0.6667,
+          "source_category_match": 0.6667,
+          "context_pollution_rate": 0.3055
+        },
+        "executive_misconduct": {
+          "recall_at_1": 0.5,
+          "recall_at_3": 0.8333,
+          "mrr": 0.6667,
+          "source_category_match": 0.5555,
+          "context_pollution_rate": 0.25
+        },
+        "food_safety": {
+          "recall_at_1": 0.6667,
+          "recall_at_3": 1.0,
+          "mrr": 0.8055,
+          "source_category_match": 0.6111,
+          "context_pollution_rate": 0.3611
+        },
+        "product_quality": {
+          "recall_at_1": 0.8333,
+          "recall_at_3": 0.8333,
+          "mrr": 0.8333,
+          "source_category_match": 0.5278,
+          "context_pollution_rate": 0.4722
+        },
+        "service_outage": {
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "mrr": 1.0,
+          "source_category_match": 0.7778,
+          "context_pollution_rate": 0.2222
+        }
+      }
+    },
+    "candidate_pool_parity": true,
+    "overall_status": "PASS"
+  },
+  "reranker_recalculated_from_jsonl": {
+    "old": {
+      "total_cases": 30,
+      "recall_at_3": 0.9,
+      "context_pollution_rate": 0.4722,
+      "acceptable_top3_count": 27,
+      "pollution_case_count": 25
+    },
+    "reranker_v2": {
+      "total_cases": 30,
+      "recall_at_3": 0.9,
+      "context_pollution_rate": 0.3222,
+      "acceptable_top3_count": 27,
+      "pollution_case_count": 16
+    },
+    "pollution_relative_reduction": 0.3177
+  },
+  "matches_historical": {
+    "gate_tpr": true,
+    "gate_tnr": true,
+    "reranker_old_recall_at_3": true,
+    "reranker_v2_recall_at_3": true,
+    "reranker_old_pollution": true,
+    "reranker_v2_pollution": true
+  },
+  "representative_failures": {
+    "gate_false_positive": [
+      {
+        "case_id": "gate_challenge_v3_business_004",
+        "label": "no_rag",
+        "type": "business_non_crisis",
+        "category": "business_non_crisis",
+        "event": "运营团队设计会员积分活动，讨论不同等级用户的兑换权益和节日优惠。",
+        "expected_label": "no_rag",
+        "predicted_need_rag": true,
+        "intent": "crisis_response_needed",
+        "decision_score": 2,
+        "current_incident": false,
+        "current_incident_signals": [],
+        "task_intent": "ambiguous_enterprise_risk",
+        "decision_path": "ambiguous_enterprise_risk_allow",
+        "matched_signals": [
+          "affected_public",
+          "enterprise_context"
+        ],
+        "negative_signals": [],
+        "reason": "无法高置信判定为非当前任务，且存在企业风险或用户影响迹象，按 recall-first 策略放行 RAG。"
+      }
+    ],
+    "gate_false_negative": [
+      {
+        "case_id": "gate_challenge_v3_data_privacy_004",
+        "label": "need_rag",
+        "type": "positive_crisis",
+        "category": "data_privacy",
+        "event": "多名商家反馈能看到其他店铺的结算明细，运营侧需要整理排查步骤并回应商家群里的追问。",
+        "expected_label": "need_rag",
+        "predicted_need_rag": false,
+        "intent": "information_lookup",
+        "decision_score": 2,
+        "current_incident": false,
+        "current_incident_signals": [],
+        "task_intent": "ambiguous_enterprise_risk",
+        "decision_path": "no_current_incident_no_enterprise_risk",
+        "matched_signals": [
+          "response_or_action_required"
+        ],
+        "negative_signals": [],
+        "reason": "文本缺少当前现实危机、用户影响或企业处置需求，不触发 RAG。"
+      }
+    ],
+    "retrieval_regression": [
+      {
+        "case_id": "retrieval_holdout_v1_product_quality_004",
+        "category": "product_quality",
+        "event": "某批次婴儿推车在使用中出现刹车失灵反馈，门店要求总部给出检查流程、维修指引和家长沟通话术。",
+        "acceptable_sources": [
+          "product_quality.md"
+        ],
+        "old_top3": [
+          "product_quality.md",
+          "executive_misconduct.md",
+          "food_safety.md"
+        ],
+        "v2_top3": [
+          "food_safety.md"
+        ]
+      }
+    ]
+  }
+}
