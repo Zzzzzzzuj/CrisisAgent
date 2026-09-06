@@ -533,8 +533,10 @@ python scripts\ingest_knowledge_base.py --path backend/rag/knowledge_base --embe
 Current regression result:
 
 ```text
-505 passed
+537 passed, 1 skipped
 ```
+
+GitHub Actions CI runs the same offline deterministic checks on push and pull request: backend pytest in `mock/json/sync/hash/json-vector` mode and frontend `npm run build`; it does not call DeepSeek, download BGE, start PostgreSQL/Redis, run Docker Compose, or deploy.
 
 Run locally:
 
