@@ -26,6 +26,7 @@ frontend/dist/
 # Local runtime data
 backend/core/data/checkpoints.json
 backend/memory/data/memories.json
+data/source_registry.local.json
 
 # Local Codex acceptance artifacts
 .codex_*.log
