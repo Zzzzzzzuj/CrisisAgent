@@ -19,6 +19,29 @@ CrisisAgent 是一个面向企业危机响应场景的 AI Agent 应用原型。�
 - Dashboard：Vue3 前端展示 Crisis Case、风险等级、AI 声明、Human Review、Agent Trace、RAG/Gate Trace 和 Metrics。
 - Tool / Skill Layer：轻量 `AgentSkill` registry、Function Calling adapter、MCP mock adapter 和 A2A message schema，用于解释工具协议边界。
 
+## 舆情 Ingestion 与 Metadata Bridge
+
+CrisisAgent 的定位是**企业舆情分析与危机响应智能体系统**。除人工提交事件外，项目还提供一个离线 ingestion 层，用本地 JSON/CSV fixture 演示舆情输入的规范化、去重、事件聚类和风险分析：
+
+```text
+本地 JSON/CSV
+→ normalize
+→ deduplicate
+→ cluster
+→ risk analyze
+→ ClusteredCrisisEvent
+→ metadata bridge
+→ AgentState.metadata["ingestion"]
+→ Dynamic Runtime
+→ Human Review Policy
+```
+
+Metadata bridge 会保留 `source_items`、`source_count`、`event_status`、`fact_status`、`event_fingerprint`、`risk_level` 和 `human_review_required`。Human Review Policy 可以根据高风险、事实未证实、来源冲突、事件不确定或显式审核要求生成可追踪的 ingestion triggers，并使 Runtime 进入 `WAITING_HUMAN`。
+
+第一阶段不直接做实时全网爬虫，也不把未经整理的新闻原文直接交给大模型：前者涉及来源授权、限流、去重、历史事件过滤和隐私治理，后者容易把重复、冲突或未经证实的信息直接带入生成流程。当前实现使用离线 fixture + mock workflow 验证 ingestion 到 Runtime 的结构化闭环，不代表已接入真实企业生产数据，也不自动发布声明。
+
+项目当前定位仍是 **production-ready prototype**，不是已经上线的生产系统。PostgreSQL、异步队列、真实模型和外部采集源均属于可选或后续生产化方向。
+
 ## Tech Stack
 
 - Backend：Python 3.11、FastAPI、Pydantic、SQLAlchemy、Alembic、httpx、pytest

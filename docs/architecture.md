@@ -25,6 +25,46 @@ flowchart TD
 - Fixed Workflow：`backend/workflow.py`，固定执行顺序，适合回归和对比。
 - Dynamic Runtime：`backend/core/dynamic_runtime.py`，Planner 生成计划，Validator 补齐依赖，Executor 按计划执行 Agent。
 
+## 1.1 Sentiment Ingestion 与 Metadata Bridge
+
+第一阶段的舆情入口使用本地 JSON/CSV fixture，不访问外部网络。它先把多条来源整理成结构化事件，再交给现有 Runtime：
+
+```mermaid
+flowchart LR
+    A["Local JSON / CSV"] --> B["normalize"]
+    B --> C["deduplicate"]
+    C --> D["cluster"]
+    D --> E["risk analyze"]
+    E --> F["ClusteredCrisisEvent"]
+    F --> G["event text + metadata bridge"]
+    G --> H["AgentState.metadata[ingestion]"]
+    H --> I["Dynamic Runtime"]
+    I --> J["Human Review Policy"]
+    J --> K{"Review required?"}
+    K -->|yes| L["WAITING_HUMAN"]
+    K -->|no| M["completed"]
+```
+
+`run_dynamic_sync_with_metadata()` 是内部的非破坏性入口。它仍然使用原有 Agent、Executor、RAG 和 checkpoint，只额外把 `ClusteredCrisisEvent.to_dict()` 写入 `AgentState.metadata["ingestion"]`。原有 `run_dynamic_sync(event)` 和 API contract 保持不变。
+
+Policy 会读取 ingestion namespace 中的 `human_review_required`、`risk_level`、`fact_status` 和 `event_status`，生成例如 `ingestion_review_required`、`ingestion_high_risk`、`ingestion_fact_conflicting` 和 `ingestion_event_uncertain` 等原因。metadata 会随 checkpoint 保存，因此 resume 时仍能恢复原始来源和风险上下文。
+
+当前边界：这是离线 fixture + mock workflow 的集成验证，不是实时全网舆情监控，不代表已经接入真实企业生产数据，也不包含自动发布声明。未来若接入 RSS、Webhook 或其他外部来源，应在此 bridge 之前增加来源授权、幂等、限流、冲突证据治理和历史事件过滤。
+
+### 面试讲解
+
+**1 分钟版：**
+
+> 我在原有危机响应 Agent 前增加了一个轻量 ingestion 层。它把本地 JSON/CSV 中的多条舆情先做规范化、去重、聚类和风险分析，生成 `ClusteredCrisisEvent`。之前 Runtime 只接收 event 字符串，ingestion 判断出的事实冲突、未证实和人工审核要求没有真正参与运行时策略。因此我增加了内部 metadata bridge，把结构化结果写入 `AgentState.metadata["ingestion"]`，再由 Human Review Policy 统一判断，必要时进入 `WAITING_HUMAN`。这没有改变原有 API、Agent 顺序或 Prompt，当前通过离线 fixture 和 mock workflow 验证了从舆情归并到人工审核的闭环。
+
+**30 秒版：**
+
+> 我补了一层离线舆情 ingestion，把多条来源规范化、去重、聚类成结构化事件，并通过 metadata bridge 写入 AgentState。这样事实未证实、来源冲突或高风险事件不只是停留在分析结果里，而是能被 Human Review Policy 读取并触发 `WAITING_HUMAN`。目前是 fixture + mock 验证，不是实时爬虫或已上线生产系统。
+
+**STAR 版：**
+
+> **S：** 原系统主要接收人工组织的一条事件文本，不够接近真实企业舆情输入，而且 ingestion 层的审核判断没有进入 Runtime。**T：** 在不修改现有 API、Agent 顺序和 Prompt 的前提下，让多来源舆情的结构化风险能够影响人工审核。**A：** 增加 normalize、deduplicate、cluster、risk analyze 流程，并通过内部 metadata bridge 将 `ClusteredCrisisEvent` 写入 `AgentState.metadata["ingestion"]`，由 Human Review Policy 根据高风险、事实未证实、来源冲突和事件不确定状态生成可追踪 trigger。**R：** 本地 fixture 聚合结果可以进入现有 Dynamic Runtime，高风险事件真实进入 `WAITING_HUMAN`，全量测试保持通过；当前结果只证明离线 mock 闭环，不夸大为实时监控或生产部署。
+
 ## 2. Planner / Executor / AgentState
 
 Dynamic Runtime 的核心是把 Agent 调用从“函数链”拆成可检查状态机：
