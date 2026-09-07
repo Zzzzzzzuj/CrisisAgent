@@ -47,6 +47,25 @@ The script forces `AGENT_MODE=mock`, `RUNTIME_MODE=sync`, and `CHECKPOINT_STORAG
 
 The output distinguishes `cluster_human_review_required` from `runtime_policy_required`. In this minimal phase, the existing API still receives only the converted `event` string, so the ingestion object's review flag is preserved as explanatory text rather than added as a new Runtime/API field. This keeps the existing contract unchanged; it also means the demo is an execution compatibility check, not a claim that the current Runtime consumes every ingestion metadata field as a policy trigger.
 
+## Metadata Bridge 与 Human Review
+
+The internal metadata bridge is the next step after the event-string compatibility check. An internal caller can pass the converted event together with:
+
+```python
+run_dynamic_sync_with_metadata(
+    event_text,
+    metadata={"ingestion": clustered_event.to_dict()},
+)
+```
+
+The bridge stores the structured object under `AgentState.metadata["ingestion"]`. It preserves `source_items`, `source_count`, `event_status`, `fact_status`, `event_fingerprint`, `risk_level`, and `human_review_required`. JSON and PostgreSQL checkpoint repositories already serialize AgentState metadata, so the information survives checkpoint loading and resume.
+
+`evaluate_human_policy` reads this namespace through independent ingestion triggers. High risk, an unverified or conflicting fact status, an uncertain event status, and an explicit `human_review_required` flag produce traceable reasons such as `ingestion_fact_conflicting` or `ingestion_review_required`. This is separate from the existing `high_risk`, RAG evidence, guardrail, evaluation, and LLM fallback checks.
+
+The distinction matters: `cluster_human_review_required` is the ingestion-layer decision, while `runtime_policy_required` is the final Dynamic Runtime policy decision. The first phase only preserved the former in event text. The metadata bridge lets an internal caller pass the structured decision directly without changing `/api/crisis/run` or `/api/dynamic/run`.
+
+No real RSS or crawler is connected yet. A later phase may expose a separate `/api/ingestion/run`, but the internal bridge is intentionally validated first to keep the current API and frontend stable.
+
 ## Interview explanation
 
 I did not send raw web content directly to an LLM. I first normalized source text, removed duplicates, clustered related reports into an event, and preserved current/historical/uncertain and verified/unverified/conflicting status. The resulting event text is then passed into the existing CrisisAgent runtime. This adds a realistic upstream input boundary without changing the existing Agent order, RAG logic, Prompt semantics, or API contract. Phase 1 uses offline fixtures; real RSS or platform ingestion would require separate source permissions, rate limiting, retry, idempotency, and privacy controls.

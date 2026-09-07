@@ -44,8 +44,12 @@ def get_rq_queue_name() -> str:
     return os.getenv("RQ_QUEUE_NAME", "crisisagent").strip() or "crisisagent"
 
 
-def create_queued_dynamic_session(event: str, created_by: dict | None = None) -> AgentState:
-    state = initialize_dynamic_state(event)
+def create_queued_dynamic_session(
+    event: str,
+    created_by: dict | None = None,
+    metadata: dict | None = None,
+) -> AgentState:
+    state = initialize_dynamic_state(event, metadata=metadata)
     state.set_status(QUEUED)
     state.metadata["runtime_mode"] = "async"
     state.metadata["queued_at"] = _now_iso()
@@ -172,7 +176,11 @@ def run_resume_session_task(session_id: str) -> dict:
 
 
 def run_dynamic_sync(event: str) -> dict:
-    state = initialize_dynamic_state(event)
+    return run_dynamic_sync_with_metadata(event)
+
+
+def run_dynamic_sync_with_metadata(event: str, metadata: dict | None = None) -> dict:
+    state = initialize_dynamic_state(event, metadata=metadata)
     result = execute_dynamic_state(state)
     evaluation = evaluate_runtime_state(state)
     policy = evaluate_human_policy(state, evaluation)

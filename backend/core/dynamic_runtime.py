@@ -1,3 +1,4 @@
+from copy import deepcopy
 from uuid import uuid4
 
 from backend.agents import decision_agent, planner_agent
@@ -47,17 +48,27 @@ def run_dynamic_agent(event: str, agent_registry: dict | None = None) -> dict:
     }
 
 
-def initialize_dynamic_state(event: str, session_id: str | None = None) -> AgentState:
+def initialize_dynamic_state(
+    event: str,
+    session_id: str | None = None,
+    metadata: dict | None = None,
+) -> AgentState:
     planner_input = {
         "event": event,
         "category": _infer_category(event),
         "risk_level": _infer_risk_level(event),
     }
+    initial_metadata = {"planner_input": planner_input}
+    if isinstance(metadata, dict):
+        for key, value in metadata.items():
+            if key not in initial_metadata:
+                initial_metadata[key] = deepcopy(value)
+
     state = AgentState(
         session_id=session_id or str(uuid4()),
         plan_id="",
         event=event,
-        metadata={"planner_input": planner_input},
+        metadata=initial_metadata,
     )
     apply_guardrails_to_state(state)
     apply_reasoning_mode_to_state(state)

@@ -16,8 +16,13 @@ from backend.ingestion.pipeline import run_sentiment_ingestion_pipeline, to_cris
 from backend.ingestion.source_adapters import load_local_items
 
 
-def _run_workflow(event_text: str, cluster_human_review_required: bool) -> None:
-    from backend.core.runtime_tasks import run_dynamic_sync
+def _run_workflow(
+    event_text: str,
+    cluster_human_review_required: bool,
+    cluster_metadata: dict,
+) -> None:
+    from backend.core.checkpoint import load_checkpoint
+    from backend.core.runtime_tasks import run_dynamic_sync_with_metadata
     from backend.config import get_config
     from backend.llm.config import get_llm_config
 
@@ -29,7 +34,12 @@ def _run_workflow(event_text: str, cluster_human_review_required: bool) -> None:
     get_config.cache_clear()
     get_llm_config.cache_clear()
 
-    result = run_dynamic_sync(event_text)
+    result = run_dynamic_sync_with_metadata(
+        event_text,
+        metadata={"ingestion": cluster_metadata},
+    )
+    saved_state = load_checkpoint(result.get("session_id", ""))
+    saved_metadata = (saved_state.metadata if saved_state is not None else {}).get("ingestion", {})
     decision = result.get("results", {}).get("decision", {})
     final_statement = decision.get("final_statement", "")
     trace = result.get("execution_trace", [])
@@ -41,6 +51,13 @@ def _run_workflow(event_text: str, cluster_human_review_required: bool) -> None:
         "agents": [item.get("agent") for item in trace if item.get("status") == "success"],
         "cluster_human_review_required": cluster_human_review_required,
         "runtime_policy_required": bool(policy.get("required")),
+        "runtime_policy_triggers": policy.get("triggers", []),
+        "metadata_ingestion": {
+            "source_count": saved_metadata.get("source_count"),
+            "event_status": saved_metadata.get("event_status"),
+            "fact_status": saved_metadata.get("fact_status"),
+            "event_fingerprint": saved_metadata.get("event_fingerprint"),
+        },
         "status": result.get("status"),
     }, ensure_ascii=False))
 
@@ -65,7 +82,8 @@ def main() -> None:
         event_text = to_crisis_event_text(event)
         print("CrisisAgent event:", event_text)
         if args.run_workflow and event.human_review_required and event.risk_level == "high":
-            _run_workflow(event_text, event.human_review_required)
+            cluster_metadata = event.to_dict()
+            _run_workflow(event_text, event.human_review_required, cluster_metadata)
             break
 
 

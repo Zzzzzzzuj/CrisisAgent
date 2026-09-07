@@ -20,6 +20,7 @@ def evaluate_human_policy(
         low_score_triggers = _find_low_score_triggers(state)
         triggers.extend(low_score_triggers)
         triggers.extend(_find_guardrail_triggers(state))
+        triggers.extend(_find_ingestion_triggers(state))
 
     if include_trace_triggers:
         triggers.extend(_find_rag_evidence_quality_triggers(state, trace_start_index))
@@ -63,6 +64,27 @@ def _find_guardrail_triggers(state: AgentState) -> list[str]:
         triggers.append("guardrail_input")
     if (guardrails.get("output") or {}).get("hit"):
         triggers.append("guardrail_output")
+    return triggers
+
+
+def _find_ingestion_triggers(state: AgentState) -> list[str]:
+    ingestion = state.metadata.get("ingestion", {})
+    if not isinstance(ingestion, dict):
+        return []
+
+    triggers = []
+    if ingestion.get("human_review_required") is True:
+        triggers.append("ingestion_review_required")
+    if str(ingestion.get("risk_level", "")).lower() == "high":
+        triggers.append("ingestion_high_risk")
+    if ingestion.get("fact_status") == "unverified":
+        triggers.append("ingestion_fact_unverified")
+    if ingestion.get("fact_status") == "conflicting":
+        triggers.append("ingestion_fact_conflicting")
+    if ingestion.get("event_status") == "uncertain":
+        triggers.append("ingestion_event_uncertain")
+    if ingestion.get("event_status") == "historical" and ingestion.get("human_review_required") is True:
+        triggers.append("ingestion_historical_review_required")
     return triggers
 
 
