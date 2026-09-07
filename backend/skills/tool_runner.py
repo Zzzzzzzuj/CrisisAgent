@@ -6,6 +6,13 @@ from time import monotonic
 from typing import Any, Callable
 
 from backend.skills.registry import SkillRegistry, validate_json_schema_payload
+from backend.skills.execution_budget import (
+    TOOL_BUDGET_EXCEEDED,
+    TOOL_LOOP_DETECTED,
+    TOOL_RETRY_BUDGET_EXCEEDED,
+    TOOL_RUNTIME_BUDGET_EXCEEDED,
+    ToolExecutionBudget,
+)
 
 
 TOOL_NOT_FOUND = "TOOL_NOT_FOUND"
@@ -44,10 +51,12 @@ class ToolRunner:
         registry: SkillRegistry,
         fallback_handlers: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] | None = None,
         policy_checker: Callable[[Any, dict[str, Any]], tuple[bool, str]] | None = None,
+        budget: ToolExecutionBudget | None = None,
     ):
         self.registry = registry
         self.fallback_handlers = fallback_handlers or {}
         self.policy_checker = policy_checker
+        self.budget = budget or ToolExecutionBudget()
 
     def run(
         self,
@@ -97,6 +106,24 @@ class ToolRunner:
 
         while attempts <= max_retries:
             attempts += 1
+            budget_check = self.budget.check(tool_name, validated_payload, attempt=attempts)
+            if not budget_check.allowed:
+                return self._result(
+                    tool_name,
+                    started,
+                    error_code=budget_check.error_code,
+                    error_message=budget_check.reason,
+                    attempts=attempts - 1,
+                    retry_count=max(0, attempts - 2),
+                    human_review_required=budget_check.human_review_required,
+                    budget_trace=budget_check.trace,
+                )
+            self.budget.record(
+                tool_name,
+                validated_payload,
+                step_index=budget_check.trace["step_index"],
+                attempt=attempts,
+            )
             try:
                 output = self._execute_with_timeout(definition.handler, validated_payload, definition.timeout_ms)
                 if not isinstance(output, dict):
@@ -186,7 +213,7 @@ class ToolRunner:
             )
 
     @staticmethod
-    def _result(tool_name, started, *, success=False, output=None, error_code=None, error_message=None, attempts=0, retry_count=0, fallback_used=False, human_review_required=False):
+    def _result(tool_name, started, *, success=False, output=None, error_code=None, error_message=None, attempts=0, retry_count=0, fallback_used=False, human_review_required=False, budget_trace=None):
         duration_ms = round((monotonic() - started) * 1000, 2)
         trace = {
             "tool_name": tool_name,
@@ -197,6 +224,8 @@ class ToolRunner:
             "fallback_used": fallback_used,
             "success": success,
         }
+        if budget_trace:
+            trace.update(budget_trace)
         return ToolResult(
             tool_name=tool_name,
             success=success,

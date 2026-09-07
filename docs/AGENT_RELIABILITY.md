@@ -16,6 +16,25 @@ CrisisAgent already has:
 
 The first reliability layer adds `backend/skills/tool_runner.py`. It is deliberately independent from the main Executor and does not replace the existing Legal Agent or Workflow.
 
+## Execution Budget / Loop Prevention
+
+Tool calls need an execution budget before a future planner is allowed to issue multiple steps. Without one, a retrying or self-correcting loop could repeat the same tool call indefinitely, increase latency, or consume resources without producing new information.
+
+`ToolExecutionBudget` currently limits:
+
+- `max_steps`：最多执行多少个逻辑工具步骤；
+- `max_retries`：预算允许的总重试次数；
+- `max_runtime_ms`：整个预算实例允许的运行时间；
+- `max_same_call`：同一个 tool 加同一组规范化 arguments 允许重复的次数。
+
+Arguments are serialized with sorted keys and hashed. If the same tool and normalized arguments exceed `max_same_call`, the budget returns `TOOL_LOOP_DETECTED` before the handler runs. Step、retry 和 runtime 超限分别返回 `TOOL_BUDGET_EXCEEDED`、`TOOL_RETRY_BUDGET_EXCEEDED` 和 `TOOL_RUNTIME_BUDGET_EXCEEDED`。这些结果会进入 `ToolResult`，并设置 `human_review_required=true`，因为系统无法证明继续重复执行是安全的。
+
+当前预算只服务于 ToolRunner 旁路实验路径，不接入主 Executor，也不把项目改成 ReAct。未来如果要接入更动态的工具规划，必须先保留预算、重复调用检测和失败 trace，再评估主运行时集成。
+
+### 面试讲解版
+
+> 我给工具执行增加了四层预算：最大 step、最大 retry、最大 runtime 和同参重复调用次数。每次工具调用前都会把参数规范化并计算 hash，如果同一个工具用同样参数重复执行，就返回 `TOOL_LOOP_DETECTED`，而不是继续调用。预算超限不会静默失败，会返回结构化错误并建议进入人工审核。第一阶段只在 ToolRunner 旁路验证，避免为了展示 ReAct 而改动主 Workflow。
+
 ## ToolDefinition
 
 Each tool can describe:
