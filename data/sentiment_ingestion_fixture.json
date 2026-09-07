@@ -1,0 +1,11 @@
+[
+  {"item_id":"food_001","source_name":"local_news","source_url":"https://offline.test/food-1","title":"星河食品糕点异味引发关注","content":"多名消费者反馈同批次糕点有异味并出现不适，近期要求企业说明核查安排。","published_at":"2026-09-05T09:00:00+08:00","company":"星河食品","fact_status":"verified"},
+  {"item_id":"food_002","source_name":"local_forum","source_url":"https://offline.test/food-2","title":"星河食品同批次糕点被指有异味","content":"消费者称食用同批糕点后身体不适，相关讨论正在传播，要求品牌回应。","published_at":"2026-09-05T11:00:00+08:00","company":"星河食品","fact_status":"verified"},
+  {"item_id":"food_003","source_name":"local_media","source_url":"https://offline.test/food-3","title":"星河食品回应糕点异味反馈","content":"媒体关注同批次糕点异味和消费者不适，品牌表示正在核查。","published_at":"2026-09-06T10:00:00+08:00","company":"星河食品","fact_status":"verified"},
+  {"item_id":"privacy_001","source_name":"local_news","source_url":"https://offline.test/privacy-1","title":"星河平台账号信息异常可见","content":"用户称登录后能看到其他账号的地址和联系方式，截图正在传播，平台尚待核实。","published_at":"2026-09-05T13:00:00+08:00","company":"星河平台","fact_status":"unverified"},
+  {"item_id":"privacy_002","source_name":"local_forum","source_url":"https://offline.test/privacy-2","title":"星河平台用户信息显示异常引讨论","content":"多位用户反馈订单信息可能被其他账号看到，平台表示正在排查。","published_at":"2026-09-05T15:00:00+08:00","company":"星河平台","fact_status":"unverified"},
+  {"item_id":"history_001","source_name":"archive","source_url":"https://offline.test/history-1","title":"星河食品去年投诉事件回顾","content":"文章回顾去年食品投诉和当时的处理经过，属于历史资料整理。","published_at":"2025-06-01T10:00:00+08:00","company":"星河食品","fact_status":"verified"},
+  {"item_id":"uncertain_001","source_name":"anonymous_forum","source_url":"https://offline.test/uncertain-1","title":"星河平台或有服务异常传言","content":"匿名帖子称用户支付可能出现问题，但没有给出时间和可核验材料。","published_at":"2026-08-01T10:00:00+08:00","company":"星河平台","fact_status":"unverified"},
+  {"item_id":"conflict_001","source_name":"local_media","source_url":"https://offline.test/conflict-1","title":"星河设备过热反馈引发讨论","content":"用户称设备近期使用时过热并影响使用，要求品牌检查。","published_at":"2026-09-06T08:00:00+08:00","company":"星河设备","fact_status":"verified"},
+  {"item_id":"conflict_002","source_name":"company_notice","source_url":"https://offline.test/conflict-2","title":"星河设备未发现普遍过热","content":"企业公告称目前未发现同批次存在普遍过热，正在继续核查用户反馈。","published_at":"2026-09-06T12:00:00+08:00","company":"星河设备","fact_status":"conflicting"}
+]
