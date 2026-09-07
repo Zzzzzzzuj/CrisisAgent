@@ -52,6 +52,12 @@ def _legal_rag_search_skill() -> AgentSkill:
         enabled=True,
         version="1.0",
         handler=_execute_legal_rag_search,
+        read_only=True,
+        risk_level="medium",
+        requires_human_confirmation=False,
+        timeout_ms=3000,
+        max_retries=0,
+        fallback_policy="none",
     )
 
 
@@ -78,6 +84,12 @@ def _session_lookup_skill() -> AgentSkill:
         enabled=True,
         version="1.0",
         handler=_execute_session_lookup,
+        read_only=True,
+        risk_level="low",
+        requires_human_confirmation=False,
+        timeout_ms=1000,
+        max_retries=0,
+        fallback_policy="none",
     )
 
 
@@ -98,6 +110,12 @@ def _runtime_metrics_query_skill() -> AgentSkill:
         enabled=True,
         version="1.0",
         handler=lambda payload: collect_runtime_metrics(),
+        read_only=True,
+        risk_level="low",
+        requires_human_confirmation=False,
+        timeout_ms=1000,
+        max_retries=0,
+        fallback_policy="none",
     )
 
 
@@ -128,6 +146,12 @@ def _guardrail_check_skill() -> AgentSkill:
         enabled=True,
         version="1.0",
         handler=_execute_guardrail_check,
+        read_only=True,
+        risk_level="high",
+        requires_human_confirmation=False,
+        timeout_ms=1000,
+        max_retries=0,
+        fallback_policy="none",
     )
 
 
@@ -157,6 +181,12 @@ def _knowledge_document_search_skill() -> AgentSkill:
         enabled=True,
         version="1.0",
         handler=_execute_knowledge_document_search,
+        read_only=True,
+        risk_level="low",
+        requires_human_confirmation=False,
+        timeout_ms=2000,
+        max_retries=0,
+        fallback_policy="none",
     )
 
 
