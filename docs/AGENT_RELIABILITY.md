@@ -31,6 +31,8 @@ Arguments are serialized with sorted keys and hashed. If the same tool and norma
 
 当前预算只服务于 ToolRunner 旁路实验路径，不接入主 Executor，也不把项目改成 ReAct。未来如果要接入更动态的工具规划，必须先保留预算、重复调用检测和失败 trace，再评估主运行时集成。
 
+离线工具可靠性评测见 [`TOOL_RELIABILITY_EVAL.md`](TOOL_RELIABILITY_EVAL.md)。
+
 ### 面试讲解版
 
 > 我给工具执行增加了四层预算：最大 step、最大 retry、最大 runtime 和同参重复调用次数。每次工具调用前都会把参数规范化并计算 hash，如果同一个工具用同样参数重复执行，就返回 `TOOL_LOOP_DETECTED`，而不是继续调用。预算超限不会静默失败，会返回结构化错误并建议进入人工审核。第一阶段只在 ToolRunner 旁路验证，避免为了展示 ReAct 而改动主 Workflow。

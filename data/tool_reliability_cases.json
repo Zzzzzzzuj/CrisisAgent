@@ -1,0 +1,14 @@
+[
+  {"case_id": "success_basic", "description": "正常工具调用成功", "tool_name": "success_basic", "arguments": {"value": "ok"}, "expected_success": true},
+  {"case_id": "input_invalid", "description": "缺少必填参数", "tool_name": "success_basic", "arguments": {}, "expected_success": false, "expected_error_code": "TOOL_INPUT_INVALID", "expected_human_review_required": false},
+  {"case_id": "handler_exception", "description": "handler 抛出异常", "tool_name": "handler_exception", "arguments": {"value": "fail"}, "expected_success": false, "expected_error_code": "TOOL_EXECUTION_FAILED", "expected_human_review_required": true},
+  {"case_id": "timeout", "description": "handler 超时", "tool_name": "timeout", "arguments": {"value": "slow"}, "expected_success": false, "expected_error_code": "TOOL_TIMEOUT", "expected_human_review_required": true},
+  {"case_id": "retry_success", "description": "第一次失败后重试成功", "tool_name": "retry_success", "arguments": {"value": "retry"}, "expected_success": true},
+  {"case_id": "retry_exhausted", "description": "重试耗尽", "tool_name": "retry_exhausted", "arguments": {"value": "persistent"}, "expected_success": false, "expected_error_code": "TOOL_RETRY_EXHAUSTED", "expected_human_review_required": true},
+  {"case_id": "output_invalid", "description": "输出不符合 schema", "tool_name": "output_invalid", "arguments": {"value": "bad-output"}, "expected_success": false, "expected_error_code": "TOOL_OUTPUT_INVALID", "expected_human_review_required": true},
+  {"case_id": "fallback_success", "description": "主 handler 失败但 fallback 成功", "tool_name": "fallback_success", "arguments": {"value": "fallback"}, "expected_success": true, "expected_fallback_used": true},
+  {"case_id": "fallback_failed", "description": "主 handler 和 fallback 都失败", "tool_name": "fallback_failed", "arguments": {"value": "fallback-fail"}, "expected_success": false, "expected_error_code": "TOOL_FALLBACK_FAILED", "expected_fallback_used": true, "expected_human_review_required": true},
+  {"case_id": "loop_detected", "description": "相同工具和参数重复调用", "tool_name": "loop_detected", "arguments": {"value": "same"}, "expected_success": false, "expected_error_code": "TOOL_LOOP_DETECTED", "expected_human_review_required": true},
+  {"case_id": "disabled_tool", "description": "工具被禁用", "tool_name": "disabled_tool", "arguments": {"value": "disabled"}, "expected_success": false, "expected_error_code": "TOOL_DISABLED", "expected_human_review_required": false},
+  {"case_id": "tool_not_found", "description": "工具不存在", "tool_name": "missing_tool", "arguments": {"value": "missing"}, "expected_success": false, "expected_error_code": "TOOL_NOT_FOUND", "expected_human_review_required": false}
+]
