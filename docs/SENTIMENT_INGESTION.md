@@ -66,6 +66,29 @@ The distinction matters: `cluster_human_review_required` is the ingestion-layer 
 
 No real RSS or crawler is connected yet. A later phase may expose a separate `/api/ingestion/run`, but the internal bridge is intentionally validated first to keep the current API and frontend stable.
 
+## 第一版白名单真实采集
+
+项目现在提供一个默认关闭的、小范围 live ingestion 入口。它只读取 `data/source_registry.example.json` 这类显式注册的 RSS 或单篇文章 URL；示例 source 全部 `enabled=false`，未明确启用时不会发起网络请求。
+
+采集边界包括：只允许 HTTPS 和白名单 URL、检查 robots.txt、使用低频率和超时限制、限制最大条数，不登录、不处理验证码、不使用代理池、不递归抓取、不读取个人隐私或授权内容。真实文章默认标记为 `unverified`，不会自动发布声明。
+
+`FetchResult` 会区分 `collected`、`no_match`、`failed`、`skipped_by_robots` 和 `disabled`。其中 `no_match` 表示请求成功但没有匹配公司或风险关键词，`failed` 表示网络或解析失败，不能把采集失败误判成“没有舆情”。
+
+RSS adapter 优先使用可选 `feedparser`，未安装时可用受限 XML fallback 运行离线测试；article adapter 优先使用可选 `trafilatura`，否则使用受限 HTML fallback。普通 pytest 只使用本地 sample，不访问真实网站。
+
+手动 live demo 必须显式开启：
+
+```powershell
+python scripts/run_live_ingestion_demo.py --source-registry data/source_registry.example.json
+python scripts/run_live_ingestion_demo.py --live-fetch --source-registry data/source_registry.example.json
+```
+
+没有 `--live-fetch` 时脚本只提示，不执行网络访问。即使传入该参数，也只会尝试 registry 中 `enabled=true` 的 source。默认 demo、普通测试和现有 Agent workflow 仍然是离线路径。
+
+### 面试讲解版
+
+我没有把项目做成全网爬虫，而是先实现白名单、低频、可测试的真实采集入口。RSS 或单篇文章先经过 registry、robots 和请求限制，再统一转换成现有 `RawSentimentItem`，复用原来的 normalize、deduplicate、cluster 和 risk analyze。采集失败和没有匹配内容使用不同状态；未经证实或来源冲突的信息继续进入 Human Review。第一阶段只验证受控采集和现有 pipeline 的兼容，不声称实时全网监控或已接入企业生产数据。
+
 ## Interview explanation
 
 I did not send raw web content directly to an LLM. I first normalized source text, removed duplicates, clustered related reports into an event, and preserved current/historical/uncertain and verified/unverified/conflicting status. The resulting event text is then passed into the existing CrisisAgent runtime. This adds a realistic upstream input boundary without changing the existing Agent order, RAG logic, Prompt semantics, or API contract. Phase 1 uses offline fixtures; real RSS or platform ingestion would require separate source permissions, rate limiting, retry, idempotency, and privacy controls.

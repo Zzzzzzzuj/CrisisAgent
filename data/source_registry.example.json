@@ -1,0 +1,30 @@
+{
+  "sources": [
+    {
+      "source_id": "example_rss",
+      "source_name": "Example RSS",
+      "source_type": "rss",
+      "url": "https://example.com/rss.xml",
+      "enabled": false,
+      "company_keywords": ["示例公司"],
+      "risk_keywords": ["投诉", "监管", "泄露", "召回", "食品安全"],
+      "respect_robots": true,
+      "rate_limit_seconds": 3,
+      "timeout_seconds": 10,
+      "max_items": 5
+    },
+    {
+      "source_id": "example_article",
+      "source_name": "Example Article",
+      "source_type": "article_url",
+      "url": "https://example.com/news/article.html",
+      "enabled": false,
+      "company_keywords": ["示例公司"],
+      "risk_keywords": ["投诉", "监管", "泄露", "召回", "食品安全"],
+      "respect_robots": true,
+      "rate_limit_seconds": 3,
+      "timeout_seconds": 10,
+      "max_items": 1
+    }
+  ]
+}

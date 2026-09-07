@@ -12,6 +12,7 @@ from .risk_analyzer import (
     human_review_required,
 )
 from .schemas import ClusteredCrisisEvent
+from .schemas import RawSentimentItem
 from .source_adapters import load_local_items
 
 
@@ -41,6 +42,10 @@ def _cluster_event(items, observation_time: datetime | None = None) -> Clustered
 
 def run_sentiment_ingestion_pipeline(input_path: str | Path, observation_time: datetime | None = None) -> list[ClusteredCrisisEvent]:
     raw_items = load_local_items(input_path)
+    return run_sentiment_ingestion_items(raw_items, observation_time)
+
+
+def run_sentiment_ingestion_items(raw_items: list[RawSentimentItem], observation_time: datetime | None = None) -> list[ClusteredCrisisEvent]:
     normalized = [normalize_item(item) for item in raw_items]
     deduped, _ = deduplicate_items(normalized)
     return [_cluster_event(cluster, observation_time) for cluster in cluster_items(deduped)]
