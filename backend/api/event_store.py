@@ -10,7 +10,10 @@ from uuid import uuid4
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_EVENT_STORE_PATH = PROJECT_ROOT / "data" / "crisis_events.runtime.json"
-ALLOWED_EVENT_STATUSES = {"new", "ready_for_agent", "archived"}
+ALLOWED_EVENT_STATUSES = {
+    "new", "ready_for_agent", "running", "waiting_human",
+    "completed", "failed", "rejected", "archived",
+}
 
 
 class JsonCrisisEventStore:

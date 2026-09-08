@@ -129,7 +129,7 @@ def test_invalid_status_is_rejected(monkeypatch, tmp_path):
         "/api/events/from-ingestion-run",
         {"run_id": run_id, "cluster_id": cluster_id},
     ).json()["event_id"]
-    assert _request("PATCH", f"/api/events/{event_id}", {"status": "running"}).status_code == 422
+    assert _request("PATCH", f"/api/events/{event_id}", {"status": "not_a_status"}).status_code == 422
 
 
 def test_existing_crisis_routes_remain_available(monkeypatch, tmp_path):

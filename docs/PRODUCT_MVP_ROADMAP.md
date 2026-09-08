@@ -121,7 +121,20 @@ GET  /api/events/{event_id}/trace
 
 事件详情应保留来源、source_count、event_fingerprint、risk_level、fact_status、event_status、human_review_required 和关联的 Agent session。
 
-### P4：Report 导出
+### P4：事件运行 CrisisAgent + Trace / Human Review
+
+P4 已新增事件运行 CrisisAgent、Trace 查询和 Human Review 状态查询能力。
+
+事件入口复用现有 Dynamic Runtime，不改变 `/api/dynamic/run` 的请求语义：
+
+```text
+CrisisEvent
+    -> Dynamic Runtime
+    -> AgentState.metadata["ingestion"]
+    -> Agent Trace / Human Review
+```
+
+### P5：Report 导出
 
 ```text
 GET /api/events/{event_id}/report
@@ -129,7 +142,7 @@ GET /api/events/{event_id}/report
 
 第一版支持 Markdown 和 JSON。报告应包含事件摘要、来源、风险、RAG evidence、Agent trace、Human Review 状态和最终决策，不应自动发布声明。
 
-### P5：前端工作台
+### P6：前端工作台
 
 建议按业务任务拆分页面：
 
@@ -141,7 +154,7 @@ GET /api/events/{event_id}/report
 - 报告页；
 - 风险分布、24 小时趋势和来源状态统计。
 
-### P6：HTTP MCP / REST Tool API
+### P7：HTTP MCP / REST Tool API
 
 在 stdio MCP 验证稳定后，再考虑联网服务化：
 
