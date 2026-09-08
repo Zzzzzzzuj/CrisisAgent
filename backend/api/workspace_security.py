@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException
 
 from backend.auth import ROLE_ADMIN, VALID_ROLES, get_current_user, is_auth_enabled
-from backend.api.audit_store import get_audit_store
+from backend.product_storage.factory import get_audit_log_repository
 
 
 def get_workspace_user(
@@ -27,7 +27,7 @@ def authorize(user: dict, allowed_roles: set[str], action: str, resource_type: s
 
 
 def write_audit(user: dict, action: str, resource_type: str, resource_id: str, result: str = "success", reason: str = "", metadata: dict | None = None) -> None:
-    get_audit_store().append({
+    get_audit_log_repository().append({
         "actor_id": str(user.get("id", "demo-system")), "actor_role": str(user.get("role", "admin")),
         "action": action, "resource_type": resource_type, "resource_id": resource_id,
         "result": result, "reason": reason, "metadata": metadata or {},

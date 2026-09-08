@@ -191,6 +191,10 @@ P11 将 Eval Center 接入命令行和离线 CI 回归验证。虚构 Golden Cas
 
 P12 为 Source、IngestionRun、CrisisEvent、AgentRun、Report 和 Eval 增加最小角色权限、owner 字段和 JSON 审计日志；认证开启时复用 JWT，关闭时保留 demo 角色模拟。该阶段已包含 JWT 产品 API 权限矩阵测试与 admin Audit Log 工作台查看区域。
 
+### P13：Durable Data Foundation
+
+P13 新增 Repository 抽象，默认保留 JSON demo storage，并为 Source、IngestionRun、CrisisEvent、AgentRun、EvalRun、AuditLog 定义可选 PostgreSQL 持久化基础与 JSON 导出迁移包。
+
 ## 7. 真实采集边界
 
 第一版真实采集只允许：

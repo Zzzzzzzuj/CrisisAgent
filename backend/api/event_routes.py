@@ -12,7 +12,8 @@ from backend.api.event_schemas import (
     EventCreateResponse,
     EventPatchRequest,
 )
-from backend.api.event_store import ALLOWED_EVENT_STATUSES, get_crisis_event_store
+from backend.api.event_store import ALLOWED_EVENT_STATUSES
+from backend.product_storage.factory import get_crisis_event_repository
 from backend.api.ingestion_run_store import get_ingestion_run_store
 from backend.api.workspace_security import authorize, get_workspace_user, owner_fields, write_audit
 
@@ -37,7 +38,7 @@ def create_event_from_ingestion_run(payload: EventCreateFromRunRequest, user: di
             detail=f"Cluster '{payload.cluster_id}' not found in ingestion run '{payload.run_id}'.",
         )
 
-    event, created = get_crisis_event_store().create_from_cluster(
+    event, created = get_crisis_event_repository().create_from_cluster(
         source_run_id=payload.run_id,
         cluster=cluster,
         title=payload.title,
@@ -58,7 +59,7 @@ def list_events(
 ) -> CrisisEventListResponse:
     # Read permissions are checked at the route boundary for every product object.
     authorize(user, {"admin", "operator", "legal_reviewer", "viewer"}, "event.list", "event")
-    events = get_crisis_event_store().list_events(
+    events = get_crisis_event_repository().list_events(
         status=status_filter,
         risk_level=risk_level,
         limit=limit,
@@ -70,7 +71,7 @@ def list_events(
 @router.get("/{event_id}", response_model=CrisisEventResponse)
 def get_event(event_id: str, user: dict = Depends(get_workspace_user)) -> CrisisEventResponse:
     authorize(user, {"admin", "operator", "legal_reviewer", "viewer"}, "event.view", "event", event_id)
-    event = get_crisis_event_store().get(event_id)
+    event = get_crisis_event_repository().get(event_id)
     if event is None:
         raise HTTPException(status_code=404, detail=f"Crisis event '{event_id}' not found.")
     return CrisisEventResponse(**event)
@@ -82,7 +83,7 @@ def update_event(event_id: str, payload: EventPatchRequest, user: dict = Depends
     changes = payload.model_dump(exclude_unset=True)
     if "status" in changes and changes["status"] not in ALLOWED_EVENT_STATUSES:
         raise HTTPException(status_code=422, detail=f"Unsupported event status: {changes['status']}")
-    event = get_crisis_event_store().update(event_id, {**changes, **owner_fields(user, updating=True)})
+    event = get_crisis_event_repository().update(event_id, {**changes, **owner_fields(user, updating=True)})
     if event is None:
         raise HTTPException(status_code=404, detail=f"Crisis event '{event_id}' not found.")
     write_audit(user, "event.update", "event", event_id)
@@ -92,7 +93,7 @@ def update_event(event_id: str, payload: EventPatchRequest, user: dict = Depends
 @router.post("/{event_id}/archive", response_model=CrisisEventResponse)
 def archive_event(event_id: str, user: dict = Depends(get_workspace_user)) -> CrisisEventResponse:
     authorize(user, {"admin", "operator"}, "event.archive", "event", event_id)
-    event = get_crisis_event_store().archive(event_id)
+    event = get_crisis_event_repository().archive(event_id)
     if event is None:
         raise HTTPException(status_code=404, detail=f"Crisis event '{event_id}' not found.")
     write_audit(user, "event.archive", "event", event_id)
