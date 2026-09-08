@@ -94,6 +94,8 @@ POST  /api/sources/{source_id}/test
 
 ### P2：Ingestion Run API
 
+P2 已新增 Ingestion Run API，用于通过后端手动触发采集/归并并保存 run 记录。
+
 为采集任务提供可追踪的运行记录：
 
 ```text

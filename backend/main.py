@@ -14,6 +14,7 @@ from backend.auth import (
     require_reviewer,
     user_to_claims,
 )
+from backend.api.ingestion_routes import router as ingestion_router
 from backend.api.source_routes import router as source_router
 from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import run_dynamic_agent
@@ -59,6 +60,7 @@ app.add_middleware(
 )
 
 app.include_router(source_router)
+app.include_router(ingestion_router)
 
 
 @app.get("/health")

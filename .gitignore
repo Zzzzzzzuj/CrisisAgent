@@ -28,6 +28,7 @@ backend/core/data/checkpoints.json
 backend/memory/data/memories.json
 data/source_registry.local.json
 data/source_registry.runtime.json
+data/ingestion_runs.runtime.json
 
 # Local Codex acceptance artifacts
 .codex_*.log
