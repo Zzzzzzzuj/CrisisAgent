@@ -112,6 +112,7 @@ def test_source_ids_filter_and_override_cannot_exceed_source_limit(monkeypatch, 
 
 
 def test_live_fetch_uses_existing_adapter_and_pipeline(monkeypatch, tmp_path):
+    monkeypatch.setenv("ENABLE_API_LIVE_FETCH", "true")
     _post_source(monkeypatch, tmp_path, "live_source")
 
     def fake_fetch(self, source):
@@ -138,6 +139,7 @@ def test_live_fetch_uses_existing_adapter_and_pipeline(monkeypatch, tmp_path):
 
 
 def test_partial_run_preserves_no_match_and_failed_distinction(monkeypatch, tmp_path):
+    monkeypatch.setenv("ENABLE_API_LIVE_FETCH", "true")
     _post_source(monkeypatch, tmp_path, "no_match")
     assert _request("POST", "/api/sources", _source("failed_source")).status_code == 201
 
@@ -171,3 +173,42 @@ def test_list_detail_and_missing_run(monkeypatch, tmp_path):
 
     assert _request("GET", "/api/ingestion/runs/missing").status_code == 404
     assert _request("POST", "/api/ingestion/run", {"source_ids": ["missing"]}).status_code == 404
+
+
+def test_api_live_fetch_requires_explicit_server_enable(monkeypatch, tmp_path):
+    monkeypatch.setenv("ENABLE_API_LIVE_FETCH", "false")
+    _post_source(monkeypatch, tmp_path, "protected_source", enabled=True)
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("disabled API live fetch must not call an adapter")
+
+    monkeypatch.setattr("backend.api.ingestion_routes.RssSourceAdapter.fetch", fail_if_called)
+    response = _request("POST", "/api/ingestion/run", {"live_fetch": True})
+    assert response.status_code == 403
+    assert "live fetch is disabled by server config" in response.json()["detail"]
+
+
+def test_dry_run_is_allowed_when_api_live_fetch_is_disabled(monkeypatch, tmp_path):
+    monkeypatch.setenv("ENABLE_API_LIVE_FETCH", "false")
+    _post_source(monkeypatch, tmp_path, "dry_protected_source", enabled=True)
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("dry run must not call an adapter")
+
+    monkeypatch.setattr("backend.api.ingestion_routes.RssSourceAdapter.fetch", fail_if_called)
+    response = _request("POST", "/api/ingestion/run", {"live_fetch": True, "dry_run": True})
+    assert response.status_code == 201
+    assert response.json()["status"] == "dry_run"
+
+
+def test_api_live_fetch_can_use_existing_adapter_when_explicitly_enabled(monkeypatch, tmp_path):
+    monkeypatch.setenv("ENABLE_API_LIVE_FETCH", "true")
+    _post_source(monkeypatch, tmp_path, "enabled_source", enabled=True)
+
+    def fake_fetch(self, source):
+        return FetchResult(source.source_id, source.source_name, "no_match", 1, 0, None, [])
+
+    monkeypatch.setattr("backend.api.ingestion_routes.RssSourceAdapter.fetch", fake_fetch)
+    response = _request("POST", "/api/ingestion/run", {"live_fetch": True})
+    assert response.status_code == 201
+    assert response.json()["source_results"][0]["status"] == "no_match"

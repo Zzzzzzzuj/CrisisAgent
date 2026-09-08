@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 from datetime import datetime, timezone
+import os
 from typing import Any
 from uuid import uuid4
 
@@ -25,6 +26,11 @@ router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 
 @router.post("/run", response_model=IngestionRunResponse, status_code=status.HTTP_201_CREATED)
 def run_ingestion(payload: IngestionRunRequest) -> IngestionRunResponse:
+    if payload.live_fetch and not payload.dry_run and not _api_live_fetch_enabled():
+        raise HTTPException(
+            status_code=403,
+            detail="live fetch is disabled by server config; set ENABLE_API_LIVE_FETCH=true to enable it.",
+        )
     try:
         sources = _select_sources(payload.source_ids)
     except KeyError as exc:
@@ -169,3 +175,7 @@ def _summary(run: dict[str, Any]) -> IngestionRunSummary:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _api_live_fetch_enabled() -> bool:
+    return os.getenv("ENABLE_API_LIVE_FETCH", "false").strip().lower() == "true"
