@@ -98,6 +98,10 @@ The ToolRunner is first validated in the Tool-Using Legal Agent experiment path.
 
 This phase is not a ReAct rewrite, distributed tool platform or MCP Server. The planner remains controlled and the default registry does not expose approve/reject/publish or other irreversible actions. A future phase can add execution budgets and repeated-call detection before considering any main-runtime integration.
 
+## MCP Server
+
+The optional [MCP Server](MCP_SERVER.md) exposes a separate read-only allowlist through stdio. It reuses `ToolRunner` rather than bypassing tool validation and budgets. The stdio server is a first protocol-validation phase; a future streamable HTTP deployment must add authentication, authorization, rate limiting, audit, HTTPS and session permissions.
+
 ## Interview version
 
 > I did not stop at exposing a function as a tool. I first described each tool's input/output schema, read-only and risk metadata, timeout and retry budget. Then I added a standalone ToolRunner that validates input, bounds execution, validates output, retries only within the declared budget, optionally falls back, and returns a structured error code and trace. I kept it on the Tool-Using Legal Agent experiment path rather than changing the production workflow, so the reliability mechanism can be tested offline without changing existing business behavior.
