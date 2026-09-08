@@ -120,3 +120,23 @@ export function getDashboardSourceHealth() {
 export function getDashboardReviewQueue() {
   return api.get("/api/dashboard/review-queue").then((response) => response.data);
 }
+
+export function runEval(payload = {}) {
+  return api.post("/api/evals/run", payload).then((response) => response.data);
+}
+
+export function listEvalRuns() {
+  return api.get("/api/evals/runs").then((response) => response.data);
+}
+
+export function getEvalRun(evalRunId) {
+  return api.get(`/api/evals/runs/${evalRunId}`).then((response) => response.data);
+}
+
+export function getEvalOverview() {
+  return api.get("/api/evals/overview").then((response) => response.data);
+}
+
+export function getEvalRegression() {
+  return api.get("/api/evals/regression").then((response) => response.data);
+}

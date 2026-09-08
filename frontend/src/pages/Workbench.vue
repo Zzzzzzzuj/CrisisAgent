@@ -10,6 +10,9 @@ import {
   getDashboardSeverity,
   getDashboardSourceHealth,
   getDashboardTrends,
+  getEvalOverview,
+  getEvalRegression,
+  getEvalRun,
   getEvent,
   getEventReport,
   getEventReview,
@@ -17,9 +20,11 @@ import {
   getEventTrace,
   getIngestionRun,
   listEvents,
+  listEvalRuns,
   listIngestionRuns,
   listSources,
   runEventAgent,
+  runEval,
   runIngestion,
   testSource,
   updateSource,
@@ -45,6 +50,10 @@ const dashboardSeverity = ref(null);
 const dashboardTrends = ref([]);
 const dashboardSourceHealth = ref([]);
 const dashboardReviewQueue = ref([]);
+const evalOverview = ref(null);
+const evalRegression = ref(null);
+const evalRuns = ref([]);
+const selectedEvalRun = ref(null);
 
 const sourceForm = ref({
   source_id: "",
@@ -77,7 +86,7 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
-    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard()]);
+    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter()]);
   } catch (err) {
     showError(err);
   } finally {
@@ -113,6 +122,41 @@ async function loadDashboard() {
   dashboardTrends.value = trends.buckets || [];
   dashboardSourceHealth.value = sourceHealth.sources || [];
   dashboardReviewQueue.value = reviewQueue.events || [];
+}
+
+async function loadEvalCenter() {
+  const [overview, regression, runsResponse] = await Promise.all([
+    getEvalOverview(),
+    getEvalRegression(),
+    listEvalRuns(),
+  ]);
+  evalOverview.value = overview;
+  evalRegression.value = regression;
+  evalRuns.value = runsResponse.runs || [];
+  if (!selectedEvalRun.value && runsResponse.runs?.[0]) {
+    selectedEvalRun.value = await getEvalRun(runsResponse.runs[0].eval_run_id);
+  }
+}
+
+async function runOfflineEval() {
+  action.value = "eval";
+  error.value = "";
+  try {
+    selectedEvalRun.value = await runEval({});
+    await loadEvalCenter();
+  } catch (err) {
+    showError(err);
+  } finally {
+    action.value = "";
+  }
+}
+
+async function inspectEvalRun(run) {
+  try {
+    selectedEvalRun.value = await getEvalRun(run.eval_run_id);
+  } catch (err) {
+    showError(err);
+  }
 }
 
 async function submitSource() {
@@ -411,6 +455,71 @@ function compactOutput(value) {
       </div>
     </article>
 
+    <article class="page-card workbench-card eval-center">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">P9 Eval Center</p>
+          <h3>评估中心</h3>
+        </div>
+        <button class="primary-button" :disabled="Boolean(action)" @click="runOfflineEval">运行离线评估</button>
+      </div>
+      <p class="muted tiny-text">只读取已有 runtime store 与确定性规则：no_live_fetch · no_real_llm_call · automatic_publish=false。</p>
+      <div v-if="evalOverview" class="eval-metrics">
+        <div class="eval-metric"><span>最新通过率</span><strong>{{ evalOverview.latest_pass_rate == null ? "暂无" : `${Math.round(evalOverview.latest_pass_rate * 100)}%` }}</strong></div>
+        <div class="eval-metric"><span>评估用例</span><strong>{{ evalOverview.total_cases }}</strong></div>
+        <div class="eval-metric"><span>通过 / 失败</span><strong>{{ evalOverview.passed_cases }} / {{ evalOverview.failed_cases }}</strong></div>
+        <div class="eval-metric"><span>历史 EvalRun</span><strong>{{ evalOverview.total_runs }}</strong></div>
+      </div>
+
+      <div class="eval-grid">
+        <section>
+          <h4>维度汇总</h4>
+          <div v-if="evalOverview && Object.keys(evalOverview.dimensions_summary || {}).length" class="eval-dimensions">
+            <div v-for="(summary, name) in evalOverview.dimensions_summary" :key="name" class="eval-dimension-row">
+              <strong>{{ name }}</strong>
+              <span>{{ Math.round(summary.pass_rate * 100) }}%</span>
+              <small>{{ summary.passed_cases }}/{{ summary.total_cases }} 通过</small>
+            </div>
+          </div>
+          <p v-else class="empty-inline">尚未运行评估。</p>
+          <p v-if="evalOverview?.top_failed_dimensions?.length" class="error tiny-text">失败维度：{{ evalOverview.top_failed_dimensions.join('、') }}</p>
+        </section>
+        <section>
+          <h4>Regression 对比</h4>
+          <div v-if="evalRegression && !evalRegression.not_enough_runs" class="regression-box">
+            <strong>{{ Math.round((evalRegression.current_pass_rate || 0) * 100) }}%</strong>
+            <span>相较上次 {{ evalRegression.delta >= 0 ? "+" : "" }}{{ Math.round((evalRegression.delta || 0) * 100) }}%</span>
+            <small>新增失败：{{ evalRegression.newly_failed_cases?.join('、') || '无' }}</small>
+            <small>恢复用例：{{ evalRegression.recovered_cases?.join('、') || '无' }}</small>
+          </div>
+          <p v-else class="empty-inline">至少运行两次评估后显示回归对比。</p>
+        </section>
+      </div>
+
+      <div class="eval-grid lower-eval-grid">
+        <section>
+          <h4>失败项</h4>
+          <div v-if="selectedEvalRun?.failed_items?.length" class="eval-failure-list">
+            <div v-for="item in selectedEvalRun.failed_items" :key="item.case_id" class="eval-failure-row">
+              <strong>{{ item.dimension }} · {{ item.name }}</strong>
+              <p>{{ item.reason }}</p>
+            </div>
+          </div>
+          <p v-else class="empty-inline">最新查看的 EvalRun 没有失败项。</p>
+        </section>
+        <section>
+          <h4>Eval Run 历史</h4>
+          <div v-if="evalRuns.length" class="eval-run-list">
+            <button v-for="run in evalRuns" :key="run.eval_run_id" class="eval-run-row" @click="inspectEvalRun(run)">
+              <span><strong>{{ run.status }}</strong><small>{{ run.eval_run_id }}</small></span>
+              <span>{{ Math.round(run.pass_rate * 100) }}% · {{ run.passed_cases }}/{{ run.total_cases }}</span>
+            </button>
+          </div>
+          <p v-else class="empty-inline">暂无持久化 EvalRun。</p>
+        </section>
+      </div>
+    </article>
+
     <article class="page-card workbench-card">
       <div class="section-heading">
         <div><p class="eyebrow">P1 Source Registry</p><h3>数据源管理</h3></div>
@@ -549,6 +658,19 @@ function compactOutput(value) {
 .workbench-card { padding: 22px; }
 .workbench-error { margin: 0; }
 .crisis-radar { border-top: 4px solid #c55d3d; }
+.eval-center { border-top: 4px solid #517d78; }
+.eval-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.eval-metric { display: grid; gap: 5px; padding: 13px; border-radius: 12px; background: #eef5f3; color: #60766d; font-size: 12px; }
+.eval-metric strong { color: #214941; font-family: Georgia, serif; font-size: 23px; }
+.eval-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.lower-eval-grid { margin-top: 18px; }
+.eval-grid h4 { margin: 0 0 10px; color: #294637; }
+.eval-dimensions, .eval-failure-list, .eval-run-list { display: grid; gap: 8px; }
+.eval-dimension-row, .eval-run-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 9px; align-items: center; border-top: 1px solid #e7ece9; padding: 10px 0; font-size: 13px; }
+.eval-dimension-row small, .eval-run-row small, .regression-box small { color: #738077; font-size: 12px; }
+.regression-box { display: grid; gap: 7px; padding: 14px; border-radius: 12px; background: #f2f7f5; }.regression-box strong { color: #244d43; font-family: Georgia, serif; font-size: 26px; }
+.eval-failure-row { border-left: 3px solid #bd6249; padding: 9px 12px; background: #fff7f4; }.eval-failure-row p { margin: 5px 0 0; color: #765a51; font-size: 12px; }
+.eval-run-row { width: 100%; border-right: 0; border-bottom: 0; border-left: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }.eval-run-row:hover { background: #f5faf6; }.eval-run-row span:first-child { display: grid; gap: 3px; }
 .radar-metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 16px 0 20px; }
 .radar-metric { display: grid; gap: 5px; padding: 13px; border-radius: 12px; background: #f1f5f2; color: #607066; font-size: 12px; }
 .radar-metric strong { color: #193329; font-family: Georgia, serif; font-size: 25px; }
@@ -607,8 +729,8 @@ function compactOutput(value) {
 .draft-statement { line-height: 1.8; margin-bottom: 0; }
 .report-box pre { max-height: 360px; overflow: auto; white-space: pre-wrap; margin: 14px 0 0; background: #17231f; color: #edf7f0; padding: 16px; border-radius: 12px; font-size: 12px; }
 @media (max-width: 900px) {
-  .workbench-columns, .workbench-form, .radar-grid { grid-template-columns: 1fr; }
-  .radar-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .workbench-columns, .workbench-form, .radar-grid, .eval-grid { grid-template-columns: 1fr; }
+  .radar-metrics, .eval-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .facts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>

@@ -166,7 +166,11 @@ P7 新增手动联网采集入口，通过 `ENABLE_API_LIVE_FETCH`、用户确�
 
 P8 新增 Crisis Radar Dashboard，用于展示事件紧急程度、风险分布、待审核队列和来源健康状态。第一版基于既有事件和采集记录进行可解释规则聚合，不重新运行 Agent 或自动发布声明。
 
-### P9：HTTP MCP / REST Tool API
+### P9：Eval Center
+
+P9 新增 Eval Center，用于对 ingestion、event、urgency、agent_run、report 和 tool reliability 做离线评估，并支持 EvalRun、overview 和 regression 对比。
+
+### P10：HTTP MCP / REST Tool API
 
 在 stdio MCP 验证稳定后，再考虑联网服务化：
 
