@@ -5,6 +5,11 @@ import {
   archiveEvent,
   createEventFromIngestionRun,
   createSource,
+  getDashboardOverview,
+  getDashboardReviewQueue,
+  getDashboardSeverity,
+  getDashboardSourceHealth,
+  getDashboardTrends,
   getEvent,
   getEventReport,
   getEventReview,
@@ -29,10 +34,17 @@ const eventRun = ref(null);
 const eventTrace = ref(null);
 const eventReview = ref(null);
 const report = ref(null);
+const liveFetchOpen = ref(false);
+const liveFetchConfirmation = ref("");
 const loading = ref(false);
 const action = ref("");
 const error = ref("");
 const sourceTestResults = ref({});
+const dashboardOverview = ref(null);
+const dashboardSeverity = ref(null);
+const dashboardTrends = ref([]);
+const dashboardSourceHealth = ref([]);
+const dashboardReviewQueue = ref([]);
 
 const sourceForm = ref({
   source_id: "",
@@ -46,6 +58,18 @@ const sourceForm = ref({
 const eventSummary = computed(() => selectedEvent.value?.event_summary || "暂无事件摘要");
 const traceItems = computed(() => eventTrace.value?.trace || []);
 const hasReport = computed(() => Boolean(report.value?.markdown_content));
+const sourceFailureRate = computed(() => {
+  const totals = dashboardSourceHealth.value.reduce(
+    (result, source) => {
+      result.attempted += source.collected_count + source.no_match_count + source.failed_count + source.skipped_by_robots_count;
+      result.failed += source.failed_count + source.skipped_by_robots_count;
+      return result;
+    },
+    { attempted: 0, failed: 0 },
+  );
+  return totals.attempted ? `${Math.round((totals.failed / totals.attempted) * 100)}%` : "0%";
+});
+const trendMax = computed(() => Math.max(1, ...dashboardTrends.value.map((item) => item.total)));
 
 onMounted(loadAll);
 
@@ -53,7 +77,7 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
-    await Promise.all([loadSources(), loadRuns(), loadEvents()]);
+    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard()]);
   } catch (err) {
     showError(err);
   } finally {
@@ -74,6 +98,21 @@ async function loadRuns() {
 async function loadEvents() {
   const data = await listEvents();
   events.value = data.events || [];
+}
+
+async function loadDashboard() {
+  const [overview, severity, trends, sourceHealth, reviewQueue] = await Promise.all([
+    getDashboardOverview(),
+    getDashboardSeverity(),
+    getDashboardTrends(),
+    getDashboardSourceHealth(),
+    getDashboardReviewQueue(),
+  ]);
+  dashboardOverview.value = overview;
+  dashboardSeverity.value = severity;
+  dashboardTrends.value = trends.buckets || [];
+  dashboardSourceHealth.value = sourceHealth.sources || [];
+  dashboardReviewQueue.value = reviewQueue.events || [];
 }
 
 async function submitSource() {
@@ -125,9 +164,27 @@ async function startIngestion(dryRun) {
   try {
     const result = await runIngestion({ live_fetch: false, dry_run: dryRun });
     selectedRun.value = result;
-    await loadRuns();
+    await Promise.all([loadRuns(), loadDashboard()]);
   } catch (err) {
     showError(err);
+  } finally {
+    action.value = "";
+  }
+}
+
+async function startLiveIngestion() {
+  action.value = "live-ingestion";
+  error.value = "";
+  try {
+    const result = await runIngestion({ live_fetch: true, dry_run: false });
+    selectedRun.value = result;
+    await Promise.all([loadRuns(), loadDashboard()]);
+  } catch (err) {
+    if (err.response?.status === 403) {
+      error.value = "后端未开启 ENABLE_API_LIVE_FETCH=true，本次没有联网。";
+    } else {
+      showError(err);
+    }
   } finally {
     action.value = "";
   }
@@ -153,7 +210,7 @@ async function createEvent(cluster) {
       run_id: selectedRun.value.run_id,
       cluster_id: cluster.cluster_id,
     });
-    await loadEvents();
+    await Promise.all([loadEvents(), loadDashboard()]);
   } catch (err) {
     showError(err);
   } finally {
@@ -199,7 +256,7 @@ async function runAgent() {
       runtime_mode: "sync",
       force_rerun: false,
     });
-    await loadEvents();
+    await Promise.all([loadEvents(), loadDashboard()]);
     selectedEvent.value = await getEvent(selectedEvent.value.event_id);
     eventTrace.value = await getEventTrace(selectedEvent.value.event_id);
     eventReview.value = await getEventReview(selectedEvent.value.event_id);
@@ -214,7 +271,7 @@ async function archiveSelectedEvent() {
   if (!selectedEvent.value) return;
   try {
     selectedEvent.value = await archiveEvent(selectedEvent.value.event_id);
-    await loadEvents();
+    await Promise.all([loadEvents(), loadDashboard()]);
   } catch (err) {
     showError(err);
   }
@@ -274,6 +331,86 @@ function compactOutput(value) {
     <p v-if="error" class="error workbench-error">{{ error }}</p>
     <p v-if="loading" class="muted">正在加载工作台数据...</p>
 
+    <article class="page-card workbench-card crisis-radar">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">P8 Crisis Radar</p>
+          <h3>危机态势总览</h3>
+        </div>
+        <span class="status-pill">规则评分 · automatic_publish=false</span>
+      </div>
+      <div v-if="dashboardOverview" class="radar-metrics">
+        <div class="radar-metric"><span>总事件数</span><strong>{{ dashboardOverview.total_events }}</strong></div>
+        <div class="radar-metric sev-one"><span>SEV-1</span><strong>{{ dashboardOverview.sev1_count }}</strong></div>
+        <div class="radar-metric sev-two"><span>SEV-2</span><strong>{{ dashboardOverview.sev2_count }}</strong></div>
+        <div class="radar-metric"><span>待审核</span><strong>{{ dashboardOverview.waiting_human_count }}</strong></div>
+        <div class="radar-metric"><span>未核实</span><strong>{{ dashboardOverview.unverified_count }}</strong></div>
+        <div class="radar-metric"><span>来源失败率</span><strong>{{ sourceFailureRate }}</strong></div>
+      </div>
+      <p v-else class="empty-inline">暂无事件数据，创建 CrisisEvent 后会显示危机态势。</p>
+
+      <div class="radar-grid">
+        <section>
+          <h4>最高优先级事件</h4>
+          <div v-if="dashboardOverview?.top_urgent_events?.length" class="radar-list">
+            <button
+              v-for="event in dashboardOverview.top_urgent_events"
+              :key="event.event_id"
+              class="radar-event"
+              @click="inspectEvent(event)"
+            >
+              <span :class="['severity-badge', event.severity.toLowerCase()]">{{ event.severity }}</span>
+              <span class="radar-event-main"><strong>{{ event.title }}</strong><small>{{ event.company || '未标注企业' }} · {{ event.urgency_score }} 分</small></span>
+              <span class="radar-action">{{ event.recommended_action }}</span>
+            </button>
+          </div>
+          <p v-else class="empty-inline">暂无活跃危机事件。</p>
+        </section>
+        <section>
+          <h4>人工审核队列</h4>
+          <div v-if="dashboardReviewQueue.length" class="radar-list">
+            <button
+              v-for="event in dashboardReviewQueue"
+              :key="event.event_id"
+              class="radar-event"
+              @click="inspectEvent(event)"
+            >
+              <span :class="['severity-badge', event.severity.toLowerCase()]">{{ event.severity }}</span>
+              <span class="radar-event-main"><strong>{{ event.title }}</strong><small>{{ event.priority_reasons.join('、') || '需要人工核查' }}</small></span>
+            </button>
+          </div>
+          <p v-else class="empty-inline">当前没有待审核事件。</p>
+        </section>
+      </div>
+
+      <div class="radar-grid lower-radar-grid">
+        <section>
+          <h4>来源健康状态</h4>
+          <div v-if="dashboardSourceHealth.length" class="source-health-list">
+            <div v-for="source in dashboardSourceHealth" :key="source.source_id" class="source-health-row">
+              <strong>{{ source.source_id }}</strong>
+              <span>{{ source.latest_status }}</span>
+              <span>失败 {{ Math.round(source.failure_rate * 100) }}%</span>
+              <small>采集 {{ source.collected_count }} · 无匹配 {{ source.no_match_count }} · 失败 {{ source.failed_count }} · robots 跳过 {{ source.skipped_by_robots_count }}</small>
+            </div>
+          </div>
+          <p v-else class="empty-inline">暂无来源运行记录。</p>
+        </section>
+        <section>
+          <h4>事件趋势</h4>
+          <div v-if="dashboardTrends.length" class="trend-list">
+            <div v-for="item in dashboardTrends" :key="item.bucket" class="trend-row">
+              <span>{{ item.bucket }}</span>
+              <div class="trend-track"><i :style="{ width: `${(item.total / trendMax) * 100}%` }"></i></div>
+              <strong>{{ item.total }}</strong>
+              <small>高风险 {{ item.high_risk }} · 待审核 {{ item.waiting_human }}</small>
+            </div>
+          </div>
+          <p v-else class="empty-inline">暂无可聚合的事件趋势。</p>
+        </section>
+      </div>
+    </article>
+
     <article class="page-card workbench-card">
       <div class="section-heading">
         <div><p class="eyebrow">P1 Source Registry</p><h3>数据源管理</h3></div>
@@ -309,10 +446,33 @@ function compactOutput(value) {
           <button class="primary-button" :disabled="Boolean(action)" @click="startIngestion(true)">运行 dry-run</button>
           <button class="ghost-button" :disabled="Boolean(action)" @click="startIngestion(false)">运行离线采集</button>
         </div>
-        <p class="muted tiny-text">工作台不提供 live_fetch=true 操作；真实采集仍需受控脚本显式开启。</p>
+        <p class="muted tiny-text">手动联网采集默认折叠，只有完成确认后才允许提交。</p>
+      <details
+        class="live-fetch-panel"
+        :open="liveFetchOpen"
+        @toggle="liveFetchOpen = $event.target.open"
+      >
+          <summary>高级：手动联网采集</summary>
+          <div class="live-fetch-warning">
+            <strong>联网采集风险提示</strong>
+            <p>只会访问白名单且 enabled=true 的 source；需要后端开启 ENABLE_API_LIVE_FETCH=true。</p>
+            <p>采集会遵守 robots、timeout、rate limit 和 max_items，不会自动发布声明。</p>
+            <input v-model="liveFetchConfirmation" placeholder="输入：我确认手动联网采集" />
+            <button
+              class="danger-button"
+              :disabled="liveFetchConfirmation !== '我确认手动联网采集' || Boolean(action)"
+              @click="startLiveIngestion"
+            >手动联网采集 enabled 来源</button>
+          </div>
+        </details>
         <div v-if="selectedRun" class="run-summary">
           <strong>{{ selectedRun.run_id }}</strong>
           <span>{{ statusText(selectedRun.status) }} · raw {{ selectedRun.raw_count }} · clusters {{ selectedRun.cluster_count }}</span>
+          <div v-if="selectedRun.source_results?.length" class="source-result-list">
+            <span v-for="item in selectedRun.source_results" :key="item.source_id">
+              {{ item.source_id }}: {{ item.status }}{{ item.failed_reason ? ` (${item.failed_reason})` : '' }}
+            </span>
+          </div>
         </div>
         <div v-if="runs.length" class="data-list compact-list">
           <div v-for="run in runs" :key="run.run_id" class="data-row clickable" @click="inspectRun(run)">
@@ -388,6 +548,29 @@ function compactOutput(value) {
 .workbench-page { display: grid; gap: 18px; }
 .workbench-card { padding: 22px; }
 .workbench-error { margin: 0; }
+.crisis-radar { border-top: 4px solid #c55d3d; }
+.radar-metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 16px 0 20px; }
+.radar-metric { display: grid; gap: 5px; padding: 13px; border-radius: 12px; background: #f1f5f2; color: #607066; font-size: 12px; }
+.radar-metric strong { color: #193329; font-family: Georgia, serif; font-size: 25px; }
+.radar-metric.sev-one { background: #ffe6df; color: #9a301c; }.radar-metric.sev-one strong { color: #9a301c; }
+.radar-metric.sev-two { background: #fff0d8; color: #915e13; }.radar-metric.sev-two strong { color: #915e13; }
+.radar-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.radar-grid h4 { margin: 0 0 10px; color: #294637; }
+.lower-radar-grid { margin-top: 20px; }
+.radar-list, .source-health-list, .trend-list { display: grid; gap: 8px; }
+.radar-event { display: flex; gap: 10px; align-items: center; width: 100%; border: 1px solid #e1e8e3; border-radius: 10px; padding: 10px; background: #fff; color: inherit; text-align: left; cursor: pointer; }
+.radar-event:hover { background: #f5faf6; }
+.radar-event-main { display: grid; min-width: 0; gap: 3px; flex: 1; }
+.radar-event-main strong, .radar-event-main small, .radar-action { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.radar-event-main small, .radar-action, .source-health-row small, .trend-row small { color: #738077; font-size: 12px; }
+.radar-action { max-width: 140px; color: #607569; font-size: 12px; }
+.severity-badge { flex: 0 0 auto; border-radius: 999px; padding: 4px 7px; background: #e9efeb; color: #516158; font-size: 11px; font-weight: 700; }
+.severity-badge.sev-1 { background: #ffe0d7; color: #9a301c; }.severity-badge.sev-2 { background: #fff0d7; color: #915e13; }.severity-badge.sev-3 { background: #e7f0df; color: #527036; }
+.source-health-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 7px 10px; align-items: center; padding: 9px 0; border-top: 1px solid #e7ece9; font-size: 13px; }
+.source-health-row small { grid-column: 1 / -1; }
+.trend-row { display: grid; grid-template-columns: 88px minmax(60px, 1fr) 24px; gap: 8px; align-items: center; font-size: 12px; }
+.trend-row small { grid-column: 2 / -1; }
+.trend-track { height: 8px; overflow: hidden; border-radius: 999px; background: #e7ece9; }.trend-track i { display: block; height: 100%; border-radius: inherit; background: #6f9d7e; }
 .workbench-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .workbench-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
 .workbench-form input, .workbench-form select { min-width: 0; border: 1px solid #d9dfdc; border-radius: 10px; padding: 10px 12px; background: #fff; }
@@ -405,6 +588,14 @@ function compactOutput(value) {
 .empty-inline { color: #78847f; padding: 14px 0; }
 .tiny-text { font-size: 12px; }
 .run-summary, .run-result, .review-box, .report-box { margin-top: 14px; border-radius: 14px; padding: 14px; background: #f5f8f6; }
+.live-fetch-panel { margin: 14px 0; border: 1px solid #e4c7a1; border-radius: 12px; padding: 10px 12px; background: #fff8ec; }
+.live-fetch-panel summary { cursor: pointer; font-weight: 700; color: #8a4b18; }
+.live-fetch-warning { display: grid; gap: 8px; padding-top: 12px; color: #6e5138; font-size: 13px; }
+.live-fetch-warning p { margin: 0; }
+.live-fetch-warning input { border: 1px solid #d8c2a9; border-radius: 9px; padding: 9px 10px; background: #fff; }
+.danger-button { width: fit-content; border: 0; border-radius: 9px; padding: 9px 12px; color: #fff; background: #a84f3b; cursor: pointer; }
+.danger-button:disabled { cursor: not-allowed; opacity: .45; }
+.source-result-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12px; color: #64736b; }
 .cluster-row { align-items: flex-start; }
 .cluster-row p { margin: 5px 0 0; color: #68756e; font-size: 13px; }
 .facts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
@@ -416,7 +607,8 @@ function compactOutput(value) {
 .draft-statement { line-height: 1.8; margin-bottom: 0; }
 .report-box pre { max-height: 360px; overflow: auto; white-space: pre-wrap; margin: 14px 0 0; background: #17231f; color: #edf7f0; padding: 16px; border-radius: 12px; font-size: 12px; }
 @media (max-width: 900px) {
-  .workbench-columns, .workbench-form { grid-template-columns: 1fr; }
+  .workbench-columns, .workbench-form, .radar-grid { grid-template-columns: 1fr; }
+  .radar-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .facts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>

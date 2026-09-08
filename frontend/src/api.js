@@ -100,3 +100,23 @@ export function getEventReview(eventId) {
 export function getEventReport(eventId, format = "json") {
   return api.get(`/api/events/${eventId}/report`, { params: { format } }).then((response) => response.data);
 }
+
+export function getDashboardOverview() {
+  return api.get("/api/dashboard/overview").then((response) => response.data);
+}
+
+export function getDashboardSeverity() {
+  return api.get("/api/dashboard/severity").then((response) => response.data);
+}
+
+export function getDashboardTrends() {
+  return api.get("/api/dashboard/trends").then((response) => response.data);
+}
+
+export function getDashboardSourceHealth() {
+  return api.get("/api/dashboard/source-health").then((response) => response.data);
+}
+
+export function getDashboardReviewQueue() {
+  return api.get("/api/dashboard/review-queue").then((response) => response.data);
+}

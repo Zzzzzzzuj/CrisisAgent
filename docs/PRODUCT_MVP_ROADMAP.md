@@ -158,7 +158,15 @@ P6 新增前端工作台，用于串联来源管理、采集运行、事件库�
 - 报告页；
 - 风险分布、24 小时趋势和来源状态统计。
 
-### P7：HTTP MCP / REST Tool API
+### P7：手动联网采集入口
+
+P7 新增手动联网采集入口，通过 `ENABLE_API_LIVE_FETCH`、用户确认、白名单 source、robots、timeout、rate limit 和 max_items 控制真实采集风险。
+
+### P8：Crisis Radar Dashboard
+
+P8 新增 Crisis Radar Dashboard，用于展示事件紧急程度、风险分布、待审核队列和来源健康状态。第一版基于既有事件和采集记录进行可解释规则聚合，不重新运行 Agent 或自动发布声明。
+
+### P9：HTTP MCP / REST Tool API
 
 在 stdio MCP 验证稳定后，再考虑联网服务化：
 
