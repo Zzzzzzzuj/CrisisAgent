@@ -12,6 +12,7 @@
       <nav>
         <RouterLink to="/cases">危机案例</RouterLink>
         <RouterLink to="/new">新建案例</RouterLink>
+        <RouterLink to="/workbench">运营工作台</RouterLink>
       </nav>
     </aside>
 

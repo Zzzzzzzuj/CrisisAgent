@@ -146,6 +146,8 @@ GET /api/events/{event_id}/report
 
 ### P6：前端工作台
 
+P6 新增前端工作台，用于串联来源管理、采集运行、事件库、Agent Run、Trace/Review 和 Report。
+
 建议按业务任务拆分页面：
 
 - 数据源管理页；

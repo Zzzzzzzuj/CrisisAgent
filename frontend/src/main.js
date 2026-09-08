@@ -5,6 +5,7 @@ import App from "./App.vue";
 import CreateTask from "./pages/CreateTask.vue";
 import SessionDetail from "./pages/SessionDetail.vue";
 import SessionList from "./pages/SessionList.vue";
+import Workbench from "./pages/Workbench.vue";
 import "./styles.css";
 
 const router = createRouter({
@@ -13,6 +14,7 @@ const router = createRouter({
     { path: "/", component: SessionList },
     { path: "/cases", component: SessionList },
     { path: "/new", component: CreateTask },
+    { path: "/workbench", component: Workbench },
     { path: "/sessions", component: SessionList },
     {
       path: "/cases/:sessionId",
