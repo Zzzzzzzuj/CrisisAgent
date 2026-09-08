@@ -108,6 +108,8 @@ GET  /api/ingestion/runs/{run_id}
 
 ### P3：CrisisEvent 事件库
 
+P3 已新增 CrisisEvent 事件库，用于把采集 run 中的 cluster 提升为可管理的危机事件。
+
 将 `ClusteredCrisisEvent` 变成可以查询和关联 Agent 运行的业务对象：
 
 ```text
