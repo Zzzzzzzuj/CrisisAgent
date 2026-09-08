@@ -136,6 +136,8 @@ CrisisEvent
 
 ### P5：Report 导出
 
+P5 已新增事件报告导出能力，支持从已有 AgentRun 生成 Markdown / JSON 危机处理报告。
+
 ```text
 GET /api/events/{event_id}/report
 ```
