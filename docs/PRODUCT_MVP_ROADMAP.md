@@ -79,6 +79,8 @@ CrisisAgent 是一个面向企业舆情危机响应的 Agent 系统原型。它�
 
 ### P1：Source Registry API
 
+P1 已新增 Source Registry API，用于通过后端管理白名单舆情源；它只管理配置，不默认触发 live-fetch。
+
 把现有白名单 Source Registry 从文件配置逐步扩展为可管理资源：
 
 ```text
