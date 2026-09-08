@@ -90,7 +90,7 @@ def test_eval_run_saves_all_dimensions_and_preserves_safety(monkeypatch, tmp_pat
     assert body["total_cases"] > 0
     assert body["passed_cases"] == body["total_cases"]
     assert body["pass_rate"] == 1.0
-    assert set(body["dimensions"]) == {"ingestion", "event", "urgency", "agent_run", "report", "tool"}
+    assert set(body["dimensions"]) == {"ingestion", "event", "urgency", "agent_run", "report", "tool", "golden_case"}
     assert body["summary"]["no_live_fetch"] is True
     assert body["summary"]["no_real_llm_call"] is True
     assert body["summary"]["agent_replayed"] is False

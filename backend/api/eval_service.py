@@ -10,8 +10,27 @@ from backend.api.report_generator import build_crisis_report, render_markdown
 from evaluation.tool_reliability import load_cases, run_tool_reliability_eval
 
 
-ALL_DIMENSIONS = ("ingestion", "event", "urgency", "agent_run", "report", "tool")
+ALL_DIMENSIONS = ("ingestion", "event", "urgency", "agent_run", "report", "tool", "golden_case")
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+GOLDEN_CASES_PATH = PROJECT_ROOT / "data" / "eval_golden_cases.json"
+GOLDEN_CASE_FIELDS = (
+    "case_id",
+    "name",
+    "event_text",
+    "category",
+    "expected_risk_level",
+    "expected_fact_status",
+    "expected_event_status",
+    "expected_human_review_required",
+    "expected_min_severity",
+    "forbidden_claims",
+    "required_response_features",
+    "notes",
+)
+VALID_RISK_LEVELS = {"low", "medium", "high"}
+VALID_FACT_STATUSES = {"verified", "unverified", "conflicting"}
+VALID_EVENT_STATUSES = {"current", "uncertain", "historical"}
+VALID_SEVERITIES = {"SEV-1", "SEV-2", "SEV-3", "SEV-4"}
 
 
 def build_eval_run(
@@ -25,6 +44,7 @@ def build_eval_run(
     dimensions = _normalize_dimensions(requested_dimensions)
     items: list[dict[str, Any]] = []
     tool_summary: dict[str, Any] | None = None
+    golden_case_summary: dict[str, Any] | None = None
 
     if "ingestion" in dimensions:
         items.extend(_evaluate_ingestion(ingestion_runs))
@@ -39,6 +59,9 @@ def build_eval_run(
     if "tool" in dimensions:
         tool_items, tool_summary = _evaluate_tools()
         items.extend(tool_items)
+    if "golden_case" in dimensions:
+        golden_items, golden_case_summary = _evaluate_golden_cases()
+        items.extend(golden_items)
 
     passed_cases = sum(item["passed"] for item in items)
     total_cases = len(items)
@@ -53,7 +76,7 @@ def build_eval_run(
         "passed_cases": passed_cases,
         "failed_cases": len(failed_items),
         "pass_rate": _rate(passed_cases, total_cases),
-        "dimensions": _summarize_dimensions(items, tool_summary),
+        "dimensions": _summarize_dimensions(items, tool_summary, golden_case_summary),
         "items": items,
         "failed_items": failed_items,
         "summary": {
@@ -332,6 +355,95 @@ def _evaluate_tools() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     }
 
 
+def load_golden_cases(path: str | Path = GOLDEN_CASES_PATH) -> list[dict[str, Any]]:
+    """Load fictional, offline Golden Cases without running any Agent or retriever."""
+    import json
+
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or not isinstance(payload.get("cases"), list):
+        raise ValueError("Golden case file must contain a cases array.")
+    return [case for case in payload["cases"] if isinstance(case, dict)]
+
+
+def evaluate_golden_cases(cases: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Validate offline expectations that define the CrisisAgent safety regression set."""
+    items: list[dict[str, Any]] = []
+    for index, case in enumerate(cases):
+        case_id = str(case.get("case_id") or f"unnamed-{index}")
+        missing = [field for field in GOLDEN_CASE_FIELDS if field not in case]
+        items.append(_item(
+            f"golden_case.{case_id}.schema",
+            "golden_case",
+            f"{case_id} 字段完整",
+            not missing,
+            list(GOLDEN_CASE_FIELDS),
+            {"missing": missing},
+            "Golden Cases must preserve a complete, reviewable expectation contract.",
+        ))
+        checks = (
+            ("risk_level", case.get("expected_risk_level") in VALID_RISK_LEVELS, sorted(VALID_RISK_LEVELS), case.get("expected_risk_level")),
+            ("fact_status", case.get("expected_fact_status") in VALID_FACT_STATUSES, sorted(VALID_FACT_STATUSES), case.get("expected_fact_status")),
+            ("event_status", case.get("expected_event_status") in VALID_EVENT_STATUSES, sorted(VALID_EVENT_STATUSES), case.get("expected_event_status")),
+            ("min_severity", case.get("expected_min_severity") in VALID_SEVERITIES, sorted(VALID_SEVERITIES), case.get("expected_min_severity")),
+            ("forbidden_claims", isinstance(case.get("forbidden_claims"), list) and bool(case.get("forbidden_claims")), "non-empty list", case.get("forbidden_claims")),
+            ("required_response_features", isinstance(case.get("required_response_features"), list) and bool(case.get("required_response_features")), "non-empty list", case.get("required_response_features")),
+        )
+        for name, passed, expected, actual in checks:
+            items.append(_item(
+                f"golden_case.{case_id}.{name}",
+                "golden_case",
+                f"{case_id} {name} 合法",
+                passed,
+                expected,
+                actual,
+                "Golden Case expectations must use the supported offline safety vocabulary.",
+            ))
+
+        high_risk = case.get("expected_risk_level") == "high"
+        conflicting = case.get("expected_fact_status") == "conflicting"
+        historical = case.get("expected_event_status") == "historical"
+        if high_risk:
+            items.append(_item(
+                f"golden_case.{case_id}.high_risk_review",
+                "golden_case",
+                f"{case_id} 高风险需人工审核",
+                case.get("expected_human_review_required") is True,
+                True,
+                case.get("expected_human_review_required"),
+                "High-risk Golden Cases must retain a Human Review expectation.",
+            ))
+        if conflicting:
+            items.append(_item(
+                f"golden_case.{case_id}.conflicting_review",
+                "golden_case",
+                f"{case_id} 来源冲突需人工审核",
+                case.get("expected_human_review_required") is True,
+                True,
+                case.get("expected_human_review_required"),
+                "Conflicting facts must not bypass Human Review.",
+            ))
+        if historical:
+            items.append(_item(
+                f"golden_case.{case_id}.historical_not_sev1",
+                "golden_case",
+                f"{case_id} 历史事件不预期 SEV-1",
+                case.get("expected_min_severity") != "SEV-1",
+                "not SEV-1",
+                case.get("expected_min_severity"),
+                "Historical content must not be labeled as an expected top-priority incident.",
+            ))
+
+    passed = sum(item["passed"] for item in items)
+    return items, {
+        "golden_case_count": len(cases),
+        "golden_case_pass_rate": _rate(passed, len(items)),
+    }
+
+
+def _evaluate_golden_cases() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    return evaluate_golden_cases(load_golden_cases())
+
+
 def _item(case_id: str, dimension: str, name: str, passed: bool, expected: Any, actual: Any, reason: str, related_event_id: str | None = None, related_run_id: str | None = None) -> dict[str, Any]:
     return {
         "case_id": case_id,
@@ -347,7 +459,11 @@ def _item(case_id: str, dimension: str, name: str, passed: bool, expected: Any, 
     }
 
 
-def _summarize_dimensions(items: list[dict[str, Any]], tool_summary: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+def _summarize_dimensions(
+    items: list[dict[str, Any]],
+    tool_summary: dict[str, Any] | None,
+    golden_case_summary: dict[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
     summary: dict[str, dict[str, Any]] = {}
     for item in items:
         dimension = item["dimension"]
@@ -359,6 +475,8 @@ def _summarize_dimensions(items: list[dict[str, Any]], tool_summary: dict[str, A
         record["pass_rate"] = _rate(record["passed_cases"], record["total_cases"])
     if tool_summary is not None:
         summary["tool"].update(tool_summary)
+    if golden_case_summary is not None:
+        summary["golden_case"].update(golden_case_summary)
     return summary
 
 

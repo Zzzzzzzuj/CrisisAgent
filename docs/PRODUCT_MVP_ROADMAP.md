@@ -183,6 +183,10 @@ POST /mcp
 
 远程版本必须补充 API Key 或 JWT、工具授权、CORS、rate limit、request size limit、audit log 和 session permission。HTTP MCP 不应直接获得审批、发布、通知或知识库修改权限。
 
+### P11：Eval CI Gate / Golden Cases
+
+P11 将 Eval Center 接入命令行和离线 CI 回归验证。虚构 Golden Cases 固化高风险、冲突事实和历史新闻等安全预期；CI 通过最低通过率和新增失败项检查，防止 Agent、RAG、Tool 或 Report 的工程改动造成已知质量契约退化。
+
 ## 7. 真实采集边界
 
 第一版真实采集只允许：

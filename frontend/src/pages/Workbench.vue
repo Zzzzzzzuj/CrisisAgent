@@ -67,6 +67,9 @@ const sourceForm = ref({
 const eventSummary = computed(() => selectedEvent.value?.event_summary || "暂无事件摘要");
 const traceItems = computed(() => eventTrace.value?.trace || []);
 const hasReport = computed(() => Boolean(report.value?.markdown_content));
+const goldenCaseFailures = computed(() => (
+  selectedEvalRun.value?.failed_items?.filter((item) => item.dimension === "golden_case") || []
+));
 const sourceFailureRate = computed(() => {
   const totals = dashboardSourceHealth.value.reduce(
     (result, source) => {
@@ -458,7 +461,7 @@ function compactOutput(value) {
     <article class="page-card workbench-card eval-center">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">P9 Eval Center</p>
+          <p class="eyebrow">P9 Eval Center · P11 CI Gate</p>
           <h3>评估中心</h3>
         </div>
         <button class="primary-button" :disabled="Boolean(action)" @click="runOfflineEval">运行离线评估</button>
@@ -469,6 +472,7 @@ function compactOutput(value) {
         <div class="eval-metric"><span>评估用例</span><strong>{{ evalOverview.total_cases }}</strong></div>
         <div class="eval-metric"><span>通过 / 失败</span><strong>{{ evalOverview.passed_cases }} / {{ evalOverview.failed_cases }}</strong></div>
         <div class="eval-metric"><span>历史 EvalRun</span><strong>{{ evalOverview.total_runs }}</strong></div>
+        <div class="eval-metric"><span>Golden Cases</span><strong>{{ evalOverview.dimensions_summary?.golden_case == null ? "暂无" : `${Math.round(evalOverview.dimensions_summary.golden_case.pass_rate * 100)}%` }}</strong></div>
       </div>
 
       <div class="eval-grid">
@@ -498,7 +502,11 @@ function compactOutput(value) {
 
       <div class="eval-grid lower-eval-grid">
         <section>
-          <h4>失败项</h4>
+          <h4>失败项与 Golden Cases</h4>
+          <div v-if="goldenCaseFailures.length" class="golden-failure-box">
+            <strong>失败 Golden Cases</strong>
+            <small>{{ goldenCaseFailures.map((item) => item.case_id).join('、') }}</small>
+          </div>
           <div v-if="selectedEvalRun?.failed_items?.length" class="eval-failure-list">
             <div v-for="item in selectedEvalRun.failed_items" :key="item.case_id" class="eval-failure-row">
               <strong>{{ item.dimension }} · {{ item.name }}</strong>
@@ -659,7 +667,7 @@ function compactOutput(value) {
 .workbench-error { margin: 0; }
 .crisis-radar { border-top: 4px solid #c55d3d; }
 .eval-center { border-top: 4px solid #517d78; }
-.eval-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.eval-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
 .eval-metric { display: grid; gap: 5px; padding: 13px; border-radius: 12px; background: #eef5f3; color: #60766d; font-size: 12px; }
 .eval-metric strong { color: #214941; font-family: Georgia, serif; font-size: 23px; }
 .eval-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
@@ -670,6 +678,7 @@ function compactOutput(value) {
 .eval-dimension-row small, .eval-run-row small, .regression-box small { color: #738077; font-size: 12px; }
 .regression-box { display: grid; gap: 7px; padding: 14px; border-radius: 12px; background: #f2f7f5; }.regression-box strong { color: #244d43; font-family: Georgia, serif; font-size: 26px; }
 .eval-failure-row { border-left: 3px solid #bd6249; padding: 9px 12px; background: #fff7f4; }.eval-failure-row p { margin: 5px 0 0; color: #765a51; font-size: 12px; }
+.golden-failure-box { display: grid; gap: 5px; padding: 10px 12px; margin-bottom: 10px; border-left: 3px solid #a84f3b; background: #fff6f1; color: #765a51; font-size: 13px; }.golden-failure-box small { overflow-wrap: anywhere; }
 .eval-run-row { width: 100%; border-right: 0; border-bottom: 0; border-left: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }.eval-run-row:hover { background: #f5faf6; }.eval-run-row span:first-child { display: grid; gap: 3px; }
 .radar-metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 16px 0 20px; }
 .radar-metric { display: grid; gap: 5px; padding: 13px; border-radius: 12px; background: #f1f5f2; color: #607066; font-size: 12px; }

@@ -32,6 +32,7 @@ data/ingestion_runs.runtime.json
 data/crisis_events.runtime.json
 data/event_agent_runs.runtime.json
 data/eval_runs.runtime.json
+data/eval_report.json
 
 # Local Codex acceptance artifacts
 .codex_*.log

@@ -5,7 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-EvalDimension = Literal["ingestion", "event", "urgency", "agent_run", "report", "tool"]
+EvalDimension = Literal["ingestion", "event", "urgency", "agent_run", "report", "tool", "golden_case"]
 
 
 class EvalRunRequest(BaseModel):

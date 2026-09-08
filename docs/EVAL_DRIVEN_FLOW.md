@@ -17,7 +17,7 @@ Eval Dataset
   -> Output Eval / RAG Eval / Tool Eval / Safety Eval
   -> Human Review
   -> Trace / Review / Report
-  -> Eval Center / Regression Dashboard
+  -> Eval Center / Golden Cases / CI Regression Gate
 ```
 
 ## 各层评估
@@ -41,6 +41,7 @@ Eval Dataset
 - Report safety boundary；
 - Crisis Radar urgency rules；
 - Eval Center 的 ingestion、event、urgency、agent run、report、tool 汇总与 regression 对比。
+- Golden Case 数据契约校验与命令行 Eval CI Gate。
 
 ## 不做什么
 

@@ -28,6 +28,7 @@ Eval Center 不替代 RAG 专项评测，也不把一次 EvalRun 伪装成 LLM �
 | agent_run | session、trace、声明草稿、`automatic_publish=false`、高风险审核保留 |
 | report | 基于已有 run、无 live-fetch、无真实 LLM 调用、声明草稿措辞与未发布边界 |
 | tool | 复用已有 deterministic fake-tool reliability suite 的成功率、超时、fallback、循环检测和审核触发指标 |
+| golden_case | 虚构危机场景的字段契约、高风险/冲突审核预期、历史事件严重度边界 |
 
 没有某类 runtime 记录时，Eval Center 会标记“当前无记录可检查”，而不是把“尚未运行”误判为产品失败。
 
@@ -72,7 +73,7 @@ POST /api/evals/run
 - EvalRun 基于 JSON runtime store，适合本地 MVP，不是生产数据库；
 - Report Eval 校验的是现有报告生成器的安全输出契约，不等同于对真实 LLM 文本做事实正确性判定；
 - Tool Eval 当前直接复用离线 fake-tool suite，不会触发真实工具；
-- 后续可补 golden cases、LLM-as-judge、pairwise prompt comparison、CI 自动 eval、人工抽检和持久化 regression dashboard。
+- P11 已补充 Golden Cases 和 Eval CI Gate；详见 [EVAL_CI_GATE.md](EVAL_CI_GATE.md)。后续可补 LLM-as-judge、pairwise prompt comparison、人工抽检和持久化 regression dashboard。
 
 ## 面试讲解
 
