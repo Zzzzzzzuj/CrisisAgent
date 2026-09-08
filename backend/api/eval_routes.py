@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.eval_schemas import (
     EvalOverviewResponse,
@@ -15,13 +15,15 @@ from backend.api.eval_store import get_eval_run_store
 from backend.api.event_run_store import get_event_agent_run_store
 from backend.api.event_store import get_crisis_event_store
 from backend.api.ingestion_run_store import get_ingestion_run_store
+from backend.api.workspace_security import authorize, get_workspace_user, owner_fields, write_audit
 
 
 router = APIRouter(prefix="/api/evals", tags=["eval-center"])
 
 
 @router.post("/run", response_model=EvalRunResponse, status_code=status.HTTP_201_CREATED)
-def run_eval(payload: EvalRunRequest) -> EvalRunResponse:
+def run_eval(payload: EvalRunRequest, user: dict = Depends(get_workspace_user)) -> EvalRunResponse:
+    authorize(user, {"admin", "operator"}, "eval.run", "eval_run")
     run = build_eval_run(
         events=get_crisis_event_store().list_events(limit=100_000),
         ingestion_runs=get_ingestion_run_store().list_runs(limit=100_000),
@@ -29,19 +31,23 @@ def run_eval(payload: EvalRunRequest) -> EvalRunResponse:
         requested_dimensions=payload.dimensions,
         dry_run=payload.dry_run,
     )
+    run.update({"created_by": str(user.get("id", "demo-system"))})
     if not payload.dry_run:
         get_eval_run_store().save(run)
+        write_audit(user, "eval.run", "eval_run", run["eval_run_id"])
     return EvalRunResponse(**run)
 
 
 @router.get("/runs", response_model=EvalRunListResponse)
-def list_eval_runs(limit: int = Query(default=20, ge=1, le=100)) -> EvalRunListResponse:
+def list_eval_runs(limit: int = Query(default=20, ge=1, le=100), user: dict = Depends(get_workspace_user)) -> EvalRunListResponse:
+    authorize(user, {"admin", "operator", "viewer"}, "eval.list", "eval_run")
     runs = get_eval_run_store().list_runs(limit=limit)
     return EvalRunListResponse(runs=[_list_item(run) for run in runs], count=len(runs))
 
 
 @router.get("/runs/{eval_run_id}", response_model=EvalRunResponse)
-def get_eval_run(eval_run_id: str) -> EvalRunResponse:
+def get_eval_run(eval_run_id: str, user: dict = Depends(get_workspace_user)) -> EvalRunResponse:
+    authorize(user, {"admin", "operator", "viewer"}, "eval.view", "eval_run", eval_run_id)
     run = get_eval_run_store().get(eval_run_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"Eval run '{eval_run_id}' not found.")
@@ -49,12 +55,14 @@ def get_eval_run(eval_run_id: str) -> EvalRunResponse:
 
 
 @router.get("/overview", response_model=EvalOverviewResponse)
-def get_eval_overview() -> EvalOverviewResponse:
+def get_eval_overview(user: dict = Depends(get_workspace_user)) -> EvalOverviewResponse:
+    authorize(user, {"admin", "operator", "viewer"}, "eval.view", "eval_run")
     return EvalOverviewResponse(**build_eval_overview(get_eval_run_store().list_runs(limit=100_000)))
 
 
 @router.get("/regression", response_model=EvalRegressionResponse)
-def get_eval_regression() -> EvalRegressionResponse:
+def get_eval_regression(user: dict = Depends(get_workspace_user)) -> EvalRegressionResponse:
+    authorize(user, {"admin", "operator", "viewer"}, "eval.view", "eval_run")
     return EvalRegressionResponse(**build_regression(get_eval_run_store().list_runs(limit=2)))
 
 

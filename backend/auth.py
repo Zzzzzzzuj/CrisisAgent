@@ -19,7 +19,8 @@ from backend.db.session import get_db_session
 ROLE_OPERATOR = "operator"
 ROLE_LEGAL_REVIEWER = "legal_reviewer"
 ROLE_ADMIN = "admin"
-VALID_ROLES = {ROLE_OPERATOR, ROLE_LEGAL_REVIEWER, ROLE_ADMIN}
+ROLE_VIEWER = "viewer"
+VALID_ROLES = {ROLE_OPERATOR, ROLE_LEGAL_REVIEWER, ROLE_ADMIN, ROLE_VIEWER}
 REVIEW_ROLES = {ROLE_LEGAL_REVIEWER, ROLE_ADMIN}
 
 _security = HTTPBearer(auto_error=False)

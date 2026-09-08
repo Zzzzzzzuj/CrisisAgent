@@ -45,3 +45,5 @@ class IngestionRunResponse(BaseModel):
     clusters: list[dict[str, Any]]
     automatic_publish: bool
     dry_run: bool
+    created_by: str | None = None
+    owner_id: str | None = None

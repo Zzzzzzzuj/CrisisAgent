@@ -43,6 +43,7 @@ class EvalRunResponse(BaseModel):
     summary: dict[str, Any]
     automatic_publish: bool = False
     dry_run: bool = False
+    created_by: str | None = None
 
 
 class EvalRunListItem(BaseModel):

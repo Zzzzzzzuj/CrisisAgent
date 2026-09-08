@@ -6,7 +6,7 @@ import os
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.ingestion_run_store import get_ingestion_run_store
 from backend.api.ingestion_schemas import (
@@ -19,13 +19,15 @@ from backend.api.source_routes import get_source_store
 from backend.ingestion.pipeline import run_sentiment_ingestion_items
 from backend.ingestion.source_adapters import HttpArticleSourceAdapter, RssSourceAdapter, FetchResult
 from backend.ingestion.source_registry import SourceDefinition
+from backend.api.workspace_security import authorize, get_workspace_user, owner_fields, write_audit
 
 
 router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 
 
 @router.post("/run", response_model=IngestionRunResponse, status_code=status.HTTP_201_CREATED)
-def run_ingestion(payload: IngestionRunRequest) -> IngestionRunResponse:
+def run_ingestion(payload: IngestionRunRequest, user: dict = Depends(get_workspace_user)) -> IngestionRunResponse:
+    authorize(user, {"admin", "operator"}, "ingestion.run", "ingestion_run")
     if payload.live_fetch and not payload.dry_run and not _api_live_fetch_enabled():
         raise HTTPException(
             status_code=403,
@@ -93,21 +95,25 @@ def run_ingestion(payload: IngestionRunRequest) -> IngestionRunResponse:
         "clusters": [asdict(cluster) for cluster in clusters],
         "automatic_publish": False,
         "dry_run": payload.dry_run,
+        **owner_fields(user),
     }
     if not payload.dry_run:
         get_ingestion_run_store().save(run)
+        write_audit(user, "ingestion.run", "ingestion_run", run["run_id"])
     return IngestionRunResponse(**run)
 
 
 @router.get("/runs", response_model=IngestionRunListResponse)
-def list_ingestion_runs(limit: int = Query(default=20, ge=1, le=100)) -> IngestionRunListResponse:
+def list_ingestion_runs(limit: int = Query(default=20, ge=1, le=100), user: dict = Depends(get_workspace_user)) -> IngestionRunListResponse:
+    authorize(user, {"admin", "operator", "viewer"}, "ingestion.list", "ingestion_run")
     runs = get_ingestion_run_store().list_runs(limit)
     summaries = [_summary(run) for run in runs]
     return IngestionRunListResponse(runs=summaries, count=len(summaries))
 
 
 @router.get("/runs/{run_id}", response_model=IngestionRunResponse)
-def get_ingestion_run(run_id: str) -> IngestionRunResponse:
+def get_ingestion_run(run_id: str, user: dict = Depends(get_workspace_user)) -> IngestionRunResponse:
+    authorize(user, {"admin", "operator", "viewer"}, "ingestion.view", "ingestion_run", run_id)
     run = get_ingestion_run_store().get(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"Ingestion run '{run_id}' not found.")

@@ -5,19 +5,21 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.api.event_run_store import get_event_agent_run_store
 from backend.api.event_schemas import EventReviewResponse, EventRunRequest, EventRunResponse
 from backend.api.event_store import get_crisis_event_store
 from backend.core.runtime_tasks import run_dynamic_sync_with_metadata
+from backend.api.workspace_security import authorize, get_workspace_user, owner_fields, write_audit
 
 
 router = APIRouter(prefix="/api/events", tags=["event-agent-runs"])
 
 
 @router.post("/{event_id}/run", response_model=EventRunResponse, status_code=status.HTTP_201_CREATED)
-def run_event_agent(event_id: str, payload: EventRunRequest) -> EventRunResponse:
+def run_event_agent(event_id: str, payload: EventRunRequest, user: dict = Depends(get_workspace_user)) -> EventRunResponse:
+    authorize(user, {"admin", "operator"}, "event_agent.run", "event", event_id)
     event_store = get_crisis_event_store()
     event = event_store.get(event_id)
     if event is None:
@@ -63,6 +65,7 @@ def run_event_agent(event_id: str, payload: EventRunRequest) -> EventRunResponse
                 "metadata": {"ingestion": ingestion_metadata},
                 "error": None,
                 "automatic_publish": False,
+                **owner_fields(user),
             }
         )
         event_store.update(event_id, {"status": run_status})
@@ -83,15 +86,18 @@ def run_event_agent(event_id: str, payload: EventRunRequest) -> EventRunResponse
                 "metadata": {"ingestion": ingestion_metadata},
                 "error": str(exc),
                 "automatic_publish": False,
+                **owner_fields(user),
             }
         )
         event_store.update(event_id, {"status": "failed"})
 
+    write_audit(user, "event_agent.run", "event_agent_run", run["agent_run_id"])
     return _run_response(run)
 
 
 @router.get("/{event_id}/run", response_model=EventRunResponse)
-def get_event_run(event_id: str) -> EventRunResponse:
+def get_event_run(event_id: str, user: dict = Depends(get_workspace_user)) -> EventRunResponse:
+    authorize(user, {"admin", "operator", "legal_reviewer", "viewer"}, "event_agent.view", "event", event_id)
     _ensure_event_exists(event_id)
     run = get_event_agent_run_store().get_latest(event_id)
     if run is None:
@@ -100,11 +106,13 @@ def get_event_run(event_id: str) -> EventRunResponse:
 
 
 @router.get("/{event_id}/trace")
-def get_event_trace(event_id: str) -> dict[str, Any]:
+def get_event_trace(event_id: str, user: dict = Depends(get_workspace_user)) -> dict[str, Any]:
+    authorize(user, {"admin", "operator", "legal_reviewer"}, "event_agent.trace.view", "event", event_id)
     _ensure_event_exists(event_id)
     run = get_event_agent_run_store().get_latest(event_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"No Agent run found for event '{event_id}'.")
+    write_audit(user, "event_agent.trace.view", "event_agent_run", run["agent_run_id"])
     return {
         "event_id": event_id,
         "agent_run_id": run["agent_run_id"],
@@ -117,13 +125,15 @@ def get_event_trace(event_id: str) -> dict[str, Any]:
 
 
 @router.get("/{event_id}/review", response_model=EventReviewResponse)
-def get_event_review(event_id: str) -> EventReviewResponse:
+def get_event_review(event_id: str, user: dict = Depends(get_workspace_user)) -> EventReviewResponse:
+    authorize(user, {"admin", "operator", "legal_reviewer"}, "event_agent.review.view", "event", event_id)
     _ensure_event_exists(event_id)
     run = get_event_agent_run_store().get_latest(event_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"No Agent run found for event '{event_id}'.")
     needs_review = bool(run.get("human_review_required", False))
     triggers = list(run.get("policy_triggers", []))
+    write_audit(user, "event_agent.review.view", "event_agent_run", run["agent_run_id"])
     return EventReviewResponse(
         event_id=event_id,
         session_id=run.get("session_id", ""),
@@ -153,6 +163,8 @@ def _run_response(run: dict[str, Any]) -> EventRunResponse:
         policy_triggers=list(run.get("policy_triggers", [])),
         trace_count=len(run.get("trace", [])),
         automatic_publish=False,
+        created_by=run.get("created_by"),
+        owner_id=run.get("owner_id"),
     )
 
 

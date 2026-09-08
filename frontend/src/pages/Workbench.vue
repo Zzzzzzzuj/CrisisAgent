@@ -28,6 +28,8 @@ import {
   runIngestion,
   testSource,
   updateSource,
+  setWorkspaceDemoUser,
+  listAuditLogs,
 } from "../api";
 
 const sources = ref([]);
@@ -54,6 +56,13 @@ const evalOverview = ref(null);
 const evalRegression = ref(null);
 const evalRuns = ref([]);
 const selectedEvalRun = ref(null);
+const auditLogs = ref([]);
+const auditLoading = ref(false);
+const auditError = ref("");
+const workspaceUser = ref({ id: "demo-system", role: "admin" });
+const isViewer = computed(() => workspaceUser.value.role === "viewer");
+const isSourceManager = computed(() => workspaceUser.value.role === "admin");
+const canOperate = computed(() => ["admin", "operator"].includes(workspaceUser.value.role));
 
 const sourceForm = ref({
   source_id: "",
@@ -85,15 +94,34 @@ const trendMax = computed(() => Math.max(1, ...dashboardTrends.value.map((item) 
 
 onMounted(loadAll);
 
+async function changeWorkspaceRole() {
+  setWorkspaceDemoUser(workspaceUser.value);
+  await loadAll();
+}
+
 async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
     await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter()]);
+    if (workspaceUser.value.role === "admin") await loadAuditLogs();
+    else auditLogs.value = [];
   } catch (err) {
     showError(err);
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadAuditLogs() {
+  auditLoading.value = true;
+  auditError.value = "";
+  try {
+    auditLogs.value = (await listAuditLogs({ limit: 50 })).logs || [];
+  } catch (err) {
+    auditError.value = err.response?.data?.detail || "审计日志加载失败";
+  } finally {
+    auditLoading.value = false;
   }
 }
 
@@ -372,11 +400,21 @@ function compactOutput(value) {
         <h2>从舆情来源到危机报告</h2>
         <p class="muted">当前工作台默认使用离线配置和 mock Agent，不会自动开启 live-fetch 或发布声明。</p>
       </div>
-      <button class="ghost-button" :disabled="loading" @click="loadAll">刷新全部</button>
+      <div class="button-line"><label class="muted tiny-text">演示角色 <select v-model="workspaceUser.role" @change="changeWorkspaceRole"><option value="admin">admin</option><option value="operator">operator</option><option value="legal_reviewer">legal_reviewer</option><option value="viewer">viewer</option></select><small>当前为 MVP 演示角色模拟，不是生产登录系统。</small></label><button class="ghost-button" :disabled="loading" @click="loadAll">刷新全部</button></div>
     </header>
 
     <p v-if="error" class="error workbench-error">{{ error }}</p>
     <p v-if="loading" class="muted">正在加载工作台数据...</p>
+
+    <article v-if="workspaceUser.role === 'admin'" class="page-card workbench-card audit-card">
+      <div class="section-heading"><div><p class="eyebrow">P12 Workspace Security</p><h3>Audit Log 审计日志</h3></div><button class="ghost-button" :disabled="auditLoading" @click="loadAuditLogs">{{ auditLoading ? '加载中...' : '刷新审计日志' }}</button></div>
+      <p v-if="auditError" class="error">{{ auditError }}</p>
+      <div v-else-if="auditLogs.length" class="audit-list">
+        <div v-for="item in auditLogs" :key="item.audit_id" class="audit-row"><small>{{ item.timestamp }}</small><strong>{{ item.actor_id }} · {{ item.actor_role }}</strong><span>{{ item.action }}</span><span>{{ item.resource_type }} / {{ item.resource_id || '-' }}</span><span :class="['status-pill', item.result === 'denied' ? 'status-off' : 'status-on']">{{ item.result }}</span><small>{{ item.reason || '-' }}</small></div>
+      </div>
+      <p v-else class="empty-inline">暂无审计记录。</p>
+    </article>
+    <p v-else class="muted tiny-text">当前角色无权查看审计日志。</p>
 
     <article class="page-card workbench-card crisis-radar">
       <div class="section-heading">
@@ -533,7 +571,7 @@ function compactOutput(value) {
         <div><p class="eyebrow">P1 Source Registry</p><h3>数据源管理</h3></div>
         <span class="status-pill">live-fetch 默认关闭</span>
       </div>
-      <form class="workbench-form" @submit.prevent="submitSource">
+      <form v-if="isSourceManager" class="workbench-form" @submit.prevent="submitSource">
         <input v-model="sourceForm.source_id" placeholder="source_id" required />
         <input v-model="sourceForm.source_name" placeholder="来源名称" required />
         <select v-model="sourceForm.source_type"><option value="rss">rss</option><option value="article_url">article_url</option></select>
@@ -546,8 +584,8 @@ function compactOutput(value) {
         <div v-for="source in sources" :key="source.source_id" class="data-row">
           <div><strong>{{ source.source_name }}</strong><small>{{ source.source_id }} · {{ source.source_type }}</small></div>
           <span :class="['status-pill', source.enabled ? 'status-on' : 'status-off']">{{ source.enabled ? 'enabled' : 'disabled' }}</span>
-          <button class="ghost-button small-button" @click="toggleSource(source)">{{ source.enabled ? '禁用' : '启用' }}</button>
-          <button class="ghost-button small-button" @click="checkSource(source)">配置检查</button>
+          <button v-if="isSourceManager" class="ghost-button small-button" @click="toggleSource(source)">{{ source.enabled ? '禁用' : '启用' }}</button>
+          <button v-if="isSourceManager || canOperate" class="ghost-button small-button" @click="checkSource(source)">配置检查</button>
           <span v-if="sourceTestResults[source.source_id]" class="muted tiny-text">
             {{ sourceTestResults[source.source_id].test_status }} · live_fetch={{ sourceTestResults[source.source_id].live_fetch_triggered }}
           </span>
@@ -560,11 +598,11 @@ function compactOutput(value) {
       <article class="page-card workbench-card">
         <div class="section-heading"><div><p class="eyebrow">P2 Ingestion Run</p><h3>采集运行</h3></div></div>
         <div class="button-line">
-          <button class="primary-button" :disabled="Boolean(action)" @click="startIngestion(true)">运行 dry-run</button>
-          <button class="ghost-button" :disabled="Boolean(action)" @click="startIngestion(false)">运行离线采集</button>
+          <button v-if="canOperate" class="primary-button" :disabled="Boolean(action)" @click="startIngestion(true)">运行 dry-run</button>
+          <button v-if="canOperate" class="ghost-button" :disabled="Boolean(action)" @click="startIngestion(false)">运行离线采集</button>
         </div>
         <p class="muted tiny-text">手动联网采集默认折叠，只有完成确认后才允许提交。</p>
-      <details
+      <details v-if="canOperate"
         class="live-fetch-panel"
         :open="liveFetchOpen"
         @toggle="liveFetchOpen = $event.target.open"
@@ -605,7 +643,7 @@ function compactOutput(value) {
         <div v-if="selectedRun?.clusters?.length" class="cluster-list">
           <div v-for="cluster in selectedRun.clusters" :key="cluster.cluster_id" class="cluster-row">
             <div><strong>{{ cluster.company || '未命名公司' }}</strong><p>{{ cluster.event }}</p></div>
-            <button class="ghost-button small-button" :disabled="action === 'event'" @click="createEvent(cluster)">沉淀为事件</button>
+            <button v-if="canOperate" class="ghost-button small-button" :disabled="action === 'event'" @click="createEvent(cluster)">沉淀为事件</button>
           </div>
         </div>
         <p v-else class="empty-inline">选择一条采集记录后，可将 cluster 沉淀为 CrisisEvent。</p>
@@ -624,8 +662,8 @@ function compactOutput(value) {
       <div class="section-heading">
         <div><p class="eyebrow">P4 Event Console</p><h3>{{ selectedEvent.title }}</h3><p class="muted">{{ eventSummary }}</p></div>
         <div class="button-line">
-          <button class="primary-button" :disabled="Boolean(action) || selectedEvent.status === 'archived'" @click="runAgent">运行 Agent（mock）</button>
-          <button class="ghost-button" :disabled="selectedEvent.status === 'archived'" @click="archiveSelectedEvent">归档</button>
+          <button v-if="canOperate" class="primary-button" :disabled="Boolean(action) || selectedEvent.status === 'archived'" @click="runAgent">运行 Agent（mock）</button>
+          <button v-if="canOperate" class="ghost-button" :disabled="selectedEvent.status === 'archived'" @click="archiveSelectedEvent">归档</button>
         </div>
       </div>
       <div class="facts-grid">

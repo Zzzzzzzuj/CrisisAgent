@@ -5,6 +5,22 @@ const api = axios.create({
   timeout: 120000,
 });
 
+let workspaceUser = { id: "demo-system", role: "admin" };
+
+export function setWorkspaceDemoUser(user) {
+  workspaceUser = user;
+}
+
+api.interceptors.request.use((config) => {
+  config.headers["X-User-Id"] = workspaceUser.id;
+  config.headers["X-User-Role"] = workspaceUser.role;
+  return config;
+});
+
+export function listAuditLogs(query = {}) {
+  return api.get("/api/audit/logs", { params: query }).then((response) => response.data);
+}
+
 export function runDynamicTask(event) {
   return api.post("/api/dynamic/run", { event }).then((response) => response.data);
 }

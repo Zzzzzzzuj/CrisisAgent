@@ -69,6 +69,10 @@ class SourceResponse(_SourceFields):
     source_type: str
     url: str
     enabled: bool
+    created_by: str | None = None
+    updated_by: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
 
 class SourceListResponse(BaseModel):

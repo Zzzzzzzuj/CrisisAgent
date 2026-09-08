@@ -20,6 +20,10 @@ class SourceDefinition:
     rate_limit_seconds: float = 3.0
     timeout_seconds: float = 10.0
     max_items: int = 5
+    created_by: str | None = None
+    updated_by: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
     def matches(self, text: str) -> bool:
         haystack = str(text or "").lower()
@@ -53,6 +57,8 @@ class SourceRegistry:
                 rate_limit_seconds=float(raw.get("rate_limit_seconds", 3)),
                 timeout_seconds=float(raw.get("timeout_seconds", 10)),
                 max_items=int(raw.get("max_items", 5)),
+                created_by=raw.get("created_by"), updated_by=raw.get("updated_by"),
+                created_at=raw.get("created_at"), updated_at=raw.get("updated_at"),
             )
             cls._validate(source)
             if source.source_id in {item.source_id for item in sources}:

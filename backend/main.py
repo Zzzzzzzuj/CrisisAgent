@@ -17,6 +17,7 @@ from backend.auth import (
 from backend.api.ingestion_routes import router as ingestion_router
 from backend.api.dashboard_routes import router as dashboard_router
 from backend.api.eval_routes import router as eval_router
+from backend.api.audit_routes import router as audit_router
 from backend.api.event_routes import router as event_router
 from backend.api.event_run_routes import router as event_run_router
 from backend.api.report_routes import router as report_router
@@ -68,6 +69,7 @@ app.include_router(source_router)
 app.include_router(ingestion_router)
 app.include_router(dashboard_router)
 app.include_router(eval_router)
+app.include_router(audit_router)
 app.include_router(event_router)
 app.include_router(event_run_router)
 app.include_router(report_router)

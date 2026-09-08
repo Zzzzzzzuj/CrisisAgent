@@ -55,6 +55,7 @@ class JsonCrisisEventStore:
         cluster: dict[str, Any],
         title: str | None = None,
         event_summary: str | None = None,
+        actor: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], bool]:
         cluster_id = str(cluster.get("cluster_id", ""))
         existing = self.find_by_source(source_run_id, cluster_id)
@@ -82,6 +83,9 @@ class JsonCrisisEventStore:
             "status": "new",
             "created_at": now,
             "updated_at": now,
+            "created_by": str((actor or {}).get("id", "demo-system")),
+            "updated_by": str((actor or {}).get("id", "demo-system")),
+            "owner_id": str((actor or {}).get("id", "demo-system")),
         }
         events = self._load()
         events.append(event)

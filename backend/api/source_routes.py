@@ -4,8 +4,9 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 import os
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.api.source_schemas import (
     SourceCreateRequest,
@@ -15,6 +16,7 @@ from backend.api.source_schemas import (
     SourceUpdateRequest,
 )
 from backend.ingestion.source_registry import SourceDefinition, SourceRegistry
+from backend.api.workspace_security import authorize, get_workspace_user, write_audit
 
 
 router = APIRouter(prefix="/api/sources", tags=["sources"])
@@ -29,23 +31,25 @@ class JsonSourceRegistryStore:
     def list_sources(self) -> list[dict[str, Any]]:
         return [asdict(source) for source in self._load()]
 
-    def create(self, payload: SourceCreateRequest) -> dict[str, Any]:
+    def create(self, payload: SourceCreateRequest, actor_id: str = "demo-system") -> dict[str, Any]:
         sources = self._load()
         if any(source.source_id == payload.source_id for source in sources):
             raise ValueError("source_id already exists")
-        source = _source_from_create(payload)
+        source = _source_from_create(payload, actor_id)
         _validate_source(source)
         sources.append(source)
         self._save(sources)
         return asdict(source)
 
-    def update(self, source_id: str, payload: SourceUpdateRequest) -> dict[str, Any]:
+    def update(self, source_id: str, payload: SourceUpdateRequest, actor_id: str = "demo-system") -> dict[str, Any]:
         sources = self._load()
         for index, current in enumerate(sources):
             if current.source_id != source_id:
                 continue
             values = asdict(current)
             values.update({key: value for key, value in payload.model_dump(exclude_unset=True).items() if value is not None})
+            values["updated_by"] = actor_id
+            values["updated_at"] = _now()
             updated = SourceDefinition(**values)
             _validate_source(updated)
             sources[index] = updated
@@ -81,6 +85,8 @@ class JsonSourceRegistryStore:
                 rate_limit_seconds=float(raw.get("rate_limit_seconds", 3)),
                 timeout_seconds=float(raw.get("timeout_seconds", 10)),
                 max_items=int(raw.get("max_items", 5)),
+                created_by=raw.get("created_by"), updated_by=raw.get("updated_by"),
+                created_at=raw.get("created_at"), updated_at=raw.get("updated_at"),
             )
             _validate_source(source)
             if any(item.source_id == source.source_id for item in sources):
@@ -100,11 +106,16 @@ def get_source_store() -> JsonSourceRegistryStore:
     return JsonSourceRegistryStore()
 
 
-def _source_from_create(payload: SourceCreateRequest) -> SourceDefinition:
+def _source_from_create(payload: SourceCreateRequest, actor_id: str) -> SourceDefinition:
     values = payload.model_dump()
     values["company_keywords"] = tuple(values["company_keywords"])
     values["risk_keywords"] = tuple(values["risk_keywords"])
-    return SourceDefinition(**values)
+    now = _now()
+    return SourceDefinition(**values, created_by=actor_id, updated_by=actor_id, created_at=now, updated_at=now)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _validate_source(source: SourceDefinition) -> None:
@@ -118,15 +129,19 @@ def _response(source: dict[str, Any]) -> SourceResponse:
 
 
 @router.get("", response_model=SourceListResponse)
-def list_sources() -> SourceListResponse:
+def list_sources(user: dict = Depends(get_workspace_user)) -> SourceListResponse:
+    authorize(user, {"admin", "operator", "legal_reviewer", "viewer"}, "source.list", "source")
     sources = get_source_store().list_sources()
     return SourceListResponse(sources=[_response(item) for item in sources], count=len(sources))
 
 
 @router.post("", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
-def create_source(payload: SourceCreateRequest) -> SourceResponse:
+def create_source(payload: SourceCreateRequest, user: dict = Depends(get_workspace_user)) -> SourceResponse:
+    authorize(user, {"admin"}, "source.create", "source", payload.source_id)
     try:
-        return _response(get_source_store().create(payload))
+        source = _response(get_source_store().create(payload, str(user.get("id", "demo-system"))))
+        write_audit(user, "source.create", "source", payload.source_id)
+        return source
     except ValueError as exc:
         if "already exists" in str(exc):
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -134,9 +149,12 @@ def create_source(payload: SourceCreateRequest) -> SourceResponse:
 
 
 @router.patch("/{source_id}", response_model=SourceResponse)
-def update_source(source_id: str, payload: SourceUpdateRequest) -> SourceResponse:
+def update_source(source_id: str, payload: SourceUpdateRequest, user: dict = Depends(get_workspace_user)) -> SourceResponse:
+    authorize(user, {"admin"}, "source.update", "source", source_id)
     try:
-        return _response(get_source_store().update(source_id, payload))
+        source = _response(get_source_store().update(source_id, payload, str(user.get("id", "demo-system"))))
+        write_audit(user, "source.update", "source", source_id)
+        return source
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"Source '{source_id}' not found.") from exc
     except ValueError as exc:
@@ -144,7 +162,8 @@ def update_source(source_id: str, payload: SourceUpdateRequest) -> SourceRespons
 
 
 @router.post("/{source_id}/test", response_model=SourceTestResponse)
-def test_source(source_id: str) -> SourceTestResponse:
+def test_source(source_id: str, user: dict = Depends(get_workspace_user)) -> SourceTestResponse:
+    authorize(user, {"admin", "operator"}, "source.test", "source", source_id)
     try:
         source = get_source_store().get(source_id)
     except KeyError as exc:
@@ -155,7 +174,7 @@ def test_source(source_id: str) -> SourceTestResponse:
         _validate_source(source)
     except ValueError as exc:
         errors.append(str(exc))
-    return SourceTestResponse(
+    response = SourceTestResponse(
         source_id=source.source_id,
         exists=True,
         enabled=source.enabled,
@@ -165,3 +184,5 @@ def test_source(source_id: str) -> SourceTestResponse:
         test_status="config_valid" if not errors else "config_invalid",
         errors=errors,
     )
+    write_audit(user, "source.test", "source", source_id)
+    return response

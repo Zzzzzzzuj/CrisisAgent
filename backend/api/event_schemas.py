@@ -67,6 +67,9 @@ class CrisisEventResponse(BaseModel):
     status: EventStatus
     created_at: str
     updated_at: str
+    created_by: str | None = None
+    updated_by: str | None = None
+    owner_id: str | None = None
 
 
 class EventCreateResponse(CrisisEventResponse):
@@ -92,6 +95,8 @@ class EventRunResponse(BaseModel):
     policy_triggers: list[str]
     trace_count: int
     automatic_publish: bool = False
+    created_by: str | None = None
+    owner_id: str | None = None
 
 
 class EventReviewResponse(BaseModel):

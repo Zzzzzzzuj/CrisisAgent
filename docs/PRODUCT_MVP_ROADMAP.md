@@ -187,6 +187,10 @@ POST /mcp
 
 P11 将 Eval Center 接入命令行和离线 CI 回归验证。虚构 Golden Cases 固化高风险、冲突事实和历史新闻等安全预期；CI 通过最低通过率和新增失败项检查，防止 Agent、RAG、Tool 或 Report 的工程改动造成已知质量契约退化。
 
+### P12：Workspace Security & Audit
+
+P12 为 Source、IngestionRun、CrisisEvent、AgentRun、Report 和 Eval 增加最小角色权限、owner 字段和 JSON 审计日志；认证开启时复用 JWT，关闭时保留 demo 角色模拟。该阶段已包含 JWT 产品 API 权限矩阵测试与 admin Audit Log 工作台查看区域。
+
 ## 7. 真实采集边界
 
 第一版真实采集只允许：
