@@ -2,19 +2,23 @@
 
 ## 1. 当前项目定位
 
-CrisisAgent 是一个面向企业舆情危机响应的 Agent 系统原型。它将舆情 ingestion、事件归并、风险分析、Multi-Agent Workflow、Legal RAG、Guardrail、Human Review、Checkpoint/Resume 和工具执行安全结合起来，用于辅助企业人员分析事件、组织回应和审查风险。
+CrisisAgent 是一个 **live-news-driven, evidence-guided enterprise crisis response Copilot workbench**。它面向企业 PR、法务和品控团队，将受控新闻源、白名单来源或人工录入事件转为可分级、可审核、可追踪的响应草稿、法律风险意见和审计报告。
 
-当前项目具备生产化思路，但仍然是 **production-oriented engineering prototype**，不是已经部署的生产级 SaaS。
+当前项目是具备工程化思路的 MVP / prototype，不是已经部署的生产级 SaaS。
 
 当前边界：
 
 - 不是全网实时爬虫平台；
 - 不是自动发布声明系统；
+- 不是 one-shot LLM demo；
 - 不是已经接入企业生产数据的线上平台；
 - 白名单 live-fetch 只用于受控验证，不默认开启；
 - MCP Safe Adapter 当前优先服务本地协议验证，远程联网能力仍需补齐安全基础设施。
+- GDELT DOC 与 NewsAPI 是手动启用的准实时新闻连接器，不代表全网实时监控覆盖。
 
 ## 2. 为什么当前还不够落地
+
+P18 新增 Watchlist 驱动的准实时监测入口，用于围绕公司、品牌和产品生成受控查询、保存 Public Signals 并产生人工确认 Alert；它仍不是全网实时监控。
 
 现有 Agent 内核和安全边界已经比较完整，但从“可运行的 Agent 工程原型”到“企业可使用的产品”还缺少以下产品闭环：
 
@@ -44,7 +48,7 @@ CrisisAgent 是一个面向企业舆情危机响应的 Agent 系统原型。它�
     -> 导出危机处理报告
 ```
 
-这里的“采集”仍然是受控采集：系统只处理登记过的 RSS 或单篇文章 URL，不通过递归爬取扩大范围，也不自动发布回应。
+这里的“采集”仍然是受控采集：系统只处理登记过的 RSS、单篇文章 URL，或手动启用的 GDELT DOC / NewsAPI 查询连接器；不通过递归爬取扩大范围，也不自动发布回应。
 
 ## 4. 可借鉴 DocReview-Agent-System 的部分
 
@@ -199,7 +203,7 @@ P13 新增 Repository 抽象，默认保留 JSON demo storage，并为 Source、
 
 第一版真实采集只允许：
 
-- 白名单 RSS 或单篇 `article_url`；
+- 白名单 RSS 或单篇 `article_url`，以及手动启用的 GDELT DOC / NewsAPI 查询连接器；
 - HTTPS URL；
 - 遵守 `robots.txt`；
 - 明确的 timeout；
@@ -224,7 +228,7 @@ P13 新增 Repository 抽象，默认保留 JSON demo storage，并为 Source、
 
 ### 1 分钟版
 
-> CrisisAgent 目前不是单纯的聊天机器人，而是一个企业舆情危机响应 Agent 原型。Agent 内核已经包含舆情 ingestion、事件归并、风险分析、固定 Workflow、Dynamic Runtime、Legal RAG、Guardrail、Human Review、Checkpoint/Resume、ToolRunner 和 MCP 安全适配。为了让它真正落地，下一步不是继续增加 Agent 数量，而是补产品闭环：数据源管理、采集任务、危机事件库、事件详情、报告导出和前端工作台。真实采集也不会做成全网乱爬，而是采用白名单 RSS/单篇文章、robots、限速、超时和人工审核。这样系统先保证来源可控、事件可追踪、结果可审计，再逐步扩展联网服务能力。
+> CrisisAgent 目前不是单纯的聊天机器人，而是一个企业舆情危机响应 Agent 原型。Agent 内核已经包含舆情 ingestion、事件归并、风险分析、固定 Workflow、Dynamic Runtime、Legal RAG、Guardrail、Human Review、Checkpoint/Resume、ToolRunner 和 MCP 安全适配。为了让它真正落地，下一步不是继续增加 Agent 数量，而是补产品闭环：数据源管理、采集任务、危机事件库、事件详情、报告导出和前端工作台。真实采集也不会做成全网乱爬，而是采用白名单 RSS/单篇文章，或手动启用的 GDELT DOC / NewsAPI 查询连接器，并保留 robots、限速、超时和人工审核边界。这样系统先保证来源可控、事件可追踪、结果可审计，再逐步扩展联网服务能力。
 
 ### 30 秒版
 

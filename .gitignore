@@ -34,6 +34,10 @@ data/event_agent_runs.runtime.json
 data/eval_runs.runtime.json
 data/eval_report.json
 data/audit_logs.runtime.json
+data/collected_items.runtime.json
+data/watchlists.runtime.json
+data/live_monitor_runs.runtime.json
+data/alerts.runtime.json
 data/product_storage_export.json
 
 # Local Codex acceptance artifacts

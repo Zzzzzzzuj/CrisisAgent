@@ -4,7 +4,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
-ALLOWED_SOURCE_TYPES = {"rss", "article_url"}
+ALLOWED_SOURCE_TYPES = {"rss", "article_url", "gdelt_doc", "news_api"}
 
 
 @dataclass(frozen=True)
@@ -20,6 +20,13 @@ class SourceDefinition:
     rate_limit_seconds: float = 3.0
     timeout_seconds: float = 10.0
     max_items: int = 5
+    query: str | None = None
+    language: str | None = None
+    lookback_minutes: int = 60
+    domains: tuple[str, ...] = ()
+    from_minutes: int | None = None
+    sort_by: str | None = None
+    api_key_env: str | None = None
     created_by: str | None = None
     updated_by: str | None = None
     created_at: str | None = None
@@ -29,6 +36,13 @@ class SourceDefinition:
         haystack = str(text or "").lower()
         keywords = self.company_keywords + self.risk_keywords
         return any(keyword.lower() in haystack for keyword in keywords if keyword)
+
+    def matched_keywords(self, text: str) -> tuple[list[str], list[str]]:
+        haystack = str(text or "").lower()
+        return (
+            [keyword for keyword in self.company_keywords if keyword.lower() in haystack],
+            [keyword for keyword in self.risk_keywords if keyword.lower() in haystack],
+        )
 
 
 class SourceRegistry:
@@ -57,6 +71,11 @@ class SourceRegistry:
                 rate_limit_seconds=float(raw.get("rate_limit_seconds", 3)),
                 timeout_seconds=float(raw.get("timeout_seconds", 10)),
                 max_items=int(raw.get("max_items", 5)),
+                query=raw.get("query"), language=raw.get("language"),
+                lookback_minutes=int(raw.get("lookback_minutes", 60)),
+                domains=tuple(str(value) for value in raw.get("domains", []) or []),
+                from_minutes=raw.get("from_minutes"), sort_by=raw.get("sort_by"),
+                api_key_env=raw.get("api_key_env"),
                 created_by=raw.get("created_by"), updated_by=raw.get("updated_by"),
                 created_at=raw.get("created_at"), updated_at=raw.get("updated_at"),
             )
@@ -77,6 +96,15 @@ class SourceRegistry:
             raise ValueError("Live source URLs must use https and include a host.")
         if source.rate_limit_seconds < 0 or source.timeout_seconds <= 0 or source.max_items <= 0:
             raise ValueError("Source limits must be positive and rate_limit_seconds cannot be negative.")
+        if source.source_type in {"gdelt_doc", "news_api"}:
+            if not source.query or len(source.query.strip()) > 300:
+                raise ValueError("News API sources require a query up to 300 characters.")
+        if source.lookback_minutes <= 0 or source.lookback_minutes > 10_080:
+            raise ValueError("lookback_minutes must be between 1 and 10080.")
+        if source.from_minutes is not None and (source.from_minutes <= 0 or source.from_minutes > 10_080):
+            raise ValueError("from_minutes must be between 1 and 10080.")
+        if source.sort_by and source.sort_by not in {"relevancy", "publishedAt"}:
+            raise ValueError("sort_by must be relevancy or publishedAt.")
 
     def get(self, source_id: str) -> SourceDefinition:
         try:

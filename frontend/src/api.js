@@ -73,6 +73,50 @@ export function testSource(sourceId) {
   return api.post(`/api/sources/${sourceId}/test`).then((response) => response.data);
 }
 
+export function fetchSourcePreview(sourceId, payload = {}) {
+  return api.post(`/api/sources/${sourceId}/fetch-preview`, payload).then((response) => response.data);
+}
+
+export function listCollectedItems(query = {}) {
+  return api.get("/api/collected-items", { params: query }).then((response) => response.data);
+}
+
+export function listWatchlists(query = {}) {
+  return api.get("/api/watchlists", { params: query }).then((response) => response.data);
+}
+
+export function createWatchlist(payload) {
+  return api.post("/api/watchlists", payload).then((response) => response.data);
+}
+
+export function updateWatchlist(entityId, payload) {
+  return api.patch(`/api/watchlists/${entityId}`, payload).then((response) => response.data);
+}
+
+export function archiveWatchlist(entityId) {
+  return api.post(`/api/watchlists/${entityId}/archive`).then((response) => response.data);
+}
+
+export function runLiveMonitor(payload = {}) {
+  return api.post("/api/live-monitor/run", payload).then((response) => response.data);
+}
+
+export function listLiveMonitorRuns() {
+  return api.get("/api/live-monitor/runs").then((response) => response.data);
+}
+
+export function getLiveMonitorRun(runId) {
+  return api.get(`/api/live-monitor/runs/${runId}`).then((response) => response.data);
+}
+
+export function listAlerts(query = {}) {
+  return api.get("/api/alerts", { params: query }).then((response) => response.data);
+}
+
+export function acknowledgeAlert(alertId) {
+  return api.post(`/api/alerts/${alertId}/ack`).then((response) => response.data);
+}
+
 export function runIngestion(payload) {
   return api.post("/api/ingestion/run", payload).then((response) => response.data);
 }

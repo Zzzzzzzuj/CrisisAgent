@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import time
 import xml.etree.ElementTree as ET
+from datetime import timedelta
 
 import httpx
 
@@ -13,6 +14,8 @@ from .article_extractor import extract_article
 from .robots import RobotsChecker
 from .schemas import RawSentimentItem
 from .source_registry import SourceDefinition
+import os
+from hashlib import sha256
 
 
 REQUIRED_FIELDS = {
@@ -36,6 +39,10 @@ class FetchResult:
     matched_count: int
     failed_reason: str | None
     items: list[RawSentimentItem]
+    adapter_type: str = "unknown"
+    duration_ms: int = 0
+    error_type: str | None = None
+    robots_allowed: bool | None = None
 
 
 def _to_item(row: dict, index: int) -> RawSentimentItem:
@@ -150,6 +157,102 @@ class HttpArticleSourceAdapter(_RateLimitedAdapter):
             return FetchResult(source.source_id, source.source_name, "collected", 1, 1, None, [item])
         except Exception as exc:
             return FetchResult(source.source_id, source.source_name, "failed", 0, 0, f"http_error:{exc.__class__.__name__}", [])
+
+
+class _NewsApiAdapter(_RateLimitedAdapter):
+    adapter_type = "news_api"
+
+    def __init__(self, http_get=None):
+        self.http_get = http_get or httpx.get
+
+    def _failed(self, source: SourceDefinition, reason: str, error_type: str) -> FetchResult:
+        return FetchResult(source.source_id, source.source_name, "failed", 0, 0, reason, [], self.adapter_type, 0, error_type, None)
+
+    @staticmethod
+    def _error_type(exc: Exception) -> str:
+        if isinstance(exc, httpx.TimeoutException):
+            return "timeout"
+        response = getattr(exc, "response", None)
+        if response is not None and getattr(response, "status_code", None) == 429:
+            return "rate_limited"
+        if response is not None and getattr(response, "status_code", None) == 403:
+            return "forbidden"
+        return "http_error"
+
+    @staticmethod
+    def _item(source: SourceDefinition, index: int, title: str, url: str, preview: str, published_at: str, metadata: dict | None = None) -> RawSentimentItem:
+        digest = sha256(f"{url}|{title}|{preview}".encode("utf-8")).hexdigest()[:16]
+        return RawSentimentItem(
+            item_id=f"{source.source_id}:{digest or index}", source_name=source.source_name,
+            source_url=url, title=title, content=preview[:4000], published_at=published_at,
+            company=source.company_keywords[0] if source.company_keywords else "unknown", fact_status="unverified",
+            metadata=metadata or {},
+        )
+
+
+class GdeltDocSourceAdapter(_NewsApiAdapter):
+    adapter_type = "gdelt_doc"
+
+    def fetch(self, source: SourceDefinition) -> FetchResult:
+        if not source.enabled:
+            return FetchResult(source.source_id, source.source_name, "disabled", 0, 0, "source_disabled", [], self.adapter_type)
+        if source.source_type != "gdelt_doc":
+            return self._failed(source, "wrong_source_type", "configuration")
+        started = time.monotonic()
+        self._wait_for_rate_limit(source)
+        try:
+            response = self.http_get(source.url, params={"query": source.query, "mode": "artlist", "format": "json", "maxrecords": source.max_items, "timespan": f"{source.lookback_minutes}min"}, timeout=source.timeout_seconds, headers={"User-Agent": "CrisisAgentResearchBot/0.1"}, follow_redirects=False)
+            response.raise_for_status()
+            articles = response.json().get("articles", [])
+            if not isinstance(articles, list):
+                raise ValueError("invalid_json_shape")
+            items = []
+            for index, article in enumerate(articles[: source.max_items], 1):
+                title, url = str(article.get("title", "")), str(article.get("url", ""))
+                preview = str(article.get("summary") or title)
+                if title and url and source.matches(f"{title} {preview}"):
+                    items.append(self._item(source, index, title, url, preview, str(article.get("seendate", "")), {"domain": article.get("domain"), "language": article.get("language")}))
+            return FetchResult(source.source_id, source.source_name, "collected" if items else "no_match", min(len(articles), source.max_items), len(items), None if items else "keyword_not_matched", items, self.adapter_type, round((time.monotonic() - started) * 1000), None, None)
+        except Exception as exc:
+            return FetchResult(source.source_id, source.source_name, "failed", 0, 0, f"{self._error_type(exc)}:{exc.__class__.__name__}", [], self.adapter_type, round((time.monotonic() - started) * 1000), self._error_type(exc), None)
+
+
+class NewsApiSourceAdapter(_NewsApiAdapter):
+    adapter_type = "news_api"
+
+    def fetch(self, source: SourceDefinition) -> FetchResult:
+        if not source.enabled:
+            return FetchResult(source.source_id, source.source_name, "disabled", 0, 0, "source_disabled", [], self.adapter_type)
+        if source.source_type != "news_api":
+            return self._failed(source, "wrong_source_type", "configuration")
+        api_key = os.getenv(source.api_key_env or "NEWSAPI_KEY")
+        if not api_key:
+            return self._failed(source, "missing_api_key", "missing_api_key")
+        started = time.monotonic()
+        self._wait_for_rate_limit(source)
+        try:
+            params = {"q": source.query, "pageSize": source.max_items, "sortBy": source.sort_by or "publishedAt"}
+            if source.domains:
+                params["domains"] = ",".join(source.domains)
+            if source.language:
+                params["language"] = source.language
+            if source.from_minutes:
+                params["from"] = (datetime.now(timezone.utc) - timedelta(minutes=source.from_minutes)).isoformat()
+            response = self.http_get(source.url, params=params, timeout=source.timeout_seconds, headers={"X-Api-Key": api_key, "User-Agent": "CrisisAgentResearchBot/0.1"}, follow_redirects=False)
+            response.raise_for_status()
+            articles = response.json().get("articles", [])
+            if not isinstance(articles, list):
+                raise ValueError("invalid_json_shape")
+            items = []
+            for index, article in enumerate(articles[: source.max_items], 1):
+                title, url = str(article.get("title", "")), str(article.get("url", ""))
+                preview = str(article.get("description") or article.get("content") or title)
+                if title and url and source.matches(f"{title} {preview}"):
+                    source_info = article.get("source") if isinstance(article.get("source"), dict) else {}
+                    items.append(self._item(source, index, title, url, preview, str(article.get("publishedAt", "")), {"news_source": source_info.get("name"), "language": source.language}))
+            return FetchResult(source.source_id, source.source_name, "collected" if items else "no_match", min(len(articles), source.max_items), len(items), None if items else "keyword_not_matched", items, self.adapter_type, round((time.monotonic() - started) * 1000), None, None)
+        except Exception as exc:
+            return FetchResult(source.source_id, source.source_name, "failed", 0, 0, f"{self._error_type(exc)}:{exc.__class__.__name__}", [], self.adapter_type, round((time.monotonic() - started) * 1000), self._error_type(exc), None)
 
 
 def _parse_feed_entries(content: str) -> list[dict]:

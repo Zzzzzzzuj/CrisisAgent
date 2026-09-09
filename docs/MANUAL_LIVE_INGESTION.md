@@ -1,5 +1,7 @@
 # 手动联网采集
 
+> 除 RSS/article URL 外，P17 支持手动启用的 GDELT DOC 与 NewsAPI 查询源。所有来源仍必须经过 Source Registry、服务器开关和人工确认；详见 [Live News Ingestion](LIVE_NEWS_INGESTION.md)。
+
 ## 1. 为什么需要手动入口
 
 白名单 RSS / 单篇文章采集可以验证真实 ingestion 链路，但联网行为具有外部副作用，不能因为用户打开工作台就自动执行。因此 API 默认关闭 live-fetch，只有服务端配置和用户确认同时满足时才允许运行。

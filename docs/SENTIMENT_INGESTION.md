@@ -1,5 +1,7 @@
 # Sentiment Ingestion
 
+> 受控连接器现可扩展到 RSS、单篇 article URL、GDELT DOC 和 NewsAPI；真实请求仍需显式 live-fetch 开关。详见 [Live News Ingestion](LIVE_NEWS_INGESTION.md)。
+
 ## Why this layer exists
 
 The original CrisisAgent entry points accept one manually written `event` string. Real enterprise input is more likely to contain multiple news items, forum posts, or media reports with duplicated, incomplete, or conflicting descriptions. The ingestion layer turns those source items into one event-level object before the existing CrisisAgent workflow runs.

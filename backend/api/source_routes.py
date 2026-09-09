@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 import os
@@ -13,6 +13,8 @@ from backend.api.source_schemas import (
     SourceListResponse,
     SourceResponse,
     SourceTestResponse,
+    SourceFetchPreviewRequest,
+    SourceFetchPreviewResponse,
     SourceUpdateRequest,
 )
 from backend.ingestion.source_registry import SourceDefinition, SourceRegistry
@@ -85,6 +87,11 @@ class JsonSourceRegistryStore:
                 rate_limit_seconds=float(raw.get("rate_limit_seconds", 3)),
                 timeout_seconds=float(raw.get("timeout_seconds", 10)),
                 max_items=int(raw.get("max_items", 5)),
+                query=raw.get("query"), language=raw.get("language"),
+                lookback_minutes=int(raw.get("lookback_minutes", 60)),
+                domains=tuple(str(value).strip() for value in raw.get("domains", []) or []),
+                from_minutes=raw.get("from_minutes"), sort_by=raw.get("sort_by"),
+                api_key_env=raw.get("api_key_env"),
                 created_by=raw.get("created_by"), updated_by=raw.get("updated_by"),
                 created_at=raw.get("created_at"), updated_at=raw.get("updated_at"),
             )
@@ -110,6 +117,7 @@ def _source_from_create(payload: SourceCreateRequest, actor_id: str) -> SourceDe
     values = payload.model_dump()
     values["company_keywords"] = tuple(values["company_keywords"])
     values["risk_keywords"] = tuple(values["risk_keywords"])
+    values["domains"] = tuple(values["domains"])
     now = _now()
     return SourceDefinition(**values, created_by=actor_id, updated_by=actor_id, created_at=now, updated_at=now)
 
@@ -178,7 +186,7 @@ def test_source(source_id: str, user: dict = Depends(get_workspace_user)) -> Sou
         source_id=source.source_id,
         exists=True,
         enabled=source.enabled,
-        source_type_supported=source.source_type in {"rss", "article_url"},
+        source_type_supported=source.source_type in {"rss", "article_url", "gdelt_doc", "news_api"},
         url_https=source.url.lower().startswith("https://"),
         keywords_valid=bool(source.company_keywords or source.risk_keywords),
         test_status="config_valid" if not errors else "config_invalid",
@@ -186,3 +194,38 @@ def test_source(source_id: str, user: dict = Depends(get_workspace_user)) -> Sou
     )
     write_audit(user, "source.test", "source", source_id)
     return response
+
+
+@router.post("/{source_id}/fetch-preview", response_model=SourceFetchPreviewResponse)
+def fetch_preview(source_id: str, payload: SourceFetchPreviewRequest, user: dict = Depends(get_workspace_user)) -> SourceFetchPreviewResponse:
+    authorize(user, {"admin", "operator"}, "source.fetch_preview", "source", source_id)
+    try:
+        source = get_source_store().get(source_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Source '{source_id}' not found.") from exc
+    if payload.max_items is not None and payload.max_items > source.max_items:
+        raise HTTPException(status_code=422, detail="max_items cannot exceed the configured source max_items.")
+    if not payload.live_fetch:
+        write_audit(user, "source.fetch_preview", "source", source_id, metadata={"live_fetch": False})
+        return SourceFetchPreviewResponse(
+            source_id=source.source_id, source_name=source.source_name, source_type=source.source_type,
+            live_fetch=False, status="disabled", failed_reason="live_fetch_disabled", robots_allowed=None,
+            rate_limit_seconds=source.rate_limit_seconds, timeout_seconds=source.timeout_seconds,
+            max_items=payload.max_items or source.max_items,
+        )
+    from backend.api.ingestion_execution import api_live_fetch_enabled, fetch_source
+
+    if not api_live_fetch_enabled():
+        write_audit(user, "source.fetch_preview", "source", source_id, "denied", "live_fetch_disabled_by_server", {"live_fetch": True})
+        raise HTTPException(status_code=403, detail="live fetch is disabled by server config; set ENABLE_API_LIVE_FETCH=true to enable it.")
+    effective = replace(source, max_items=payload.max_items) if payload.max_items else source
+    result = fetch_source(effective)
+    write_audit(user, "source.fetch_preview", "source", source_id, metadata={"live_fetch": True, "status": result.status})
+    return SourceFetchPreviewResponse(
+        source_id=source.source_id, source_name=source.source_name, source_type=source.source_type,
+        live_fetch=True, status=result.status, fetched_count=result.fetched_count,
+        matched_count=result.matched_count, failed_reason=result.failed_reason,
+        robots_allowed=result.robots_allowed, rate_limit_seconds=source.rate_limit_seconds,
+        timeout_seconds=source.timeout_seconds, max_items=effective.max_items,
+        items=[asdict(item) for item in result.items],
+    )

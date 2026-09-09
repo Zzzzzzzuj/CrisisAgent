@@ -28,6 +28,16 @@ import {
   runEval,
   runIngestion,
   testSource,
+  fetchSourcePreview,
+  listCollectedItems,
+  listWatchlists,
+  createWatchlist,
+  updateWatchlist,
+  runLiveMonitor,
+  listLiveMonitorRuns,
+  getLiveMonitorRun,
+  listAlerts,
+  acknowledgeAlert,
   updateSource,
   setWorkspaceDemoUser,
   listAuditLogs,
@@ -52,6 +62,18 @@ const loading = ref(false);
 const action = ref("");
 const error = ref("");
 const sourceTestResults = ref({});
+const sourcePreviewResults = ref({});
+const sourcePreviewConfirmations = ref({});
+const collectedItems = ref([]);
+const collectedSourceFilter = ref("");
+const watchlists = ref([]);
+const monitorRuns = ref([]);
+const alerts = ref([]);
+const watchlistForm = ref({ entity_name: "", entity_type: "company", aliases: "", company_keywords: "", risk_keywords: "投诉,监管,召回", exclude_keywords: "" });
+const monitorProvider = ref("gdelt_doc");
+const monitorLiveFetch = ref(false);
+const monitorConfirmation = ref("");
+const monitorLoading = ref(false);
 const dashboardOverview = ref(null);
 const dashboardSeverity = ref(null);
 const dashboardTrends = ref([]);
@@ -89,6 +111,8 @@ const sourceForm = ref({
   url: "https://",
   company_keywords: "",
   risk_keywords: "投诉,监管,召回",
+  query: "",
+  api_key_env: "NEWSAPI_KEY",
 });
 
 const eventSummary = computed(() => selectedEvent.value?.event_summary || "暂无事件摘要");
@@ -121,7 +145,7 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
-    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools()]);
+    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools(), loadCollectedItems(), loadWatchlists(), loadMonitorRuns(), loadAlerts()]);
     if (workspaceUser.value.role === "admin") await loadAuditLogs();
     else auditLogs.value = [];
   } catch (err) {
@@ -176,6 +200,52 @@ async function loadAuditLogs() {
 async function loadSources() {
   const data = await listSources();
   sources.value = data.sources || [];
+}
+
+async function loadCollectedItems() {
+  const data = await listCollectedItems(collectedSourceFilter.value ? { source_id: collectedSourceFilter.value } : {});
+  collectedItems.value = data.items || [];
+}
+
+async function loadWatchlists() {
+  const data = await listWatchlists();
+  watchlists.value = data.watchlists || [];
+}
+
+async function loadMonitorRuns() {
+  const data = await listLiveMonitorRuns();
+  monitorRuns.value = data.runs || [];
+}
+
+async function loadAlerts() {
+  const data = await listAlerts();
+  alerts.value = data.alerts || [];
+}
+
+async function submitWatchlist() {
+  if (!watchlistForm.value.entity_name.trim() || !canOperate.value) return;
+  try {
+    await createWatchlist({ entity_name: watchlistForm.value.entity_name, entity_type: watchlistForm.value.entity_type, aliases: splitKeywords(watchlistForm.value.aliases), company_keywords: splitKeywords(watchlistForm.value.company_keywords), risk_keywords: splitKeywords(watchlistForm.value.risk_keywords), exclude_keywords: splitKeywords(watchlistForm.value.exclude_keywords), enabled: false });
+    watchlistForm.value.entity_name = "";
+    await loadWatchlists();
+  } catch (err) { showError(err); }
+}
+
+async function toggleWatchlist(item) {
+  try { Object.assign(item, await updateWatchlist(item.entity_id, { enabled: !item.enabled })); } catch (err) { showError(err); }
+}
+
+async function startMonitor() {
+  if (!canOperate.value || !watchlists.value.some((item) => item.enabled)) return;
+  monitorLoading.value = true;
+  try {
+    await runLiveMonitor({ providers: [monitorProvider.value], background: false, live_fetch: monitorLiveFetch.value, max_items_per_entity: 10, lookback_minutes: 60 });
+    await Promise.all([loadMonitorRuns(), loadCollectedItems(), loadAlerts(), loadDashboard()]);
+  } catch (err) { showError(err); } finally { monitorLoading.value = false; }
+}
+
+async function ackAlert(alert) {
+  try { Object.assign(alert, await acknowledgeAlert(alert.alert_id)); } catch (err) { showError(err); }
 }
 
 async function loadRuns() {
@@ -247,6 +317,8 @@ async function submitSource() {
       enabled: false,
       company_keywords: splitKeywords(sourceForm.value.company_keywords),
       risk_keywords: splitKeywords(sourceForm.value.risk_keywords),
+      query: sourceForm.value.query || null,
+      api_key_env: sourceForm.value.source_type === "news_api" ? (sourceForm.value.api_key_env || "NEWSAPI_KEY") : null,
       respect_robots: true,
       rate_limit_seconds: 3,
       timeout_seconds: 10,
@@ -256,6 +328,7 @@ async function submitSource() {
     sourceForm.value.source_name = "";
     sourceForm.value.url = "https://";
     sourceForm.value.company_keywords = "";
+    sourceForm.value.query = "";
     await loadSources();
   } catch (err) {
     showError(err);
@@ -281,6 +354,18 @@ async function checkSource(source) {
   }
 }
 
+async function previewSource(source) {
+  if (sourcePreviewConfirmations.value[source.source_id] !== "我确认预览联网采集") {
+    sourcePreviewResults.value[source.source_id] = { status: "disabled", failed_reason: "confirmation_required", items: [] };
+    return;
+  }
+  try {
+    sourcePreviewResults.value[source.source_id] = await fetchSourcePreview(source.source_id, { live_fetch: true });
+  } catch (err) {
+    sourcePreviewResults.value[source.source_id] = { status: "failed", failed_reason: err.response?.data?.detail || "预览失败", items: [] };
+  }
+}
+
 async function startIngestion(dryRun) {
   action.value = dryRun ? "dry-run" : "ingestion";
   error.value = "";
@@ -288,6 +373,7 @@ async function startIngestion(dryRun) {
     const result = await runIngestion({ live_fetch: false, dry_run: dryRun, background: dryRun ? false : backgroundIngestion.value });
     selectedRun.value = result;
     await Promise.all([loadRuns(), loadDashboard()]);
+    await loadCollectedItems();
   } catch (err) {
     showError(err);
   } finally {
@@ -302,6 +388,7 @@ async function startLiveIngestion() {
     const result = await runIngestion({ live_fetch: true, dry_run: false, background: backgroundIngestion.value });
     selectedRun.value = result;
     await Promise.all([loadRuns(), loadDashboard()]);
+    await loadCollectedItems();
   } catch (err) {
     if (err.response?.status === 403) {
       error.value = "后端未开启 ENABLE_API_LIVE_FETCH=true，本次没有联网。";
@@ -667,10 +754,12 @@ function compactOutput(value) {
       <form v-if="isSourceManager" class="workbench-form" @submit.prevent="submitSource">
         <input v-model="sourceForm.source_id" placeholder="source_id" required />
         <input v-model="sourceForm.source_name" placeholder="来源名称" required />
-        <select v-model="sourceForm.source_type"><option value="rss">rss</option><option value="article_url">article_url</option></select>
+        <select v-model="sourceForm.source_type"><option value="rss">rss</option><option value="article_url">article_url</option><option value="gdelt_doc">gdelt_doc</option><option value="news_api">news_api</option></select>
         <input v-model="sourceForm.url" placeholder="HTTPS URL" required />
         <input v-model="sourceForm.company_keywords" placeholder="公司关键词，用逗号分隔" />
         <input v-model="sourceForm.risk_keywords" placeholder="风险关键词，用逗号分隔" required />
+        <input v-if="['gdelt_doc', 'news_api'].includes(sourceForm.source_type)" v-model="sourceForm.query" placeholder="新闻查询词" required />
+        <input v-if="sourceForm.source_type === 'news_api'" v-model="sourceForm.api_key_env" placeholder="API key 环境变量名" />
         <button class="primary-button" :disabled="action === 'source'">新增安全来源</button>
       </form>
       <div v-if="sources.length" class="data-list">
@@ -679,12 +768,52 @@ function compactOutput(value) {
           <span :class="['status-pill', source.enabled ? 'status-on' : 'status-off']">{{ source.enabled ? 'enabled' : 'disabled' }}</span>
           <button v-if="isSourceManager" class="ghost-button small-button" @click="toggleSource(source)">{{ source.enabled ? '禁用' : '启用' }}</button>
           <button v-if="isSourceManager || canOperate" class="ghost-button small-button" @click="checkSource(source)">配置检查</button>
+          <details v-if="canOperate" class="source-preview"><summary>联网预览</summary><p class="muted tiny-text">不会创建 IngestionRun、CrisisEvent 或正式采集记录；需要后端开启 live-fetch。</p><input v-model="sourcePreviewConfirmations[source.source_id]" placeholder="输入：我确认预览联网采集" /><button class="ghost-button small-button" @click="previewSource(source)">预览单个来源</button><p v-if="sourcePreviewResults[source.source_id]" class="muted tiny-text">{{ sourcePreviewResults[source.source_id].status }} · fetched {{ sourcePreviewResults[source.source_id].fetched_count || 0 }} · matched {{ sourcePreviewResults[source.source_id].matched_count || 0 }}{{ sourcePreviewResults[source.source_id].failed_reason ? ` · ${sourcePreviewResults[source.source_id].failed_reason}` : '' }}</p></details>
           <span v-if="sourceTestResults[source.source_id]" class="muted tiny-text">
             {{ sourceTestResults[source.source_id].test_status }} · live_fetch={{ sourceTestResults[source.source_id].live_fetch_triggered }}
           </span>
         </div>
       </div>
       <p v-else class="empty-inline">暂无数据源，请先添加一个 HTTPS 白名单来源。</p>
+    </article>
+
+    <article class="page-card workbench-card collected-items-card">
+      <div class="section-heading"><div><p class="eyebrow">P17 Live News Ingestion</p><h3>Collected News Items</h3></div><button class="ghost-button small-button" @click="loadCollectedItems">刷新条目</button></div>
+      <p class="muted tiny-text">只显示正式 live ingestion 写入的摘要条目，不保存新闻全文；预览不会写入这里。</p>
+      <label class="tiny-text">按 source_id 过滤 <input v-model="collectedSourceFilter" placeholder="可选 source_id" @change="loadCollectedItems" /></label>
+      <div v-if="collectedItems.length" class="collected-item-list"><article v-for="item in collectedItems" :key="item.item_id" class="collected-item"><strong>{{ item.title }}</strong><small>{{ item.source_name }} · {{ item.source_type }} · {{ item.published_at }}</small><p>{{ item.content_preview }}</p><a :href="item.url" target="_blank" rel="noreferrer">查看来源</a><small>匹配：{{ [...item.matched_company_keywords, ...item.matched_risk_keywords].join('、') || '无' }}</small></article></div>
+      <p v-else class="empty-inline">暂无正式真实采集条目。默认离线运行和 fetch-preview 都不会写入此列表。</p>
+    </article>
+
+    <article class="page-card workbench-card monitoring-card">
+      <div class="section-heading"><div><p class="eyebrow">P18 Watchlist Monitoring</p><h3>企业监测任务中心</h3></div><span class="status-pill">白名单 provider · 默认不联网</span></div>
+      <p class="muted tiny-text">围绕公司、品牌或产品生成受控搜索线索。这里只展示公开信号，不是任意网站爬虫，也不会自动运行 Agent 或发布声明。</p>
+      <div class="monitor-grid">
+        <section>
+          <h4>Watchlist / 监控对象</h4>
+          <div class="watchlist-form">
+            <input v-model="watchlistForm.entity_name" placeholder="公司 / 品牌 / 产品名称" />
+            <select v-model="watchlistForm.entity_type"><option value="company">company</option><option value="brand">brand</option><option value="product">product</option><option value="organization">organization</option></select>
+            <input v-model="watchlistForm.aliases" placeholder="别名，用逗号分隔" />
+            <input v-model="watchlistForm.risk_keywords" placeholder="风险词，用逗号分隔" />
+            <input v-model="watchlistForm.exclude_keywords" placeholder="排除词，可选" />
+            <button class="primary-button" :disabled="!canOperate" @click="submitWatchlist">新增监控对象</button>
+          </div>
+          <div v-if="watchlists.length" class="data-list compact-list">
+            <div v-for="item in watchlists" :key="item.entity_id" class="data-row"><div><strong>{{ item.entity_name }}</strong><small>{{ item.entity_type }} · {{ item.priority }} · {{ item.enabled ? 'enabled' : 'disabled' }}</small></div><button v-if="canOperate" class="ghost-button small-button" @click="toggleWatchlist(item)">{{ item.enabled ? '停用' : '启用' }}</button></div>
+          </div><p v-else class="empty-inline">暂无监控对象。</p>
+        </section>
+        <section>
+          <h4>Live Monitor Run</h4>
+          <label class="monitor-control">Provider <select v-model="monitorProvider"><option value="gdelt_doc">GDELT DOC</option><option value="news_api">NewsAPI</option><option value="rss">RSS</option></select></label>
+          <label class="monitor-control"><input v-model="monitorLiveFetch" type="checkbox" /> 允许联网（需服务端 ENABLE_API_LIVE_FETCH=true）</label>
+          <input v-if="monitorLiveFetch" v-model="monitorConfirmation" placeholder="输入：我确认手动联网采集" />
+          <button class="primary-button" :disabled="monitorLoading || !canOperate || !watchlists.some((item) => item.enabled) || (monitorLiveFetch && monitorConfirmation !== '我确认手动联网采集')" @click="startMonitor">{{ monitorLoading ? '运行中...' : (monitorLiveFetch ? '确认并运行联网监测' : '运行离线监测') }}</button>
+          <p class="muted tiny-text">默认 live_fetch=false；启用联网前请确认来源、robots、限速和授权范围。</p>
+          <div v-if="monitorRuns.length" class="data-list compact-list"><div v-for="run in monitorRuns.slice(0, 5)" :key="run.monitor_run_id" class="data-row"><div><strong>{{ run.monitor_run_id }}</strong><small>{{ run.status }} · items {{ run.item_count }} · alerts {{ run.alert_count }}</small></div><span>{{ run.live_fetch ? 'live' : 'offline' }}</span></div></div>
+        </section>
+      </div>
+      <section class="monitor-subsection"><h4>Alerts / 风险提醒</h4><div v-if="alerts.length" class="data-list compact-list"><div v-for="alert in alerts" :key="alert.alert_id" class="data-row"><div><strong>{{ alert.title }}</strong><small>{{ alert.entity_name }} · {{ alert.reason }}</small></div><span class="severity-badge" :class="alert.severity.toLowerCase()">{{ alert.severity }}</span><button v-if="alert.status === 'open' && canOperate" class="ghost-button small-button" @click="ackAlert(alert)">确认</button><span v-else class="status-pill">{{ alert.status }}</span></div></div><p v-else class="empty-inline">暂无风险提醒；no_match 不会生成 alert。</p></section>
     </article>
 
     <div class="workbench-columns">
@@ -807,6 +936,19 @@ function compactOutput(value) {
 .crisis-radar { border-top: 4px solid #c55d3d; }
 .eval-center { border-top: 4px solid #517d78; }
 .tool-api-card { border-top: 4px solid #4d7588; }
+.collected-items-card { border-top: 4px solid #bf7046; }
+.collected-item-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.collected-item { display: grid; gap: 6px; border: 1px solid #e5e9e6; border-radius: 11px; padding: 12px; background: #fbfcfb; }
+.collected-item small, .collected-item p { margin: 0; color: #718078; font-size: 12px; }
+.collected-item p { line-height: 1.55; }.collected-item a { color: #2e716b; font-size: 12px; }
+.monitoring-card { border-top: 4px solid #6d7f4f; }
+.monitor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.monitor-grid section { display: grid; gap: 10px; }
+.watchlist-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.watchlist-form input, .watchlist-form select, .monitor-control select { min-width: 0; border: 1px solid #d9dfdc; border-radius: 9px; padding: 9px 10px; background: #fff; }
+.monitor-control { display: flex; gap: 7px; align-items: center; color: #43584e; font-size: 13px; }
+.monitor-subsection { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e7ece9; }
+.source-preview { grid-column: 1 / -1; display: grid; gap: 6px; }.source-preview summary { cursor: pointer; color: #53675e; font-size: 12px; }.source-preview input { border: 1px solid #d9dfdc; border-radius: 8px; padding: 7px 9px; font-size: 12px; }
 .tool-api-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 14px; }
 .tool-api-grid section { display: grid; gap: 10px; }
 .tool-api-grid label { display: grid; gap: 6px; color: #43584e; font-size: 13px; }
@@ -886,7 +1028,8 @@ function compactOutput(value) {
 .draft-statement { line-height: 1.8; margin-bottom: 0; }
 .report-box pre { max-height: 360px; overflow: auto; white-space: pre-wrap; margin: 14px 0 0; background: #17231f; color: #edf7f0; padding: 16px; border-radius: 12px; font-size: 12px; }
 @media (max-width: 900px) {
-  .workbench-columns, .workbench-form, .radar-grid, .eval-grid, .tool-api-grid { grid-template-columns: 1fr; }
+  .workbench-columns, .workbench-form, .radar-grid, .eval-grid, .tool-api-grid, .collected-item-list, .monitor-grid { grid-template-columns: 1fr; }
+  .watchlist-form { grid-template-columns: 1fr; }
   .radar-metrics, .eval-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .facts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
