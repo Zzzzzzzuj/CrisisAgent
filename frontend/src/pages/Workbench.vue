@@ -31,6 +31,8 @@ import {
   updateSource,
   setWorkspaceDemoUser,
   listAuditLogs,
+  listSafeTools,
+  runSafeTool,
 } from "../api";
 
 const sources = ref([]);
@@ -62,10 +64,23 @@ const selectedEvalRun = ref(null);
 const auditLogs = ref([]);
 const auditLoading = ref(false);
 const auditError = ref("");
+const safeTools = ref([]);
+const selectedToolName = ref("");
+const toolArguments = ref("{}");
+const toolResult = ref(null);
+const toolLoading = ref(false);
+const toolError = ref("");
 const workspaceUser = ref({ id: "demo-system", role: "admin" });
 const isViewer = computed(() => workspaceUser.value.role === "viewer");
 const isSourceManager = computed(() => workspaceUser.value.role === "admin");
 const canOperate = computed(() => ["admin", "operator"].includes(workspaceUser.value.role));
+const canRunSelectedTool = computed(() => {
+  if (workspaceUser.value.role === "viewer") return false;
+  if (workspaceUser.value.role === "legal_reviewer") {
+    return ["legal_rag_search", "guardrail_check"].includes(selectedToolName.value);
+  }
+  return Boolean(selectedToolName.value);
+});
 
 const sourceForm = ref({
   source_id: "",
@@ -106,13 +121,43 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
-    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter()]);
+    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools()]);
     if (workspaceUser.value.role === "admin") await loadAuditLogs();
     else auditLogs.value = [];
   } catch (err) {
     showError(err);
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadSafeTools() {
+  const data = await listSafeTools();
+  safeTools.value = data.tools || [];
+  if (!selectedToolName.value && safeTools.value[0]) selectedToolName.value = safeTools.value[0].tool_name;
+}
+
+async function runSelectedTool() {
+  toolError.value = "";
+  toolResult.value = null;
+  let argumentsPayload;
+  try {
+    argumentsPayload = JSON.parse(toolArguments.value || "{}");
+  } catch {
+    toolError.value = "arguments 必须是合法 JSON 对象。";
+    return;
+  }
+  if (!argumentsPayload || Array.isArray(argumentsPayload) || typeof argumentsPayload !== "object") {
+    toolError.value = "arguments 必须是 JSON 对象。";
+    return;
+  }
+  toolLoading.value = true;
+  try {
+    toolResult.value = await runSafeTool({ tool_name: selectedToolName.value, arguments: argumentsPayload });
+  } catch (err) {
+    toolError.value = err.response?.data?.detail || "安全工具调用失败";
+  } finally {
+    toolLoading.value = false;
   }
 }
 
@@ -442,6 +487,28 @@ function compactOutput(value) {
     </article>
     <p v-else class="muted tiny-text">当前角色无权查看审计日志。</p>
 
+    <article class="page-card workbench-card tool-api-card">
+      <div class="section-heading"><div><p class="eyebrow">P16 HTTP Tool API</p><h3>安全工具调用</h3></div><span class="status-pill">受控 allowlist · 非任意代码执行</span></div>
+      <p class="muted tiny-text">仅开放只读安全工具；不会开放 live-fetch、审批、发布或工作流运行。默认使用离线能力，不调用真实 LLM。</p>
+      <div v-if="safeTools.length" class="tool-api-grid">
+        <section>
+          <label>安全工具 <select v-model="selectedToolName"><option v-for="tool in safeTools" :key="tool.tool_name" :value="tool.tool_name">{{ tool.tool_name }}</option></select></label>
+          <p v-for="tool in safeTools.filter((item) => item.tool_name === selectedToolName)" :key="tool.tool_name" class="muted tiny-text">{{ tool.description }} · {{ tool.risk_level }} · v{{ tool.version }}</p>
+          <label>JSON arguments <textarea v-model="toolArguments" rows="5" spellcheck="false"></textarea></label>
+          <button class="primary-button" :disabled="toolLoading || !canRunSelectedTool" @click="runSelectedTool">{{ toolLoading ? '调用中...' : '运行安全工具' }}</button>
+          <p v-if="workspaceUser.role === 'viewer'" class="muted tiny-text">viewer 只能查看安全工具列表。</p>
+          <p v-else-if="workspaceUser.role === 'legal_reviewer'" class="muted tiny-text">legal_reviewer 仅可调用 Legal RAG 与 Guardrail 工具。</p>
+        </section>
+        <section>
+          <h4>执行结果</h4>
+          <p v-if="toolError" class="error">{{ toolError }}</p>
+          <pre v-else-if="toolResult" class="tool-result">{{ JSON.stringify(toolResult, null, 2) }}</pre>
+          <p v-else class="empty-inline">选择工具并提供 JSON 参数后执行。工具错误会返回结构化 error_code 与 trace。</p>
+        </section>
+      </div>
+      <p v-else class="empty-inline">暂无可用安全工具。</p>
+    </article>
+
     <article class="page-card workbench-card crisis-radar">
       <div class="section-heading">
         <div>
@@ -739,6 +806,13 @@ function compactOutput(value) {
 .workbench-error { margin: 0; }
 .crisis-radar { border-top: 4px solid #c55d3d; }
 .eval-center { border-top: 4px solid #517d78; }
+.tool-api-card { border-top: 4px solid #4d7588; }
+.tool-api-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 14px; }
+.tool-api-grid section { display: grid; gap: 10px; }
+.tool-api-grid label { display: grid; gap: 6px; color: #43584e; font-size: 13px; }
+.tool-api-grid select, .tool-api-grid textarea { min-width: 0; border: 1px solid #d9dfdc; border-radius: 10px; padding: 10px 12px; background: #fff; font: inherit; }
+.tool-api-grid textarea { resize: vertical; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
+.tool-result { max-height: 320px; overflow: auto; margin: 0; padding: 13px; border-radius: 10px; background: #17231f; color: #edf7f0; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .eval-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
 .eval-metric { display: grid; gap: 5px; padding: 13px; border-radius: 12px; background: #eef5f3; color: #60766d; font-size: 12px; }
 .eval-metric strong { color: #214941; font-family: Georgia, serif; font-size: 23px; }
@@ -812,7 +886,7 @@ function compactOutput(value) {
 .draft-statement { line-height: 1.8; margin-bottom: 0; }
 .report-box pre { max-height: 360px; overflow: auto; white-space: pre-wrap; margin: 14px 0 0; background: #17231f; color: #edf7f0; padding: 16px; border-radius: 12px; font-size: 12px; }
 @media (max-width: 900px) {
-  .workbench-columns, .workbench-form, .radar-grid, .eval-grid { grid-template-columns: 1fr; }
+  .workbench-columns, .workbench-form, .radar-grid, .eval-grid, .tool-api-grid { grid-template-columns: 1fr; }
   .radar-metrics, .eval-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .facts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

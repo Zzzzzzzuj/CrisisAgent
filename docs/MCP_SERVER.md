@@ -40,7 +40,9 @@ MCP transport 成功不代表工具业务成功。Server 能够正常响应时�
 
 stdio 是第一阶段的本地协议验证 transport，适合 MCP Inspector 和离线测试。stdout 只保留协议内容，启动提示写入 stderr。
 
-项目最终目标是支持联网使用，但当前还不能宣称是生产级远程 MCP 服务。后续 streamable HTTP 版本必须补充：
+P16 已新增受控 REST Tool API：`GET /api/tools` 和 `POST /api/tools/run`。它复用同一份 MCP allowlist 与 `ToolRunner`，并补充 JWT/demo RBAC 和 Audit Log；具体用法见 [HTTP Tool API](HTTP_TOOL_API.md)。它不是 Streamable HTTP MCP transport。
+
+项目最终目标是支持联网使用，但当前还不能宣称是生产级远程 MCP 服务。后续 streamable HTTP 版本仍必须补充：
 
 - JWT 或 API key；
 - MCP tool authorization；

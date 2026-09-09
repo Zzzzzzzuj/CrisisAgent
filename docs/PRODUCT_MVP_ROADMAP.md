@@ -264,3 +264,10 @@ business-state source of truth.
 
 P15 adds bounded retry, dead-letter state, timeout metadata, worker heartbeat,
 and a safe stuck-ingestion recovery script without moving business data into Redis.
+
+## P16: HTTP Tool API
+
+P16 exposes the existing MCP Safe Adapter and ToolRunner through `GET /api/tools`
+and `POST /api/tools/run`. Only the read-only safe allowlist is available, with
+JWT/demo RBAC and audit records; workflow execution, live fetch, approval and
+publishing actions remain blocked.

@@ -21,6 +21,14 @@ export function listAuditLogs(query = {}) {
   return api.get("/api/audit/logs", { params: query }).then((response) => response.data);
 }
 
+export function listSafeTools() {
+  return api.get("/api/tools").then((response) => response.data);
+}
+
+export function runSafeTool(payload) {
+  return api.post("/api/tools/run", payload).then((response) => response.data);
+}
+
 export function runDynamicTask(event) {
   return api.post("/api/dynamic/run", { event }).then((response) => response.data);
 }
