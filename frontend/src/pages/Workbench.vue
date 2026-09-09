@@ -43,6 +43,7 @@ const eventReview = ref(null);
 const report = ref(null);
 const liveFetchOpen = ref(false);
 const liveFetchConfirmation = ref("");
+const backgroundIngestion = ref(false);
 const loading = ref(false);
 const action = ref("");
 const error = ref("");
@@ -237,7 +238,7 @@ async function startIngestion(dryRun) {
   action.value = dryRun ? "dry-run" : "ingestion";
   error.value = "";
   try {
-    const result = await runIngestion({ live_fetch: false, dry_run: dryRun });
+    const result = await runIngestion({ live_fetch: false, dry_run: dryRun, background: dryRun ? false : backgroundIngestion.value });
     selectedRun.value = result;
     await Promise.all([loadRuns(), loadDashboard()]);
   } catch (err) {
@@ -251,7 +252,7 @@ async function startLiveIngestion() {
   action.value = "live-ingestion";
   error.value = "";
   try {
-    const result = await runIngestion({ live_fetch: true, dry_run: false });
+    const result = await runIngestion({ live_fetch: true, dry_run: false, background: backgroundIngestion.value });
     selectedRun.value = result;
     await Promise.all([loadRuns(), loadDashboard()]);
   } catch (err) {
@@ -270,6 +271,19 @@ async function inspectRun(run) {
     selectedRun.value = await fetchRun(run.run_id);
   } catch (err) {
     showError(err);
+  }
+}
+
+async function refreshSelectedRun() {
+  if (!selectedRun.value?.run_id) return;
+  action.value = "refresh-run";
+  try {
+    selectedRun.value = await fetchRun(selectedRun.value.run_id);
+    await Promise.all([loadRuns(), loadDashboard()]);
+  } catch (err) {
+    showError(err);
+  } finally {
+    action.value = "";
   }
 }
 
@@ -376,6 +390,8 @@ function statusText(value) {
   const map = {
     completed: "已完成",
     waiting_human: "待人工审核",
+    queued: "已入队",
+    partial: "部分完成",
     running: "运行中",
     failed: "失败",
     archived: "已归档",
@@ -601,6 +617,8 @@ function compactOutput(value) {
           <button v-if="canOperate" class="primary-button" :disabled="Boolean(action)" @click="startIngestion(true)">运行 dry-run</button>
           <button v-if="canOperate" class="ghost-button" :disabled="Boolean(action)" @click="startIngestion(false)">运行离线采集</button>
         </div>
+        <label v-if="canOperate" class="background-run-toggle"><input v-model="backgroundIngestion" type="checkbox" /> 后台运行（background=true，需要 Redis worker）</label>
+        <p v-if="backgroundIngestion" class="muted tiny-text">提交后仅创建 queued 任务；请启动 Redis 和 ingestion worker，再手动刷新状态。Redis 不可用时后端会拒绝本次后台任务，不会降级为进程内执行。</p>
         <p class="muted tiny-text">手动联网采集默认折叠，只有完成确认后才允许提交。</p>
       <details v-if="canOperate"
         class="live-fetch-panel"
@@ -622,7 +640,10 @@ function compactOutput(value) {
         </details>
         <div v-if="selectedRun" class="run-summary">
           <strong>{{ selectedRun.run_id }}</strong>
-          <span>{{ statusText(selectedRun.status) }} · raw {{ selectedRun.raw_count }} · clusters {{ selectedRun.cluster_count }}</span>
+          <span>{{ statusText(selectedRun.status) }} · {{ selectedRun.execution_mode || 'sync' }}{{ selectedRun.queue_backend ? `/${selectedRun.queue_backend}` : '' }} · raw {{ selectedRun.raw_count }} · clusters {{ selectedRun.cluster_count }}</span>
+          <span v-if="selectedRun.job_id">job_id：{{ selectedRun.job_id }}</span>
+          <p v-if="selectedRun.error" class="error tiny-text">任务错误：{{ selectedRun.error }}</p>
+          <button v-if="selectedRun.execution_mode === 'background'" class="ghost-button small-button" :disabled="action === 'refresh-run'" @click="refreshSelectedRun">刷新状态</button>
           <div v-if="selectedRun.source_results?.length" class="source-result-list">
             <span v-for="item in selectedRun.source_results" :key="item.source_id">
               {{ item.source_id }}: {{ item.status }}{{ item.failed_reason ? ` (${item.failed_reason})` : '' }}
@@ -631,7 +652,7 @@ function compactOutput(value) {
         </div>
         <div v-if="runs.length" class="data-list compact-list">
           <div v-for="run in runs" :key="run.run_id" class="data-row clickable" @click="inspectRun(run)">
-            <div><strong>{{ run.run_id }}</strong><small>{{ statusText(run.status) }} · {{ run.started_at }}</small></div>
+            <div><strong>{{ run.run_id }}</strong><small>{{ statusText(run.status) }} · {{ run.execution_mode || 'sync' }}{{ run.queue_backend ? `/${run.queue_backend}` : '' }} · {{ run.started_at || '尚未开始' }}</small></div>
             <span>clusters {{ run.cluster_count }}</span>
           </div>
         </div>
@@ -765,6 +786,7 @@ function compactOutput(value) {
 .danger-button { width: fit-content; border: 0; border-radius: 9px; padding: 9px 12px; color: #fff; background: #a84f3b; cursor: pointer; }
 .danger-button:disabled { cursor: not-allowed; opacity: .45; }
 .source-result-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12px; color: #64736b; }
+.background-run-toggle { display: flex; gap: 7px; align-items: center; margin-top: 12px; color: #43584e; font-size: 13px; }
 .cluster-row { align-items: flex-start; }
 .cluster-row p { margin: 5px 0 0; color: #68756e; font-size: 13px; }
 .facts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import asdict, replace
-from datetime import datetime, timezone
-import os
 from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from backend.api.ingestion_execution import execute_ingestion_payload, now, validate_ingestion_payload
+from backend.api.ingestion_queue import IngestionQueueUnavailable, submit_ingestion_job
 from backend.api.ingestion_run_store import get_ingestion_run_store
 from backend.api.ingestion_schemas import (
     IngestionRunListResponse,
@@ -15,11 +14,12 @@ from backend.api.ingestion_schemas import (
     IngestionRunResponse,
     IngestionRunSummary,
 )
-from backend.api.source_routes import get_source_store
-from backend.ingestion.pipeline import run_sentiment_ingestion_items
-from backend.ingestion.source_adapters import HttpArticleSourceAdapter, RssSourceAdapter, FetchResult
-from backend.ingestion.source_registry import SourceDefinition
 from backend.api.workspace_security import authorize, get_workspace_user, owner_fields, write_audit
+from backend.ingestion.source_adapters import RssSourceAdapter
+
+# Compatibility export for existing integrations that reference the historical
+# route module. Actual adapter execution lives in ingestion_execution.py.
+__all__ = ["router", "RssSourceAdapter"]
 
 
 router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
@@ -28,78 +28,31 @@ router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 @router.post("/run", response_model=IngestionRunResponse, status_code=status.HTTP_201_CREATED)
 def run_ingestion(payload: IngestionRunRequest, user: dict = Depends(get_workspace_user)) -> IngestionRunResponse:
     authorize(user, {"admin", "operator"}, "ingestion.run", "ingestion_run")
-    if payload.live_fetch and not payload.dry_run and not _api_live_fetch_enabled():
-        raise HTTPException(
-            status_code=403,
-            detail="live fetch is disabled by server config; set ENABLE_API_LIVE_FETCH=true to enable it.",
-        )
-    try:
-        sources = _select_sources(payload.source_ids)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"Source '{exc.args[0]}' not found.") from exc
-    if not sources:
-        raise HTTPException(status_code=400, detail="No sources selected for ingestion.")
+    payload_data = payload.model_dump()
+    validate_ingestion_payload(payload_data)
+    if payload.background and payload.dry_run:
+        raise HTTPException(status_code=422, detail="background ingestion does not support dry_run; use background=false for a safe preview.")
+    if payload.background:
+        return _queue_background_run(payload_data, user)
 
-    for source in sources:
-        if payload.max_items_override is not None and payload.max_items_override > source.max_items:
-            raise HTTPException(
-                status_code=422,
-                detail=f"max_items_override cannot exceed source '{source.source_id}' max_items.",
-            )
-
-    started_at = _now()
-    source_results: list[dict[str, Any]] = []
-    raw_items = []
-    if payload.live_fetch and not payload.dry_run:
-        for source in sources:
-            effective_source = (
-                replace(source, max_items=payload.max_items_override)
-                if payload.max_items_override is not None
-                else source
-            )
-            result = _fetch_source(effective_source)
-            source_results.append(_fetch_result_dict(result))
-            raw_items.extend(result.items)
-    else:
-        # A non-live run is an explicit configuration-only execution. It never
-        # calls an adapter and therefore cannot access the network.
-        for source in sources:
-            source_results.append(
-                {
-                    "source_id": source.source_id,
-                    "source_name": source.source_name,
-                    "status": "disabled",
-                    "fetched_count": 0,
-                    "matched_count": 0,
-                    "failed_reason": "dry_run" if payload.dry_run else "live_fetch_disabled",
-                    "items": [],
-                }
-            )
-
-    clusters = run_sentiment_ingestion_items(raw_items) if raw_items else []
-    finished_at = _now()
-    failed_count = sum(
-        1 for item in source_results if item["status"] in {"failed", "skipped_by_robots"}
-    )
-    run_status = _run_status(payload.live_fetch, source_results, failed_count)
+    result = execute_ingestion_payload(payload_data)
     run = {
         "run_id": str(uuid4()),
-        "status": "dry_run" if payload.dry_run else run_status,
-        "live_fetch": payload.live_fetch,
-        "started_at": started_at,
-        "finished_at": finished_at,
-        "source_results": source_results,
-        "raw_count": len(raw_items),
-        "deduped_count": len({item_id for cluster in clusters for item_id in cluster.source_items}),
-        "cluster_count": len(clusters),
-        "clusters": [asdict(cluster) for cluster in clusters],
-        "automatic_publish": False,
-        "dry_run": payload.dry_run,
+        **result,
+        "execution_mode": "sync",
+        "queue_backend": None,
+        "job_id": None,
         **owner_fields(user),
     }
     if not payload.dry_run:
         get_ingestion_run_store().save(run)
-        write_audit(user, "ingestion.run", "ingestion_run", run["run_id"])
+        write_audit(
+            user,
+            "ingestion.run.completed",
+            "ingestion_run",
+            run["run_id"],
+            metadata={"execution_mode": "sync", "queue_backend": None, "background": False, "final_status": run["status"]},
+        )
     return IngestionRunResponse(**run)
 
 
@@ -120,45 +73,64 @@ def get_ingestion_run(run_id: str, user: dict = Depends(get_workspace_user)) -> 
     return IngestionRunResponse(**run)
 
 
-def _select_sources(source_ids: list[str] | None) -> list[SourceDefinition]:
-    store = get_source_store()
-    if source_ids is None:
-        return [SourceDefinition(**item) for item in store.list_sources()]
-    selected = []
-    for source_id in source_ids:
-        item = store.get(source_id)
-        selected.append(item)
-    return selected
+def _queue_background_run(payload: dict[str, Any], user: dict) -> IngestionRunResponse:
+    store = get_ingestion_run_store()
+    run = {
+        "run_id": str(uuid4()),
+        "status": "queued",
+        "live_fetch": bool(payload.get("live_fetch", False)),
+        "started_at": None,
+        "finished_at": None,
+        "source_results": [],
+        "raw_count": 0,
+        "deduped_count": 0,
+        "cluster_count": 0,
+        "clusters": [],
+        "automatic_publish": False,
+        "dry_run": False,
+        "execution_mode": "background",
+        "queue_backend": "redis",
+        "job_id": None,
+        "error": None,
+        **owner_fields(user),
+    }
+    store.save(run)
+    try:
+        job_id = submit_ingestion_job(run["run_id"], _queue_payload(payload), _worker_user_context(user))
+    except IngestionQueueUnavailable as exc:
+        store.update(run["run_id"], {"status": "failed", "finished_at": now(), "error": str(exc)})
+        write_audit(
+            user,
+            "ingestion.run.failed",
+            "ingestion_run",
+            run["run_id"],
+            "failed",
+            str(exc),
+            {"execution_mode": "background", "queue_backend": "redis", "background": True, "final_status": "failed"},
+        )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    updated = store.update(run["run_id"], {"job_id": job_id})
+    write_audit(
+        user,
+        "ingestion.run.queued",
+        "ingestion_run",
+        run["run_id"],
+        metadata={"execution_mode": "background", "queue_backend": "redis", "background": True, "job_id": job_id, "final_status": "queued"},
+    )
+    return IngestionRunResponse(**updated)
 
 
-def _fetch_source(source: SourceDefinition) -> FetchResult:
-    if source.source_type == "rss":
-        return RssSourceAdapter().fetch(source)
-    if source.source_type == "article_url":
-        return HttpArticleSourceAdapter().fetch(source)
-    raise ValueError(f"Unsupported source_type: {source.source_type}")
-
-
-def _fetch_result_dict(result: FetchResult) -> dict[str, Any]:
+def _queue_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {
-        "source_id": result.source_id,
-        "source_name": result.source_name,
-        "status": result.status,
-        "fetched_count": result.fetched_count,
-        "matched_count": result.matched_count,
-        "failed_reason": result.failed_reason,
-        "items": [asdict(item) for item in result.items],
+        "source_ids": payload.get("source_ids"),
+        "live_fetch": bool(payload.get("live_fetch", False)),
+        "max_items_override": payload.get("max_items_override"),
+        "dry_run": False,
     }
 
 
-def _run_status(live_fetch: bool, source_results: list[dict[str, Any]], failed_count: int) -> str:
-    if not live_fetch:
-        return "completed"
-    if failed_count == len(source_results):
-        return "failed"
-    if failed_count:
-        return "partial"
-    return "completed"
+def _worker_user_context(user: dict) -> dict[str, str]:
+    return {"id": str(user.get("id", "demo-system")), "username": str(user.get("username", "demo-system")), "role": str(user.get("role", "admin"))}
 
 
 def _summary(run: dict[str, Any]) -> IngestionRunSummary:
@@ -167,21 +139,15 @@ def _summary(run: dict[str, Any]) -> IngestionRunSummary:
         run_id=run["run_id"],
         status=run["status"],
         live_fetch=run["live_fetch"],
-        started_at=run["started_at"],
-        finished_at=run["finished_at"],
+        started_at=run.get("started_at"),
+        finished_at=run.get("finished_at"),
+        execution_mode=run.get("execution_mode", "sync"),
+        queue_backend=run.get("queue_backend"),
+        job_id=run.get("job_id"),
+        error=run.get("error"),
         source_count=len(source_results),
         raw_count=run.get("raw_count", 0),
         deduped_count=run.get("deduped_count", 0),
         cluster_count=run.get("cluster_count", 0),
-        failed_source_count=sum(
-            1 for item in source_results if item.get("status") in {"failed", "skipped_by_robots"}
-        ),
+        failed_source_count=sum(1 for item in source_results if item.get("status") in {"failed", "skipped_by_robots"}),
     )
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _api_live_fetch_enabled() -> bool:
-    return os.getenv("ENABLE_API_LIVE_FETCH", "false").strip().lower() == "true"

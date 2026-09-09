@@ -50,7 +50,7 @@ def test_postgres_without_url_is_explicit(monkeypatch):
 
 
 def test_export_payload_handles_empty_and_existing_json_stores(monkeypatch, tmp_path):
-    monkeypatch.setenv("SOURCE_REGISTRY_STORE_PATH", str(tmp_path / "sources.json"))
+    monkeypatch.setenv("SOURCE_REGISTRY_RUNTIME_PATH", str(tmp_path / "sources.json"))
     monkeypatch.setenv("INGESTION_RUN_STORE_PATH", str(tmp_path / "ingestion.json"))
     monkeypatch.setenv("CRISIS_EVENT_STORE_PATH", str(tmp_path / "events.json"))
     monkeypatch.setenv("EVENT_AGENT_RUN_STORE_PATH", str(tmp_path / "agent-runs.json"))

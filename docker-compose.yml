@@ -17,6 +17,7 @@ services:
       - "8000:8000"
     volumes:
       - crisisagent_demo_checkpoints:/app/backend/core/data
+      - crisisagent_product_data:/app/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
       interval: 10s
@@ -73,7 +74,30 @@ services:
       timeout: 5s
       retries: 5
 
+  ingestion-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crisisagent-ingestion-worker
+    command: ["python", "scripts/run_ingestion_worker.py"]
+    profiles: ["rq"]
+    environment:
+      AGENT_MODE: mock
+      CHECKPOINT_STORAGE: json
+      PRODUCT_STORAGE: json
+      REDIS_URL: redis://redis:6379/0
+      INGESTION_QUEUE_NAME: crisis-ingestion
+      INGESTION_JOB_TIMEOUT_SECONDS: "300"
+      AUTH_ENABLED: "false"
+    volumes:
+      - crisisagent_demo_checkpoints:/app/backend/core/data
+      - crisisagent_product_data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   crisisagent_demo_checkpoints:
   crisisagent_postgres_data:
   crisisagent_redis_data:
+  crisisagent_product_data:

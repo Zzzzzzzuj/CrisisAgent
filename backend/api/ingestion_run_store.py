@@ -24,6 +24,19 @@ class JsonIngestionRunStore:
     def save(self, run: dict[str, Any]) -> None:
         runs = self._load()
         runs.append(run)
+        self._save(runs)
+
+    def update(self, run_id: str, changes: dict[str, Any]) -> dict[str, Any]:
+        runs = self._load()
+        for index, run in enumerate(runs):
+            if run.get("run_id") == run_id:
+                updated = {**run, **changes}
+                runs[index] = updated
+                self._save(runs)
+                return updated
+        raise KeyError(run_id)
+
+    def _save(self, runs: list[dict[str, Any]]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(
             json.dumps({"runs": runs}, ensure_ascii=False, indent=2, default=str) + "\n",

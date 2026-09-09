@@ -254,3 +254,8 @@ Source Registry
 ```
 
 这条链路完成后，企业用户才可以从系统中完成一次完整的“发现舆情、确认事件、运行分析、人工审核、导出结果”流程。
+## P14: Redis-required Background Ingestion Jobs
+
+P14 adds Redis-backed background ingestion dispatch and status polling. Redis
+only carries queue jobs; IngestionRun repository storage remains the product
+business-state source of truth.
