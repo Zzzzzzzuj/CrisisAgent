@@ -1,5 +1,7 @@
 # CrisisAgent
 
+This is a live-news-driven, Watchlist-based monitoring and crisis-response Agent Harness. It is a controlled engineering prototype, not an unrestricted crawler, automatic publisher, or production SaaS.
+
 ## Live-News-Driven Crisis Response Copilot
 
 CrisisAgent is a live-news-driven, evidence-guided crisis response workbench for enterprise PR, legal, and quality teams. It can turn controlled news-source signals or manually entered incidents into prioritized, reviewable, traceable response drafts, legal-risk notes, and audit-ready reports.
@@ -21,6 +23,7 @@ Source / Manual Input
 ```
 
 - Manage allowlisted RSS, GDELT DOC, NewsAPI, or single-article sources, and configure Watchlist-driven monitoring for companies, brands, and products.
+- Evaluate monitoring mentions, risk alerts, duplicates, and bad cases with deterministic offline golden cases.
 - Normalize, deduplicate, cluster, and risk-tag opinion signals into a `CrisisEvent`.
 - Run a fixed multi-agent response workflow: Sentiment, Writer, RedTeam, Legal, Writer V2, and Decision.
 - Use Legal RAG evidence, retrieval quality signals, and guardrails to support conservative review.

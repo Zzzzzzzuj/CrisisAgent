@@ -20,6 +20,7 @@ CrisisAgent 是一个 **live-news-driven, evidence-guided enterprise crisis resp
 
 P18 新增 Watchlist 驱动的准实时监测入口，用于围绕公司、品牌和产品生成受控查询、保存 Public Signals 并产生人工确认 Alert；它仍不是全网实时监控。
 P18 同时增加离线 Monitoring Eval，用于观察 mention relevance、risk precision、duplicate rate、alert precision 和 bad case。
+P19 增加 production-like demo、受控 GDELT live smoke 文档和 scheduled live monitoring 脚本，用于人工验收准实时链路。
 
 现有 Agent 内核和安全边界已经比较完整，但从“可运行的 Agent 工程原型”到“企业可使用的产品”还缺少以下产品闭环：
 

@@ -8,6 +8,8 @@ CrisisAgent is an evidence-guided enterprise crisis-response Copilot workbench M
 
 P18 adds bounded, manually configured monitoring queries for allowlisted providers. It does not enable whole-web crawling or automatic response publication.
 
+P19 adds a manually run live smoke and a guarded scheduler. It does not claim cloud deployment, production uptime, or continuous whole-web coverage.
+
 ## What It Is Not
 
 - Not a whole-web or real-time monitoring SaaS.

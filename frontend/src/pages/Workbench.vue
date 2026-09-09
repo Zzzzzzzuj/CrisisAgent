@@ -792,7 +792,7 @@ function compactOutput(value) {
     </article>
 
     <article class="page-card workbench-card monitoring-card">
-      <div class="section-heading"><div><p class="eyebrow">P18 Watchlist Monitoring</p><h3>企业监测任务中心</h3></div><span class="status-pill">白名单 provider · 默认不联网</span></div>
+      <div class="section-heading"><div><p class="eyebrow">Watchlist / 监控对象</p><h3>企业监测任务中心</h3></div><span class="status-pill">白名单 provider · 默认不联网</span></div>
       <p class="muted tiny-text">围绕公司、品牌或产品生成受控搜索线索。这里只展示公开信号，不是任意网站爬虫，也不会自动运行 Agent 或发布声明。</p>
       <div class="monitor-grid">
         <section>
@@ -810,7 +810,7 @@ function compactOutput(value) {
           </div><p v-else class="empty-inline">暂无监控对象。</p>
         </section>
         <section>
-          <h4>Live Monitor Run</h4>
+          <h4>Live Monitor / 实时舆情监测</h4>
           <label class="monitor-control">Provider <select v-model="monitorProvider"><option value="gdelt_doc">GDELT DOC</option><option value="news_api">NewsAPI</option><option value="rss">RSS</option></select></label>
           <label class="monitor-control"><input v-model="monitorLiveFetch" type="checkbox" /> 允许联网（需服务端 ENABLE_API_LIVE_FETCH=true）</label>
           <input v-if="monitorLiveFetch" v-model="monitorConfirmation" placeholder="输入：我确认手动联网采集" />
@@ -819,7 +819,7 @@ function compactOutput(value) {
           <div v-if="monitorRuns.length" class="data-list compact-list"><div v-for="run in monitorRuns.slice(0, 5)" :key="run.monitor_run_id" class="data-row"><div><strong>{{ run.monitor_run_id }}</strong><small>{{ run.status }} · items {{ run.item_count }} · alerts {{ run.alert_count }}</small></div><span>{{ run.live_fetch ? 'live' : 'offline' }}</span></div></div>
         </section>
       </div>
-      <section class="monitor-subsection"><h4>Alerts / 风险提醒</h4><div v-if="alerts.length" class="data-list compact-list"><div v-for="alert in alerts" :key="alert.alert_id" class="data-row"><div><strong>{{ alert.title }}</strong><small>{{ alert.entity_name }} · {{ alert.reason }}</small></div><span class="severity-badge" :class="alert.severity.toLowerCase()">{{ alert.severity }}</span><button v-if="alert.status === 'open' && canOperate" class="ghost-button small-button" @click="ackAlert(alert)">确认</button><span v-else class="status-pill">{{ alert.status }}</span></div></div><p v-else class="empty-inline">暂无风险提醒；no_match 不会生成 alert。</p></section>
+      <section class="monitor-subsection"><h4>Alerts / 风险告警</h4><div v-if="alerts.length" class="data-list compact-list"><div v-for="alert in alerts" :key="alert.alert_id" class="data-row"><div><strong>{{ alert.title }}</strong><small>{{ alert.entity_name }} · {{ alert.reason }}</small></div><span class="severity-badge" :class="alert.severity.toLowerCase()">{{ alert.severity }}</span><button v-if="alert.status === 'open' && canOperate" class="ghost-button small-button" @click="ackAlert(alert)">确认</button><span v-else class="status-pill">{{ alert.status }}</span></div></div><p v-else class="empty-inline">暂无风险告警；no_match 不会生成 alert。</p></section>
       <section v-if="monitoringEval" class="monitor-subsection"><h4>Monitoring Eval / 监测评测</h4><div class="facts-grid"><span>mention relevance：{{ monitoringEval.mention_relevance }}</span><span>risk precision：{{ monitoringEval.risk_precision }}</span><span>alert precision：{{ monitoringEval.alert_precision }}</span><span>duplicate rate：{{ monitoringEval.duplicate_rate }}</span><span>误报：{{ monitoringEval.false_positive_count }}</span><span>漏报：{{ monitoringEval.missed_risk_count }}</span></div><p class="muted tiny-text">基于本地 golden cases 的离线评测，不访问网络、不调用 LLM。</p></section>
     </article>
 
@@ -897,7 +897,7 @@ function compactOutput(value) {
 
     <article v-if="selectedEvent" class="page-card workbench-card event-console">
       <div class="section-heading">
-        <div><p class="eyebrow">P4 Event Console</p><h3>{{ selectedEvent.title }}</h3><p class="muted">{{ eventSummary }}</p></div>
+        <div><p class="eyebrow">Response Studio / Agent 响应</p><h3>{{ selectedEvent.title }}</h3><p class="muted">{{ eventSummary }}</p></div>
         <div class="button-line">
           <button v-if="canOperate" class="primary-button" :disabled="Boolean(action) || selectedEvent.status === 'archived'" @click="runAgent">运行 Agent（mock）</button>
           <button v-if="canOperate" class="ghost-button" :disabled="selectedEvent.status === 'archived'" @click="archiveSelectedEvent">归档</button>
