@@ -9,6 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.api.ingestion_queue import IngestionQueueUnavailable, _queue_settings, get_redis_connection
+from backend.api.ingestion_heartbeat import current_worker_id, update_worker_heartbeat
 
 
 def resolve_worker_class(worker_class: str | None = None, *, os_name: str | None = None):
@@ -33,6 +34,7 @@ def main() -> int:
         from rq import Queue
 
         worker_class = resolve_worker_class()
+        update_worker_heartbeat(current_worker_id(), queue_name, "started", connection=connection)
         print(f"Starting CrisisAgent ingestion worker for queue '{queue_name}' using {worker_class.__name__}.")
         worker_class([Queue(queue_name, connection=connection)], connection=connection).work()
         return 0

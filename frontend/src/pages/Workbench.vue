@@ -19,6 +19,7 @@ import {
   getEventRun,
   getEventTrace,
   getIngestionRun,
+  listIngestionWorkers,
   listEvents,
   listEvalRuns,
   listIngestionRuns,
@@ -44,6 +45,7 @@ const report = ref(null);
 const liveFetchOpen = ref(false);
 const liveFetchConfirmation = ref("");
 const backgroundIngestion = ref(false);
+const ingestionWorkers = ref([]);
 const loading = ref(false);
 const action = ref("");
 const error = ref("");
@@ -284,6 +286,14 @@ async function refreshSelectedRun() {
     showError(err);
   } finally {
     action.value = "";
+  }
+}
+
+async function refreshIngestionWorkers() {
+  try {
+    ingestionWorkers.value = (await listIngestionWorkers()).workers || [];
+  } catch (err) {
+    showError(err);
   }
 }
 
@@ -643,6 +653,8 @@ function compactOutput(value) {
           <span>{{ statusText(selectedRun.status) }} · {{ selectedRun.execution_mode || 'sync' }}{{ selectedRun.queue_backend ? `/${selectedRun.queue_backend}` : '' }} · raw {{ selectedRun.raw_count }} · clusters {{ selectedRun.cluster_count }}</span>
           <span v-if="selectedRun.job_id">job_id：{{ selectedRun.job_id }}</span>
           <p v-if="selectedRun.error" class="error tiny-text">任务错误：{{ selectedRun.error }}</p>
+          <p v-if="selectedRun.execution_mode === 'background'" class="muted tiny-text">重试 {{ selectedRun.retry_count || 0 }}/{{ selectedRun.max_retries ?? '-' }} · timeout {{ selectedRun.timeout_seconds ?? '-' }}s · worker {{ selectedRun.worker_id || '待分配' }}</p>
+          <p v-if="selectedRun.last_error" class="error tiny-text">最近错误：{{ selectedRun.last_error }}{{ selectedRun.dead_lettered_at ? ` · dead letter: ${selectedRun.dead_lettered_at}` : '' }}</p>
           <button v-if="selectedRun.execution_mode === 'background'" class="ghost-button small-button" :disabled="action === 'refresh-run'" @click="refreshSelectedRun">刷新状态</button>
           <div v-if="selectedRun.source_results?.length" class="source-result-list">
             <span v-for="item in selectedRun.source_results" :key="item.source_id">
@@ -650,6 +662,7 @@ function compactOutput(value) {
             </span>
           </div>
         </div>
+        <div v-if="canOperate" class="worker-panel"><div class="button-line"><strong>Worker 状态</strong><button class="ghost-button small-button" @click="refreshIngestionWorkers">刷新 Worker</button></div><p v-if="!ingestionWorkers.length" class="muted tiny-text">暂无 heartbeat。启动 Redis Worker 后会显示。</p><div v-for="worker in ingestionWorkers" :key="worker.worker_id" class="muted tiny-text">{{ worker.worker_id }} · {{ worker.queue_name }} · {{ worker.status }} · {{ worker.last_seen_at }}</div></div>
         <div v-if="runs.length" class="data-list compact-list">
           <div v-for="run in runs" :key="run.run_id" class="data-row clickable" @click="inspectRun(run)">
             <div><strong>{{ run.run_id }}</strong><small>{{ statusText(run.status) }} · {{ run.execution_mode || 'sync' }}{{ run.queue_backend ? `/${run.queue_backend}` : '' }} · {{ run.started_at || '尚未开始' }}</small></div>
@@ -787,6 +800,7 @@ function compactOutput(value) {
 .danger-button:disabled { cursor: not-allowed; opacity: .45; }
 .source-result-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12px; color: #64736b; }
 .background-run-toggle { display: flex; gap: 7px; align-items: center; margin-top: 12px; color: #43584e; font-size: 13px; }
+.worker-panel { display: grid; gap: 7px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e7ece9; }
 .cluster-row { align-items: flex-start; }
 .cluster-row p { margin: 5px 0 0; color: #68756e; font-size: 13px; }
 .facts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }

@@ -6,7 +6,8 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.ingestion_execution import execute_ingestion_payload, now, validate_ingestion_payload
-from backend.api.ingestion_queue import IngestionQueueUnavailable, submit_ingestion_job
+from backend.api.ingestion_queue import IngestionQueueUnavailable, job_timeout_seconds, reliability_settings, submit_ingestion_job
+from backend.api.ingestion_heartbeat import list_worker_heartbeats
 from backend.api.ingestion_run_store import get_ingestion_run_store
 from backend.api.ingestion_schemas import (
     IngestionRunListResponse,
@@ -73,8 +74,19 @@ def get_ingestion_run(run_id: str, user: dict = Depends(get_workspace_user)) -> 
     return IngestionRunResponse(**run)
 
 
+@router.get("/workers")
+def list_ingestion_workers(user: dict = Depends(get_workspace_user)) -> dict:
+    authorize(user, {"admin", "operator", "viewer"}, "ingestion.workers", "ingestion_worker")
+    try:
+        return {"workers": list_worker_heartbeats()}
+    except IngestionQueueUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 def _queue_background_run(payload: dict[str, Any], user: dict) -> IngestionRunResponse:
     store = get_ingestion_run_store()
+    max_retries, _, _ = reliability_settings()
+    timeout_seconds = job_timeout_seconds()
     run = {
         "run_id": str(uuid4()),
         "status": "queued",
@@ -92,6 +104,16 @@ def _queue_background_run(payload: dict[str, Any], user: dict) -> IngestionRunRe
         "queue_backend": "redis",
         "job_id": None,
         "error": None,
+        "retry_count": 0,
+        "max_retries": max_retries,
+        "last_error": None,
+        "last_attempt_at": None,
+        "next_retry_at": None,
+        "dead_lettered_at": None,
+        "worker_id": None,
+        "heartbeat_at": None,
+        "timeout_seconds": timeout_seconds,
+        "recovery_reason": None,
         **owner_fields(user),
     }
     store.save(run)

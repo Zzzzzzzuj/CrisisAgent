@@ -259,3 +259,8 @@ Source Registry
 P14 adds Redis-backed background ingestion dispatch and status polling. Redis
 only carries queue jobs; IngestionRun repository storage remains the product
 business-state source of truth.
+
+## P15: Queue Reliability
+
+P15 adds bounded retry, dead-letter state, timeout metadata, worker heartbeat,
+and a safe stuck-ingestion recovery script without moving business data into Redis.

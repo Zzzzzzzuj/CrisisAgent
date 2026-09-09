@@ -77,6 +77,10 @@ export function getIngestionRun(runId) {
   return api.get(`/api/ingestion/runs/${runId}`).then((response) => response.data);
 }
 
+export function listIngestionWorkers() {
+  return api.get("/api/ingestion/workers").then((response) => response.data);
+}
+
 export function createEventFromIngestionRun(payload) {
   return api.post("/api/events/from-ingestion-run", payload).then((response) => response.data);
 }

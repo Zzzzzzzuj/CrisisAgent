@@ -54,5 +54,15 @@ class IngestionRunResponse(BaseModel):
     queue_backend: str | None = None
     job_id: str | None = None
     error: str | None = None
+    retry_count: int | None = None
+    max_retries: int | None = None
+    last_error: str | None = None
+    last_attempt_at: str | None = None
+    next_retry_at: str | None = None
+    dead_lettered_at: str | None = None
+    worker_id: str | None = None
+    heartbeat_at: str | None = None
+    timeout_seconds: int | None = None
+    recovery_reason: str | None = None
     created_by: str | None = None
     owner_id: str | None = None

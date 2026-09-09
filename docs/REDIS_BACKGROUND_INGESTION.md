@@ -69,9 +69,9 @@ Only `admin` and `operator` may create ingestion runs. `viewer` and
 allowlist, robots, timeout, rate-limit, or `max_items` controls. No path
 automatically publishes a statement.
 
-Audit actions are `ingestion.run.queued`, `ingestion.run.started`,
-`ingestion.run.completed`, and `ingestion.run.failed`, with execution mode,
-queue backend, job ID, and final status metadata.
+Audit actions include `ingestion.run.queued`, `ingestion.run.started`,
+`ingestion.run.completed`, retry/dead-letter transitions, and recovery actions,
+with execution mode, queue backend, job ID, and final status metadata.
 
 ## Local and CI boundary
 
@@ -81,10 +81,10 @@ worker behind the `rq` profile. GitHub CI remains offline/fake-queue based.
 
 ## Current limits
 
-This first background path has no delayed jobs, retry policy, dead-letter
-queue, cancellation, or worker heartbeat yet. JSON product storage also remains
-the default business storage. Those are follow-up durability improvements, not
-claims of a distributed production scheduler.
+See [Queue Reliability](QUEUE_RELIABILITY.md) for bounded retry, dead-letter,
+timeout, worker-heartbeat, and stuck-run recovery behavior. JSON product
+storage remains the default business storage; cancellation, priority queues,
+autoscaling, and alerting are still future work.
 
 ## Interview version
 
