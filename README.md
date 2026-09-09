@@ -27,6 +27,7 @@ Source / Manual Input
 - Normalize, deduplicate, cluster, and risk-tag opinion signals into a `CrisisEvent`.
 - Run a fixed multi-agent response workflow: Sentiment, Writer, RedTeam, Legal, Writer V2, and Decision.
 - Use Legal RAG evidence, retrieval quality signals, and guardrails to support conservative review.
+- Use reviewed case memory and deterministic ContextPack previews to control long-context inputs without changing the core Agent workflow.
 - Require human review for high-risk, unverified, conflicting, guardrail-hit, or low-evidence-confidence cases.
 - Inspect Trace, review status, audit records, reports, evaluation results, and safe read-only tool calls in the Vue Workbench.
 

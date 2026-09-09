@@ -44,6 +44,8 @@ import {
   listAuditLogs,
   listSafeTools,
   runSafeTool,
+  listCaseMemories,
+  buildContextPack,
 } from "../api";
 
 const sources = ref([]);
@@ -94,6 +96,13 @@ const toolArguments = ref("{}");
 const toolResult = ref(null);
 const toolLoading = ref(false);
 const toolError = ref("");
+const caseMemories = ref([]);
+const memoryLoading = ref(false);
+const memoryError = ref("");
+const memoryTagFilter = ref("");
+const contextPack = ref(null);
+const contextPackLoading = ref(false);
+const contextPackTargetAgent = ref("writer");
 const workspaceUser = ref({ id: "demo-system", role: "admin" });
 const isViewer = computed(() => workspaceUser.value.role === "viewer");
 const isSourceManager = computed(() => workspaceUser.value.role === "admin");
@@ -147,7 +156,7 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
-    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools(), loadCollectedItems(), loadWatchlists(), loadMonitorRuns(), loadAlerts(), loadMonitoringEval()]);
+    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools(), loadCollectedItems(), loadWatchlists(), loadMonitorRuns(), loadAlerts(), loadMonitoringEval(), loadCaseMemories()]);
     if (workspaceUser.value.role === "admin") await loadAuditLogs();
     else auditLogs.value = [];
   } catch (err) {
@@ -196,6 +205,29 @@ async function loadAuditLogs() {
     auditError.value = err.response?.data?.detail || "审计日志加载失败";
   } finally {
     auditLoading.value = false;
+  }
+}
+
+async function loadCaseMemories() {
+  memoryLoading.value = true;
+  memoryError.value = "";
+  try {
+    caseMemories.value = (await listCaseMemories(memoryTagFilter.value ? { tag: memoryTagFilter.value } : {})).memories || [];
+  } catch (err) {
+    memoryError.value = err.response?.data?.detail || "案例记忆加载失败";
+  } finally {
+    memoryLoading.value = false;
+  }
+}
+
+async function previewContextPack() {
+  contextPackLoading.value = true;
+  try {
+    contextPack.value = await buildContextPack({ event_id: selectedEvent.value?.event_id, event_text: selectedEvent.value ? undefined : "输入事件后构建上下文包", include_memories: true, target_agent: contextPackTargetAgent.value });
+  } catch (err) {
+    showError(err);
+  } finally {
+    contextPackLoading.value = false;
   }
 }
 
@@ -602,6 +634,16 @@ function compactOutput(value) {
       <p v-else class="empty-inline">暂无可用安全工具。</p>
     </article>
 
+    <article class="page-card workbench-card memory-card">
+      <div class="section-heading"><div><p class="eyebrow">P20 Case Memory</p><h3>历史案例记忆与 ContextPack</h3></div><span class="status-pill">摘要化 · 非用户闲聊记忆</span></div>
+      <p class="muted tiny-text">这里保存企业危机响应案例摘要，不保存完整新闻、system prompt、API key 或完整工具参数。</p>
+      <div class="button-line"><input v-model="memoryTagFilter" placeholder="按 tag 过滤" /><select v-model="contextPackTargetAgent"><option value="sentiment">Sentiment 视角</option><option value="writer">Writer 视角</option><option value="redteam">RedTeam 视角</option><option value="legal">Legal 视角</option><option value="writer_v2">Writer V2 视角</option><option value="decision">Decision 视角</option></select><button class="ghost-button" :disabled="memoryLoading" @click="loadCaseMemories">{{ memoryLoading ? '加载中...' : '刷新案例记忆' }}</button><button class="ghost-button" :disabled="contextPackLoading || (!selectedEvent && !events.length)" @click="previewContextPack">{{ contextPackLoading ? '构建中...' : '预览 ContextPack' }}</button></div>
+      <p v-if="memoryError" class="error">{{ memoryError }}</p>
+      <div v-else-if="caseMemories.length" class="data-list compact-list"><div v-for="memory in caseMemories.slice(0, 6)" :key="memory.memory_id" class="data-row"><div><strong>{{ memory.entity_name || '未标注主体' }} · {{ memory.crisis_type }}</strong><small>{{ memory.final_statement_summary }}</small></div><span>{{ memory.risk_level }} · {{ memory.tags?.join('、') || '无标签' }}</span></div></div>
+      <p v-else class="empty-inline">暂无已审核案例记忆。</p>
+      <pre v-if="contextPack" class="tool-result">{{ JSON.stringify(contextPack, null, 2) }}</pre>
+    </article>
+
     <article class="page-card workbench-card crisis-radar">
       <div class="section-heading">
         <div>
@@ -959,6 +1001,7 @@ function compactOutput(value) {
 .tool-api-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 14px; }
 .tool-api-grid section { display: grid; gap: 10px; }
 .tool-api-grid label { display: grid; gap: 6px; color: #43584e; font-size: 13px; }
+.memory-card input { border: 1px solid #d9dfdc; border-radius: 9px; padding: 9px 10px; background: #fff; }
 .tool-api-grid select, .tool-api-grid textarea { min-width: 0; border: 1px solid #d9dfdc; border-radius: 10px; padding: 10px 12px; background: #fff; font: inherit; }
 .tool-api-grid textarea { resize: vertical; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
 .tool-result { max-height: 320px; overflow: auto; margin: 0; padding: 13px; border-radius: 10px; background: #17231f; color: #edf7f0; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }

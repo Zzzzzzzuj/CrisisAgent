@@ -121,6 +121,14 @@ export function getMonitoringEval() {
   return api.get("/api/monitoring-eval").then((response) => response.data);
 }
 
+export function listCaseMemories(query = {}) {
+  return api.get("/api/case-memories", { params: query }).then((response) => response.data);
+}
+
+export function buildContextPack(payload) {
+  return api.post("/api/context-pack/build", payload).then((response) => response.data);
+}
+
 export function runIngestion(payload) {
   return api.post("/api/ingestion/run", payload).then((response) => response.data);
 }

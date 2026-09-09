@@ -11,3 +11,4 @@ The Watchlist layer demonstrates the same principle for monitoring: deterministi
 - ToolRunner validates schemas, bounds retries and runtime, and records structured errors.
 - Prompt Injection and excessive agency are handled with policy boundaries and Human Review rather than prompt text alone.
 - RAG and monitoring evaluation measure retrieval and signal quality instead of only showing a successful demo.
+- Case Memory and ContextPack separate durable reviewed case summaries from short-lived AgentState and bound the context passed to later steps.

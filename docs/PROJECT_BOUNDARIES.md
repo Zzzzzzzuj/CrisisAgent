@@ -10,6 +10,8 @@ P18 adds bounded, manually configured monitoring queries for allowlisted provide
 
 P19 adds a manually run live smoke and a guarded scheduler. It does not claim cloud deployment, production uptime, or continuous whole-web coverage.
 
+P20 adds reviewed case-summary memory and deterministic context packing. It does not store complete news articles, user-chat memory, or claim a production vector memory system.
+
 ## What It Is Not
 
 - Not a whole-web or real-time monitoring SaaS.

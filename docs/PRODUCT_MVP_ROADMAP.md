@@ -277,3 +277,7 @@ P16 exposes the existing MCP Safe Adapter and ToolRunner through `GET /api/tools
 and `POST /api/tools/run`. Only the read-only safe allowlist is available, with
 JWT/demo RBAC and audit records; workflow execution, live fetch, approval and
 publishing actions remain blocked.
+
+## P20: Case Memory And ContextPack
+
+P20 adds reviewed case memory, deterministic memory retrieval, and bounded ContextPack previews. It does not change the existing Agent workflow, Prompt, or RAG algorithm; unreviewed external signals are not promoted into long-term memory.
