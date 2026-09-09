@@ -23,6 +23,7 @@ from backend.api.event_run_routes import router as event_run_router
 from backend.api.report_routes import router as report_router
 from backend.api.source_routes import router as source_router
 from backend.api.tool_routes import router as tool_router
+from backend.api.collected_item_routes import router as collected_item_router
 from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import run_dynamic_agent
 from backend.core.followup import build_followup_response
@@ -75,6 +76,13 @@ app.include_router(event_router)
 app.include_router(event_run_router)
 app.include_router(report_router)
 app.include_router(tool_router)
+app.include_router(collected_item_router)
+from backend.api.watchlist_routes import router as watchlist_router
+from backend.api.live_monitor_routes import router as live_monitor_router
+from backend.api.alert_routes import router as alert_router
+app.include_router(watchlist_router)
+app.include_router(live_monitor_router)
+app.include_router(alert_router)
 
 
 @app.get("/health")

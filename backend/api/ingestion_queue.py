@@ -108,3 +108,17 @@ def enqueue_dead_letter(run_id: str, error: str) -> str:
         raise
     except Exception as exc:
         raise IngestionQueueUnavailable(f"Redis dead-letter enqueue failed: {exc}") from exc
+
+
+def submit_live_monitor_job(run_id: str, payload: dict[str, Any], user_context: dict[str, Any]) -> str:
+    """Use the existing Redis/RQ connection for a monitor run; no in-process fallback."""
+    _, queue_name, timeout_seconds = _queue_settings()
+    try:
+        from rq import Queue
+        from backend.api.live_monitor_worker import run_live_monitor_job
+        job = Queue(queue_name, connection=get_redis_connection()).enqueue(run_live_monitor_job, run_id, payload, user_context, job_timeout=timeout_seconds)
+        return str(job.id)
+    except IngestionQueueUnavailable:
+        raise
+    except Exception as exc:
+        raise IngestionQueueUnavailable(f"Redis enqueue failed: {exc}") from exc
