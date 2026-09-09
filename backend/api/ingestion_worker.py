@@ -33,7 +33,9 @@ def run_ingestion_job(run_id: str, payload: dict[str, Any], user_context: dict[s
         metadata={"execution_mode": "background", "queue_backend": "redis", "background": True, "worker_id": worker_id},
     )
     try:
-        result = execute_ingestion_payload(payload)
+        # Preserve the public one-argument worker seam while passing the run
+        # identity needed by the collected-item store.
+        result = execute_ingestion_payload({**payload, "_ingestion_run_id": run_id})
         final_status = result["status"]
         updated = store.update(run_id, {**result, "execution_mode": "background", "queue_backend": "redis", "worker_id": worker_id, "heartbeat_at": now()})
         write_audit(

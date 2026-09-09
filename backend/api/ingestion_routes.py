@@ -36,9 +36,10 @@ def run_ingestion(payload: IngestionRunRequest, user: dict = Depends(get_workspa
     if payload.background:
         return _queue_background_run(payload_data, user)
 
-    result = execute_ingestion_payload(payload_data)
+    run_id = str(uuid4())
+    result = execute_ingestion_payload(payload_data, ingestion_run_id=None if payload.dry_run else run_id)
     run = {
-        "run_id": str(uuid4()),
+        "run_id": run_id,
         **result,
         "execution_mode": "sync",
         "queue_backend": None,

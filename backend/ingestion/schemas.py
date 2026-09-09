@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 
 @dataclass(frozen=True)
@@ -11,6 +11,7 @@ class RawSentimentItem:
     published_at: str
     company: str
     fact_status: str = "unverified"
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
