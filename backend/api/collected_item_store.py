@@ -24,7 +24,7 @@ class JsonCollectedItemStore:
                 known.add(key)
         self._save(existing)
 
-    def list_items(self, *, source_id: str | None = None, ingestion_run_id: str | None = None, status: str | None = None, entity_id: str | None = None, provider: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    def list_items(self, *, source_id: str | None = None, ingestion_run_id: str | None = None, status: str | None = None, entity_id: str | None = None, provider: str | None = None, monitor_run_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         items = self._load()
         filtered = [
             item for item in items
@@ -33,6 +33,7 @@ class JsonCollectedItemStore:
             and (status is None or item.get("status") == status)
             and (entity_id is None or item.get("entity_id") == entity_id)
             and (provider is None or item.get("provider") == provider)
+            and (monitor_run_id is None or item.get("monitor_run_id") == monitor_run_id)
         ]
         return list(reversed(filtered[-limit:]))
 

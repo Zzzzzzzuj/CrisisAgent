@@ -1,0 +1,8 @@
+[
+  {"case_id":"signal_food_recall","signal":"Acme food recall complaint","expected_relevant":true,"expected_risk":true,"predicted_relevant":true,"predicted_risk":true,"alert_created":true,"human_review_required":true},
+  {"case_id":"signal_privacy","signal":"Acme customer data leak report","expected_relevant":true,"expected_risk":true,"predicted_relevant":true,"predicted_risk":true,"alert_created":true,"human_review_required":true},
+  {"case_id":"signal_neutral","signal":"Acme quarterly product announcement","expected_relevant":true,"expected_risk":false,"predicted_relevant":true,"predicted_risk":false,"alert_created":false,"human_review_required":false},
+  {"case_id":"signal_unrelated","signal":"Unrelated company hiring news","expected_relevant":false,"expected_risk":false,"predicted_relevant":false,"predicted_risk":false,"alert_created":false,"human_review_required":false},
+  {"case_id":"signal_duplicate","signal":"Repeated Acme recall report","expected_relevant":true,"expected_risk":true,"predicted_relevant":true,"predicted_risk":true,"alert_created":true,"human_review_required":true,"duplicate":true},
+  {"case_id":"signal_false_alert","signal":"Acme sponsorship event","expected_relevant":true,"expected_risk":false,"predicted_relevant":true,"predicted_risk":true,"alert_created":true,"human_review_required":false}
+]

@@ -19,6 +19,7 @@ class WatchlistCreateRequest(BaseModel):
     regions: list[str] = Field(default_factory=list)
     priority: str = "medium"
     enabled: bool = False
+    archived: bool = False
     model_config = ConfigDict(extra="forbid")
 
 
@@ -49,6 +50,7 @@ class WatchlistResponse(BaseModel):
     regions: list[str]
     priority: str
     enabled: bool
+    archived: bool = False
     created_by: str | None = None
     owner_id: str | None = None
     created_at: str

@@ -80,9 +80,11 @@ app.include_router(collected_item_router)
 from backend.api.watchlist_routes import router as watchlist_router
 from backend.api.live_monitor_routes import router as live_monitor_router
 from backend.api.alert_routes import router as alert_router
+from backend.api.monitoring_eval_routes import router as monitoring_eval_router
 app.include_router(watchlist_router)
 app.include_router(live_monitor_router)
 app.include_router(alert_router)
+app.include_router(monitoring_eval_router)
 
 
 @app.get("/health")

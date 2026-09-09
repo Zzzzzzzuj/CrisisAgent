@@ -18,9 +18,9 @@ class JsonWatchlistStore:
     def __init__(self, path: str | Path | None = None):
         self.path = Path(path or os.getenv("WATCHLIST_STORE_PATH", DEFAULT_WATCHLIST_PATH))
 
-    def list(self, enabled: bool | None = None) -> list[dict[str, Any]]:
+    def list(self, enabled: bool | None = None, archived: bool | None = None) -> list[dict[str, Any]]:
         values = self._load()
-        return [item for item in values if enabled is None or item.get("enabled") is enabled]
+        return [item for item in values if (enabled is None or item.get("enabled") is enabled) and (archived is None or item.get("archived", False) is archived)]
 
     def get(self, entity_id: str) -> dict[str, Any] | None:
         return next((item for item in self._load() if item.get("entity_id") == entity_id), None)
@@ -33,7 +33,7 @@ class JsonWatchlistStore:
             "entity_type": payload.entity_type, "aliases": _clean(payload.aliases), "products": _clean(payload.products),
             "company_keywords": _clean(payload.company_keywords), "risk_keywords": _clean(payload.risk_keywords),
             "exclude_keywords": _clean(payload.exclude_keywords), "languages": _clean(payload.languages),
-            "regions": _clean(payload.regions), "priority": payload.priority, "enabled": payload.enabled,
+            "regions": _clean(payload.regions), "priority": payload.priority, "enabled": payload.enabled, "archived": False,
             "created_by": actor_id, "owner_id": owner_id, "created_at": now, "updated_at": now,
         }
         values = self._load()
@@ -59,13 +59,21 @@ class JsonWatchlistStore:
         raise KeyError(entity_id)
 
     def archive(self, entity_id: str, actor_id: str) -> dict[str, Any]:
-        return self.update(entity_id, WatchlistUpdateRequest(enabled=False), actor_id)
+        values = self._load()
+        for index, current in enumerate(values):
+            if current.get("entity_id") == entity_id:
+                current = {**current, "enabled": False, "archived": True, "updated_at": _now(), "updated_by": actor_id}
+                values[index] = current
+                self._save(values)
+                return current
+        raise KeyError(entity_id)
 
     def _load(self) -> list[dict[str, Any]]:
         if not self.path.exists():
             return []
         payload = json.loads(self.path.read_text(encoding="utf-8"))
-        return payload.get("watchlists", []) if isinstance(payload, dict) else []
+        values = payload.get("watchlists", []) if isinstance(payload, dict) else []
+        return [{"archived": False, **item} for item in values]
 
     def _save(self, values: list[dict[str, Any]]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)

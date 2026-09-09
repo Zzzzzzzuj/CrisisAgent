@@ -13,9 +13,9 @@ WRITE = {"admin", "operator"}
 
 
 @router.get("", response_model=WatchlistListResponse)
-def list_watchlists(enabled: bool | None = Query(default=None), user: dict = Depends(get_workspace_user)):
+def list_watchlists(enabled: bool | None = Query(default=None), archived: bool | None = Query(default=None), user: dict = Depends(get_workspace_user)):
     authorize(user, READ, "watchlist.list", "watchlist")
-    values = get_watchlist_store().list(enabled)
+    values = get_watchlist_store().list(enabled, archived)
     return WatchlistListResponse(watchlists=[WatchlistResponse(**item) for item in values], count=len(values))
 
 

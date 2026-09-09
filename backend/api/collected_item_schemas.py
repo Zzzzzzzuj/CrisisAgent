@@ -29,6 +29,7 @@ class CollectedItemResponse(BaseModel):
     relevance_score: float | None = None
     risk_score: float | None = None
     sentiment_hint: str | None = None
+    monitor_run_id: str | None = None
 
 
 class CollectedItemListResponse(BaseModel):

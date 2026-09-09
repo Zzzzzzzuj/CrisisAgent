@@ -117,6 +117,10 @@ export function acknowledgeAlert(alertId) {
   return api.post(`/api/alerts/${alertId}/ack`).then((response) => response.data);
 }
 
+export function getMonitoringEval() {
+  return api.get("/api/monitoring-eval").then((response) => response.data);
+}
+
 export function runIngestion(payload) {
   return api.post("/api/ingestion/run", payload).then((response) => response.data);
 }

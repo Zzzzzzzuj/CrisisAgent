@@ -24,6 +24,9 @@ def execute_monitor_payload(payload: dict[str, Any], monitor_run_id: str) -> dic
     collected = []
     alerts = []
     for entity in entities:
+        entity_records = []
+        matched_providers = set()
+        risk_matches = []
         for provider in providers:
             query = build_monitor_query(entity, provider, int(payload.get("lookback_minutes", 60)), max_items)
             source = _provider_source(provider)
@@ -40,12 +43,14 @@ def execute_monitor_payload(payload: dict[str, Any], monitor_run_id: str) -> dic
             for item in result.items:
                 record = _collected_record(item, entity, provider, monitor_run_id, result)
                 collected.append(record)
+                entity_records.append(record)
+                matched_providers.add(provider)
             if result.status == "collected" and result.items and (result.matched_count > 0):
-                risk_matches = [key for key in entity.get("risk_keywords", []) if any(key.lower() in f"{item.title} {item.content}".lower() for item in result.items)]
-                if risk_matches:
-                    severity = "SEV-2" if entity.get("priority") == "high" else "SEV-3"
-                    alert = get_alert_store().create(entity, [record["item_id"] for record in collected if record["entity_id"] == entity["entity_id"]], f"risk_keywords_matched:{','.join(risk_matches)}", severity)
-                    alerts.append(alert)
+                risk_matches.extend(key for key in entity.get("risk_keywords", []) if any(key.lower() in f"{item.title} {item.content}".lower() for item in result.items))
+        if entity_records and risk_matches:
+            severity = "SEV-1" if len(matched_providers) >= 2 else ("SEV-2" if entity.get("priority") == "high" else "SEV-3")
+            alert = get_alert_store().create(entity, [record["item_id"] for record in entity_records], f"risk_keywords_matched:{','.join(sorted(set(risk_matches)))}", severity)
+            alerts.append(alert)
     clusters = run_sentiment_ingestion_items(raw_items) if raw_items else []
     if collected:
         get_collected_item_store().save_many(collected)
@@ -86,4 +91,4 @@ def _collected_record(item, entity, provider, run_id, result):
     content_hash = sha256(f"{item.source_url}|{item.title}|{item.content}".encode("utf-8")).hexdigest()
     text = f"{item.title} {item.content}".lower()
     risks = [key for key in entity.get("risk_keywords", []) if key.lower() in text]
-    return {"item_id": str(uuid4()), "source_id": result.source_id, "source_name": result.source_name, "source_type": provider, "ingestion_run_id": run_id, "entity_id": entity["entity_id"], "entity_name": entity["entity_name"], "provider": provider, "title": item.title[:500], "url": item.source_url, "summary": item.content[:500], "content_preview": item.content[:2000], "published_at": item.published_at, "collected_at": now(), "matched_company_keywords": entity.get("company_keywords", []), "matched_risk_keywords": risks, "content_hash": content_hash, "status": "collected", "reason": None, "relevance_score": 1.0, "risk_score": min(1.0, len(risks) / 3), "sentiment_hint": "negative" if risks else "unknown", "metadata": {"monitor_run_id": run_id, "adapter_type": result.adapter_type}}
+    return {"item_id": str(uuid4()), "source_id": result.source_id, "source_name": result.source_name, "source_type": provider, "ingestion_run_id": run_id, "monitor_run_id": run_id, "entity_id": entity["entity_id"], "entity_name": entity["entity_name"], "provider": provider, "title": item.title[:500], "url": item.source_url, "summary": item.content[:500], "content_preview": item.content[:2000], "published_at": item.published_at, "collected_at": now(), "matched_company_keywords": entity.get("company_keywords", []), "matched_risk_keywords": risks, "content_hash": content_hash, "status": "collected", "reason": None, "relevance_score": 1.0, "risk_score": min(1.0, len(risks) / 3), "sentiment_hint": "negative" if risks else "unknown", "metadata": {"monitor_run_id": run_id, "adapter_type": result.adapter_type}}

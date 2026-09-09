@@ -38,6 +38,7 @@ import {
   getLiveMonitorRun,
   listAlerts,
   acknowledgeAlert,
+  getMonitoringEval,
   updateSource,
   setWorkspaceDemoUser,
   listAuditLogs,
@@ -74,6 +75,7 @@ const monitorProvider = ref("gdelt_doc");
 const monitorLiveFetch = ref(false);
 const monitorConfirmation = ref("");
 const monitorLoading = ref(false);
+const monitoringEval = ref(null);
 const dashboardOverview = ref(null);
 const dashboardSeverity = ref(null);
 const dashboardTrends = ref([]);
@@ -145,7 +147,7 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
-    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools(), loadCollectedItems(), loadWatchlists(), loadMonitorRuns(), loadAlerts()]);
+    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools(), loadCollectedItems(), loadWatchlists(), loadMonitorRuns(), loadAlerts(), loadMonitoringEval()]);
     if (workspaceUser.value.role === "admin") await loadAuditLogs();
     else auditLogs.value = [];
   } catch (err) {
@@ -220,6 +222,10 @@ async function loadMonitorRuns() {
 async function loadAlerts() {
   const data = await listAlerts();
   alerts.value = data.alerts || [];
+}
+
+async function loadMonitoringEval() {
+  monitoringEval.value = await getMonitoringEval();
 }
 
 async function submitWatchlist() {
@@ -814,6 +820,7 @@ function compactOutput(value) {
         </section>
       </div>
       <section class="monitor-subsection"><h4>Alerts / 风险提醒</h4><div v-if="alerts.length" class="data-list compact-list"><div v-for="alert in alerts" :key="alert.alert_id" class="data-row"><div><strong>{{ alert.title }}</strong><small>{{ alert.entity_name }} · {{ alert.reason }}</small></div><span class="severity-badge" :class="alert.severity.toLowerCase()">{{ alert.severity }}</span><button v-if="alert.status === 'open' && canOperate" class="ghost-button small-button" @click="ackAlert(alert)">确认</button><span v-else class="status-pill">{{ alert.status }}</span></div></div><p v-else class="empty-inline">暂无风险提醒；no_match 不会生成 alert。</p></section>
+      <section v-if="monitoringEval" class="monitor-subsection"><h4>Monitoring Eval / 监测评测</h4><div class="facts-grid"><span>mention relevance：{{ monitoringEval.mention_relevance }}</span><span>risk precision：{{ monitoringEval.risk_precision }}</span><span>alert precision：{{ monitoringEval.alert_precision }}</span><span>duplicate rate：{{ monitoringEval.duplicate_rate }}</span><span>误报：{{ monitoringEval.false_positive_count }}</span><span>漏报：{{ monitoringEval.missed_risk_count }}</span></div><p class="muted tiny-text">基于本地 golden cases 的离线评测，不访问网络、不调用 LLM。</p></section>
     </article>
 
     <div class="workbench-columns">
