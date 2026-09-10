@@ -61,17 +61,22 @@ def build_pack(payload: ContextPackBuildRequest, user: dict = Depends(get_worksp
         human_review_notes=review_notes,
         token_budget_hint=payload.token_budget_hint,
         target_agent=payload.target_agent,
+        compression_mode=payload.compression_mode,
     )
     write_audit(user, "context_pack.build", "context_pack", payload.event_id or "")
     return ContextPackBuildResponse(
         context_pack=pack,
         memory_count=len(pack["related_case_memories"]),
         dropped_fields=pack["dropped_fields"],
-        safety_notes=[
-            "Deterministic preview only; no LLM call.",
-            "Full news text, system prompts, API keys, and tool arguments are excluded.",
-        ],
+        safety_notes=pack["safety_notes"],
         agent_specific_focus=pack["agent_specific_focus"],
         selected_case_ids=pack["selected_case_ids"],
         latest_round_summary=pack["latest_round_summary"],
+        compression_level=pack["compression_level"],
+        usage_ratio=pack["usage_ratio"],
+        estimated_chars=pack["estimated_chars"],
+        token_budget_hint=pack["token_budget_hint"],
+        compression_actions=pack["compression_actions"],
+        aggregate_summary=pack["aggregate_summary"],
+        preserved_fields=pack["preserved_fields"],
     )

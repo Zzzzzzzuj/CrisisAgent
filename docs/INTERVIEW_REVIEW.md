@@ -23,3 +23,4 @@
 - 如何避免第二轮失忆？用 `case_group_id`、`round_index` 和 `previous_memory_id` 串起危机生命周期；确定性 Retriever 优先选择同组、相近轮次和未解决问题。
 - 不同 Agent 看到什么？RedTeam 关注上一轮和未解决攻击面，Legal 关注历史法律约束和事实状态，Writer 关注上一轮声明和变化，Decision 关注结果趋势和是否需要二次回应。
 - 是否已经改了主 Agent？没有。当前是有数量、长度和敏感字段裁剪的 ContextPack Preview，先独立验证，不改变主 Workflow、Prompt 或 Agent 顺序。
+- 上下文压缩怎么做？不是让 LLM 总结全部历史，而是 Risk-aware ContextPack：先按相关性、风险、时间和来源多样性选取内容，再根据预算进入 green/yellow/orange/red 水位线。压缩时保留 `fact_status`、`event_status`、`risk_level` 和每个 Agent 必需字段；`dropped_fields` 和 `compression_actions` 用于审计和 bad case 复盘。

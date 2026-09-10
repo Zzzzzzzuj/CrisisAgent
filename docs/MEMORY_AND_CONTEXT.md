@@ -45,6 +45,14 @@ Memory Retriever 仍是离线确定性规则：同一危机组、相近轮次、
 
 ContextPack 请求可传 `target_agent`：`sentiment`、`writer`、`redteam`、`legal`、`writer_v2` 或 `decision`。构建器在原有数量和 500 字预览上限基础上，生成 `agent_specific_focus`：RedTeam 看到已处理和未解决攻击面，Legal 看到历史法律约束和事实状态，Writer 看到上一轮声明及变化，Decision 看到结果趋势和是否需要二次回应。当前仍是独立 Preview，不强行改写主 Agent Prompt 或顺序。
 
+## Risk-aware ContextPack Waterline Policy
+
+ContextPack 不依赖 LLM 把全部历史“总结一遍”。第一版先以确定性规则按相关性、风险等级、时间和来源多样性排序，再根据压缩前 `estimated_chars / token_budget_hint` 进入四级水位线：GREEN 保留基础结果；YELLOW 限制同一 provider 数量并将预览缩至 350 字；ORANGE 将信号、告警、法律证据和案例分别限为 3/2/2/2，并生成来源聚合摘要；RED 只保留最小安全上下文和目标 Agent 的核心字段。
+
+压缩不会删除 `fact_status`、`event_status`、`risk_level` 和 `agent_specific_focus`。RED/ORANGE 下，RedTeam 保留未解决攻击点，Legal 保留历史法律约束，Writer 保留上一轮声明摘要，Decision 保留结果趋势。`dropped_fields` 记录字段、原因和数量，`compression_actions` 记录执行过的压缩动作，便于审计和 bad case 复盘。`compression_mode=off` 会关闭水位线分级，但仍执行敏感字段清洗和基础上限。
+
+面试表述：我的上下文压缩不是让 LLM 总结所有历史，而是先基于相关性、风险、时间和 Agent 职责做确定性筛选，再按预算进入 green/yellow/orange/red 水位线。无论怎么压缩，都保留事实状态、风险状态和每个 Agent 的关键输入；所有丢弃内容与压缩动作都有结构化记录。
+
 写操作需要 admin/operator，legal_reviewer 和 viewer 只读；写操作会写入 Audit Log。ContextPack 构建允许 admin/operator/legal_reviewer。
 
 ## 验证和边界

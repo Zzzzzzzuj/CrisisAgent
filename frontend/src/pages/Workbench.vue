@@ -103,6 +103,8 @@ const memoryTagFilter = ref("");
 const contextPack = ref(null);
 const contextPackLoading = ref(false);
 const contextPackTargetAgent = ref("writer");
+const contextPackBudget = ref(3000);
+const contextPackCompressionMode = ref("auto");
 const workspaceUser = ref({ id: "demo-system", role: "admin" });
 const isViewer = computed(() => workspaceUser.value.role === "viewer");
 const isSourceManager = computed(() => workspaceUser.value.role === "admin");
@@ -223,7 +225,7 @@ async function loadCaseMemories() {
 async function previewContextPack() {
   contextPackLoading.value = true;
   try {
-    contextPack.value = await buildContextPack({ event_id: selectedEvent.value?.event_id, event_text: selectedEvent.value ? undefined : "输入事件后构建上下文包", include_memories: true, target_agent: contextPackTargetAgent.value });
+    contextPack.value = await buildContextPack({ event_id: selectedEvent.value?.event_id, event_text: selectedEvent.value ? undefined : "输入事件后构建上下文包", include_memories: true, target_agent: contextPackTargetAgent.value, token_budget_hint: Number(contextPackBudget.value), compression_mode: contextPackCompressionMode.value });
   } catch (err) {
     showError(err);
   } finally {
@@ -636,11 +638,13 @@ function compactOutput(value) {
 
     <article class="page-card workbench-card memory-card">
       <div class="section-heading"><div><p class="eyebrow">P20 Case Memory</p><h3>历史案例记忆与 ContextPack</h3></div><span class="status-pill">摘要化 · 非用户闲聊记忆</span></div>
-      <p class="muted tiny-text">这里保存企业危机响应案例摘要，不保存完整新闻、system prompt、API key 或完整工具参数。</p>
-      <div class="button-line"><input v-model="memoryTagFilter" placeholder="按 tag 过滤" /><select v-model="contextPackTargetAgent"><option value="sentiment">Sentiment 视角</option><option value="writer">Writer 视角</option><option value="redteam">RedTeam 视角</option><option value="legal">Legal 视角</option><option value="writer_v2">Writer V2 视角</option><option value="decision">Decision 视角</option></select><button class="ghost-button" :disabled="memoryLoading" @click="loadCaseMemories">{{ memoryLoading ? '加载中...' : '刷新案例记忆' }}</button><button class="ghost-button" :disabled="contextPackLoading || (!selectedEvent && !events.length)" @click="previewContextPack">{{ contextPackLoading ? '构建中...' : '预览 ContextPack' }}</button></div>
+      <p class="muted tiny-text">这里保存企业危机响应案例摘要，不保存完整新闻、system prompt、API key 或完整工具参数。ContextPack 使用风险感知水位线策略确定性压缩：先按风险、相关性、时间和 Agent 职责筛选，再记录可审计的 dropped_fields 与 compression_actions。</p>
+      <div class="button-line"><input v-model="memoryTagFilter" placeholder="按 tag 过滤" /><select v-model="contextPackTargetAgent"><option value="sentiment">Sentiment 视角</option><option value="writer">Writer 视角</option><option value="redteam">RedTeam 视角</option><option value="legal">Legal 视角</option><option value="writer_v2">Writer V2 视角</option><option value="decision">Decision 视角</option></select><input v-model.number="contextPackBudget" type="number" min="1" max="20000" aria-label="ContextPack token budget" /><select v-model="contextPackCompressionMode"><option value="auto">自动水位线</option><option value="off">关闭水位线</option></select><button class="ghost-button" :disabled="memoryLoading" @click="loadCaseMemories">{{ memoryLoading ? '加载中...' : '刷新案例记忆' }}</button><button class="ghost-button" :disabled="contextPackLoading || (!selectedEvent && !events.length)" @click="previewContextPack">{{ contextPackLoading ? '构建中...' : '预览 ContextPack' }}</button></div>
       <p v-if="memoryError" class="error">{{ memoryError }}</p>
       <div v-else-if="caseMemories.length" class="data-list compact-list"><div v-for="memory in caseMemories.slice(0, 6)" :key="memory.memory_id" class="data-row"><div><strong>{{ memory.entity_name || '未标注主体' }} · {{ memory.crisis_type }}</strong><small>{{ memory.final_statement_summary }}</small></div><span>{{ memory.risk_level }} · {{ memory.tags?.join('、') || '无标签' }}</span></div></div>
       <p v-else class="empty-inline">暂无已审核案例记忆。</p>
+      <div v-if="contextPack" class="memory-compression-summary"><span>水位线：{{ contextPack.compression_level }}</span><span>占用比例：{{ contextPack.usage_ratio }}</span><span>估算字符：{{ contextPack.estimated_chars }}</span><span>保留字段：{{ contextPack.preserved_fields?.join('、') }}</span></div>
+      <p v-if="contextPack?.aggregate_summary" class="muted tiny-text">{{ contextPack.aggregate_summary }}</p>
       <pre v-if="contextPack" class="tool-result">{{ JSON.stringify(contextPack, null, 2) }}</pre>
     </article>
 
@@ -1001,7 +1005,9 @@ function compactOutput(value) {
 .tool-api-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 14px; }
 .tool-api-grid section { display: grid; gap: 10px; }
 .tool-api-grid label { display: grid; gap: 6px; color: #43584e; font-size: 13px; }
-.memory-card input { border: 1px solid #d9dfdc; border-radius: 9px; padding: 9px 10px; background: #fff; }
+.memory-card input, .memory-card select { border: 1px solid #d9dfdc; border-radius: 9px; padding: 9px 10px; background: #fff; }
+.memory-compression-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; color: #385447; font-size: 12px; }
+.memory-compression-summary span { padding: 5px 8px; border-radius: 999px; background: #edf4ef; }
 .tool-api-grid select, .tool-api-grid textarea { min-width: 0; border: 1px solid #d9dfdc; border-radius: 10px; padding: 10px 12px; background: #fff; font: inherit; }
 .tool-api-grid textarea { resize: vertical; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
 .tool-result { max-height: 320px; overflow: auto; margin: 0; padding: 13px; border-radius: 10px; background: #17231f; color: #edf7f0; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }

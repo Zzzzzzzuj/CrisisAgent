@@ -1,4 +1,5 @@
 import asyncio
+import math
 
 import httpx
 
@@ -26,16 +27,17 @@ def test_context_pack_limits_inputs_and_records_dropped_fields():
             for index in range(5)
         ],
         human_review_notes=["note"] * 5,
+        compression_mode="off",
     )
     assert len(pack["top_public_signals"]) == 5
     assert len(pack["top_alerts"]) == 3
     assert len(pack["top_legal_evidence"]) == 3
     assert len(pack["related_case_memories"]) <= 3
-    assert "public_signals" in pack["dropped_fields"]
-    assert "alerts" in pack["dropped_fields"]
-    assert "legal_evidence" in pack["dropped_fields"]
-    assert "case_memories" in pack["dropped_fields"]
-    assert "human_review_notes" in pack["dropped_fields"]
+    assert "public_signals" in pack["dropped_field_names"]
+    assert "alerts" in pack["dropped_field_names"]
+    assert "legal_evidence" in pack["dropped_field_names"]
+    assert "case_memories" in pack["dropped_field_names"]
+    assert "human_review_notes" in pack["dropped_field_names"]
     assert all(len(item["content_preview"]) <= 500 for item in pack["top_public_signals"])
 
 
@@ -56,7 +58,7 @@ def test_context_pack_drops_explicitly_low_relevance_items():
         public_signals=[{"title": "noise", "relevant": False}, {"title": "kept", "relevance_score": 0.9}],
     )
     assert [item["title"] for item in pack["top_public_signals"]] == ["kept"]
-    assert "public_signals" in pack["dropped_fields"]
+    assert "public_signals" in pack["dropped_field_names"]
 
 
 def test_context_pack_api_builds_from_existing_event(monkeypatch, tmp_path):
@@ -129,3 +131,79 @@ def test_context_pack_agent_focus_excludes_sensitive_and_full_text_data():
     assert "PRIVATE_ARTICLE" not in serialized
     assert "PRIVATE_PROMPT" not in serialized
     assert "PRIVATE_KEY" not in serialized
+
+
+def _large_context_inputs():
+    memories = [{
+        "memory_id": f"memory-{index}", "entity_name": "示例公司", "crisis_type": "food_safety",
+        "risk_level": "high", "fact_status": "verified", "tags": ["召回"],
+        "previous_statement_summary": "上一轮声明" * 100,
+        "unresolved_redteam_findings": ["赔付标准未说明" * 20],
+        "previous_legal_constraints": ["避免承认未经证实责任" * 20],
+        "outcome": "worsened", "created_at": "2026-01-01T00:00:00+00:00",
+    } for index in range(4)]
+    return {
+        "event": {"company": "示例公司", "event_summary": "食品安全召回事件" * 50, "risk_level": "high",
+                  "fact_status": "unverified", "event_status": "uncertain", "risk_keywords": ["召回", "监管"]},
+        "public_signals": [{"provider": f"provider-{index % 2}", "risk_level": "high", "relevance_score": 0.9,
+                            "content_preview": "公众质疑处理进展" * 100, "risk_keywords": ["召回", "监管"]}
+                           for index in range(8)],
+        "alerts": [{"title": "高风险告警" * 80, "risk_level": "high"} for _ in range(4)],
+        "legal_evidence": [{"text": "法律证据摘要" * 100, "relevance_score": 0.8} for _ in range(4)],
+        "case_memories": memories,
+    }
+
+
+def _budget_for_ratio(inputs, ratio, target_agent="redteam"):
+    baseline = build_context_pack(**inputs, compression_mode="off", token_budget_hint=20_000, target_agent=target_agent)
+    return max(1, math.ceil(baseline["pre_compression_estimated_chars"] / ratio))
+
+
+def test_green_waterline_preserves_baseline_limits():
+    inputs = _large_context_inputs()
+    pack = build_context_pack(**inputs, token_budget_hint=100_000, target_agent="redteam")
+    assert pack["compression_level"] == "green"
+    assert len(pack["top_public_signals"]) == 5
+    assert "baseline_safety_cleaning_only" in pack["compression_actions"]
+
+
+def test_yellow_waterline_shortens_previews_and_records_actions():
+    inputs = _large_context_inputs()
+    pack = build_context_pack(**inputs, token_budget_hint=_budget_for_ratio(inputs, 0.7), target_agent="redteam")
+    assert pack["compression_level"] == "yellow"
+    assert all(len(item["content_preview"]) <= 350 for item in pack["top_public_signals"])
+    assert "content_preview_truncated_to_350_chars" in pack["compression_actions"]
+
+
+def test_orange_waterline_limits_context_and_aggregates_sources():
+    inputs = _large_context_inputs()
+    pack = build_context_pack(**inputs, token_budget_hint=_budget_for_ratio(inputs, 0.82, "legal"), target_agent="legal")
+    assert pack["compression_level"] == "orange"
+    assert len(pack["top_public_signals"]) <= 3
+    assert len(pack["top_legal_evidence"]) <= 2
+    assert len(pack["related_case_memories"]) <= 2
+    assert pack["aggregate_summary"]
+    assert pack["dropped_fields"]
+
+
+def test_red_waterline_preserves_critical_and_agent_specific_fields():
+    inputs = _large_context_inputs()
+    for agent, required_key in {"redteam": "unresolved_redteam_findings", "legal": "previous_legal_constraints",
+                                "writer": "previous_statement_summary", "decision": "outcome_trend"}.items():
+        pack = build_context_pack(**inputs, token_budget_hint=100, target_agent=agent)
+        assert pack["compression_level"] == "red"
+        assert len(pack["top_public_signals"]) <= 1
+        assert pack["fact_status"] == "unverified"
+        assert pack["event_status"] == "uncertain"
+        assert pack["risk_level"] == "high"
+        assert required_key in pack["agent_specific_focus"]
+        assert any("aggressively compressed" in note for note in pack["safety_notes"])
+
+
+def test_compression_mode_off_keeps_safety_cleaning_without_waterline():
+    inputs = _large_context_inputs()
+    inputs["public_signals"][0]["system_prompt"] = "SECRET"
+    pack = build_context_pack(**inputs, token_budget_hint=100, compression_mode="off")
+    assert pack["compression_level"] == "off"
+    assert "compression_mode_off" in pack["compression_actions"]
+    assert "SECRET" not in str(pack)
