@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from backend.harness.service import ALLOWED_CANDIDATE_FIELDS
 from backend.harness.spec import spec_hash
+from backend.harness.policy_guardrails import analyze_policy_diff
 
 
 TAG_TO_FIELDS = {
@@ -28,6 +29,10 @@ def build_proposal(diagnosis: dict[str, Any], baseline: dict[str, Any], *, sourc
     context_tags = [tag for tag in tags if tag in {"context_over_budget", "context_critical_field_dropped"}]
     reasons = [f"{tag} maps to {', '.join(TAG_TO_FIELDS.get(tag, [])) or 'context_policy review only'}" for tag in tags]
     metadata = baseline.get("metadata", {})
+    proposed = deepcopy(baseline)
+    for field, value in allowed_patch.items():
+        _set_path(proposed, field, value)
+    policy_diff = analyze_policy_diff(baseline, proposed)
     return {
         "proposal_id": f"proposal-{uuid4()}",
         "source_run_id": source_run_id,
@@ -42,7 +47,8 @@ def build_proposal(diagnosis: dict[str, Any], baseline: dict[str, Any], *, sourc
         "recommended_harness_areas": diagnosis.get("recommended_harness_areas", []),
         "allowed_patch": allowed_patch,
         "rationale": "; ".join(reasons) or "No deterministic failure tag was provided.",
-        "risk_notes": ["Advisory only; no HarnessSpec changes occur until manual acceptance."] + (["Context compression requires manual context_policy review; no automatic patch is generated."] if context_tags else []),
+        "risk_notes": ["Advisory only; no HarnessSpec changes occur until manual acceptance."] + (["Context compression requires manual context_policy review; no automatic patch is generated."] if context_tags else []) + (["Policy diff contains a safety weakening and requires explicit human review."] if policy_diff.get("safety_weakening") else []),
+        "policy_diff": policy_diff,
         "expected_validation": {"replay_case_ids": [replay_case_id] if replay_case_id else [], "golden_cases": True},
         "status": "DRAFT",
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -86,3 +92,11 @@ def _get_path(source: dict[str, Any], path: str) -> Any:
             return None
         node = node.get(part)
     return deepcopy(node)
+
+
+def _set_path(target: dict[str, Any], path: str, value: Any) -> None:
+    node = target
+    parts = path.split(".")
+    for part in parts[:-1]:
+        node = node.setdefault(part, {})
+    node[parts[-1]] = deepcopy(value)

@@ -20,6 +20,8 @@ def create_comparison(payload: HarnessComparisonCreateRequest, user: dict = Depe
             payload.baseline_version,
             payload.candidate_harness_id,
             payload.candidate_version,
+            payload.mode,
+            payload.replay_case_ids,
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

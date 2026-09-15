@@ -9,6 +9,8 @@ from backend.api.eval_service import evaluate_golden_cases, load_golden_cases
 from backend.diagnostics.failure_analyzer import analyze_trace_failure
 from backend.harness.service import get_effective_harness_spec
 from backend.harness.spec import spec_hash
+from backend.evaluation.harness_replay import compare_harness_replay
+from backend.harness.policy_guardrails import analyze_policy_diff, evaluate_policy_safety_gate
 
 
 def compare_harnesses(baseline: dict[str, Any], candidate: dict[str, Any], cases: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -17,7 +19,7 @@ def compare_harnesses(baseline: dict[str, Any], candidate: dict[str, Any], cases
     candidate_items, _ = evaluate_golden_cases(cases)
     baseline_result = _variant(baseline, baseline_items)
     candidate_result = _variant(candidate, candidate_items)
-    return {
+    result = {
         "comparison_id": str(uuid4()),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "offline_only": True,
@@ -29,12 +31,25 @@ def compare_harnesses(baseline: dict[str, Any], candidate: dict[str, Any], cases
         "automatic_enable": False,
         "automatic_publish": False,
     }
+    result["policy_diff"] = analyze_policy_diff(baseline, candidate)
+    result["policy_safety_gate"] = evaluate_policy_safety_gate(result)
+    return result
 
 
-def compare_harness_ids(baseline_id: str, baseline_version: str, candidate_id: str, candidate_version: str) -> dict[str, Any]:
+def compare_harness_ids(baseline_id: str, baseline_version: str, candidate_id: str, candidate_version: str, mode: str = "golden", replay_case_ids: list[str] | None = None) -> dict[str, Any]:
+    baseline = get_effective_harness_spec(baseline_id, baseline_version)
+    candidate = get_effective_harness_spec(candidate_id, candidate_version)
+    if mode == "main_workflow_replay":
+        from backend.evaluation.harness_replay import load_replay_cases
+        cases = load_replay_cases()
+        if replay_case_ids is not None:
+            wanted = {str(item) for item in replay_case_ids}
+            cases = [case for case in cases if str(case.get("case_id", "")) in wanted]
+        return compare_harness_replay(baseline, candidate, cases)
+    if mode != "golden":
+        raise ValueError("mode must be 'golden' or 'main_workflow_replay'.")
     return compare_harnesses(
-        get_effective_harness_spec(baseline_id, baseline_version),
-        get_effective_harness_spec(candidate_id, candidate_version),
+        baseline, candidate,
     )
 
 
@@ -46,11 +61,14 @@ def evaluate_comparison_gate(comparison: dict[str, Any]) -> dict[str, Any]:
     severe_tags = {"retrieval_low_quality", "evidence_low_confidence", "evidence_conflict", "tool_timeout", "tool_retry_exhausted", "tool_output_invalid", "tool_loop_detected", "context_over_budget", "context_critical_field_dropped", "review_scope_mismatch"}
     baseline_severe = sum(int(count) for tag, count in bm.get("failure_tag_counts", {}).items() if tag in severe_tags)
     candidate_severe = sum(int(count) for tag, count in cm.get("failure_tag_counts", {}).items() if tag in severe_tags)
+    policy_safety_gate = evaluate_policy_safety_gate(comparison)
     checks = {
         "task_completion_rate_not_lower": float(cm.get("task_completion_rate", 0)) >= float(bm.get("task_completion_rate", 0)),
         "evidence_quality_not_lower": float(cm.get("evidence_quality_rate", 0)) >= float(bm.get("evidence_quality_rate", 0)),
         "severe_failures_not_increased": candidate_severe <= baseline_severe,
         "tool_failure_rate_not_increased": float(cm.get("tool_failure_rate", 0)) <= float(bm.get("tool_failure_rate", 0)),
+        "policy_safety_gate_passed": bool(policy_safety_gate.get("passed", True)),
+        "critical_review_coverage_not_lower": bool(policy_safety_gate.get("critical_review_coverage_not_lower", True)),
     }
     return {
         "passed": all(checks.values()),

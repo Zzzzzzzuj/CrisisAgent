@@ -1,7 +1,7 @@
 from backend.core.state import AgentState
 
 
-def build_agent_input(agent_name: str, state: AgentState) -> dict:
+def build_agent_input(agent_name: str, state: AgentState, runtime_context=None) -> dict:
     if agent_name == "sentiment":
         return {"event": state.event}
     if agent_name == "writer":
@@ -11,7 +11,7 @@ def build_agent_input(agent_name: str, state: AgentState) -> dict:
     if agent_name == "redteam":
         return _build_redteam_input(state)
     if agent_name == "legal":
-        return _build_legal_input(state)
+        return _build_legal_input(state, runtime_context)
     if agent_name == "decision":
         return _build_decision_input(state)
 
@@ -36,7 +36,7 @@ def _build_redteam_input(state: AgentState) -> dict:
     }
 
 
-def _build_legal_input(state: AgentState) -> dict:
+def _build_legal_input(state: AgentState, runtime_context=None) -> dict:
     writer_result = state.get_result("writer") or {}
     planner_input = state.metadata.get("planner_input", {})
     payload = {
@@ -49,6 +49,8 @@ def _build_legal_input(state: AgentState) -> dict:
     }
     if state.metadata.get("harness_spec"):
         payload["harness_spec"] = state.metadata["harness_spec"]
+    if runtime_context is not None:
+        payload["harness_runtime_context"] = runtime_context.trace_metadata()
     return payload
 
 

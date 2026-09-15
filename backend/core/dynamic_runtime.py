@@ -4,10 +4,11 @@ from uuid import uuid4
 from backend.agents import decision_agent, planner_agent
 from backend.core.executor import AGENT_REGISTRY, execute
 from backend.core.guardrail_runtime import apply_guardrails_to_state
+from backend.core.harness_runtime import HarnessRuntimeContext
 from backend.core.plan_validator import validate_plan
 from backend.core.reasoning_mode import apply_reasoning_mode_to_state
 from backend.core.state import RUNNING, AgentState
-from backend.harness.service import get_effective_harness_spec
+from backend.harness.service import get_effective_harness_spec, get_runtime_harness_spec
 
 
 def run_dynamic_agent(
@@ -27,8 +28,9 @@ def run_dynamic_agent(
         session_id=str(uuid4()),
         plan_id=validated_plan["plan_id"],
         event=event,
-        metadata={"planner_input": planner_input, "harness_spec": get_effective_harness_spec(harness_id, harness_version)},
+        metadata={"planner_input": planner_input, "harness_spec": get_runtime_harness_spec(harness_id, harness_version)},
     )
+    state.metadata["harness_runtime_context"] = HarnessRuntimeContext.from_spec(state.metadata["harness_spec"]).trace_metadata()
     apply_reasoning_mode_to_state(state)
     execution_result = execute_dynamic_plan_for_state(
         state=state,
@@ -75,7 +77,8 @@ def initialize_dynamic_state(
     if "harness_spec" not in initial_metadata:
         selected_id = harness_id or initial_metadata.get("harness_id")
         selected_version = harness_version or initial_metadata.get("harness_version")
-        initial_metadata["harness_spec"] = get_effective_harness_spec(selected_id, selected_version)
+        initial_metadata["harness_spec"] = get_runtime_harness_spec(selected_id, selected_version)
+    initial_metadata["harness_runtime_context"] = HarnessRuntimeContext.from_spec(initial_metadata["harness_spec"]).trace_metadata()
     initial_metadata.pop("harness_id", None)
     initial_metadata.pop("harness_version", None)
 

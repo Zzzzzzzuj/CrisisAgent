@@ -137,6 +137,9 @@ redteam_review 红队反馈：
 evaluation 运行评估：
 {payload.get("evaluation", {})}
 
+本轮 ContextPack（按 Decision 角色裁剪）：
+{payload.get("context_pack_text", "")}
+
 任务：
 综合所有 Agent 输出，判断当前声明是否适合公开发布。
 

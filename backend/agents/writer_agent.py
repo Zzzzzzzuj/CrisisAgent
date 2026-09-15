@@ -122,7 +122,8 @@ def _run_mock(payload: dict) -> dict:
 
 
 def _run_llm(payload: dict) -> dict:
-    memory_context = _retrieve_memory_context(payload)
+    runtime_pack = payload.get("context_pack") or {}
+    memory_context = runtime_pack.get("rendered_context", "") if runtime_pack else _retrieve_memory_context(payload)
     context = _build_context(payload, memory_context)
     prompt = _build_writer_prompt(payload, memory_context, context)
     raw_text = call_llm(prompt)
@@ -175,6 +176,9 @@ def _build_writer_prompt(payload: dict, memory_context: str, context: str) -> st
 
 历史经验 memory_context：
 {memory_context}
+
+本轮 ContextPack（按 Writer 角色裁剪）：
+{payload.get("context_pack_text", "")}
 
 统一上下文 context:
 {context}
@@ -383,6 +387,9 @@ def _build_writer_v2_prompt(payload: dict) -> str:
 
 法律审核建议 legal_review：
 {payload.get("legal_review", {})}
+
+本轮 ContextPack（按 Writer V2 角色裁剪）：
+{payload.get("context_pack_text", "")}
 
 任务：
 根据原始声明、红队攻击意见和法律审核建议，生成第二版公开声明。

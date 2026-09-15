@@ -1,0 +1,11 @@
+{
+  "cases": [
+    {"case_id": "replay-evidence-low", "description": "low evidence", "fixture": {"event": "食品安全投诉", "category": "food_safety", "risk_level": "high", "evidence": [{"score": 0.05, "rerank_score": 0.05, "source_category": "food_safety"}]}, "expected": {"failure_tags": ["evidence_low_confidence"], "human_review_required": true}},
+    {"case_id": "replay-evidence-conflict", "description": "conflicting evidence", "fixture": {"event": "数据泄露争议", "category": "data_privacy", "risk_level": "high", "review_required": true, "evidence": [{"score": 0.9, "rerank_score": 0.9, "source_category": "data_privacy"}, {"score": 0.9, "rerank_score": 0.9, "source_category": "legal_risk"}]}, "expected": {"failure_tags": ["evidence_conflict"], "human_review_required": true}},
+    {"case_id": "replay-context-pollution", "description": "context pollution", "fixture": {"event": "产品质量争议", "category": "product_quality", "context_pollution": true, "evidence": []}, "expected": {"failure_tags": ["context_over_budget"], "human_review_required": true}},
+    {"case_id": "replay-tool-timeout", "description": "tool timeout", "fixture": {"event": "工具超时", "tool": {"mode": "timeout", "failures": 1}, "evidence": []}, "expected": {"failure_tags": ["tool_timeout"], "human_review_required": true}},
+    {"case_id": "replay-tool-retry", "description": "tool retry", "fixture": {"event": "工具重试", "tool": {"mode": "retry", "failures": 1, "max_retries": 1}, "category": "general", "evidence": [{"score": 0.9, "rerank_score": 0.9, "source_category": "general"}]}, "expected": {"failure_tags": [], "human_review_required": false}},
+    {"case_id": "replay-review-required", "description": "review required", "fixture": {"event": "人工审核", "review_required": true, "evidence": []}, "expected": {"failure_tags": ["review_required"], "human_review_required": true}},
+    {"case_id": "replay-resume-snapshot", "description": "resume keeps harness snapshot", "fixture": {"event": "恢复任务", "category": "general", "checkpoint_resume": true, "evidence": [{"score": 0.9, "rerank_score": 0.9, "source_category": "general"}]}, "expected": {"failure_tags": [], "human_review_required": false}}
+  ]
+}

@@ -95,7 +95,7 @@ def patch_candidate(harness_id: str, version: str, payload: HarnessCandidatePatc
 def evaluate_candidate(harness_id: str, version: str, payload: HarnessEvaluateRequest, user: dict = Depends(get_workspace_user)) -> dict:
     authorize(user, {"admin", "operator"}, "harness.evaluate", "harness", harness_id)
     try:
-        comparison = compare_harness_ids(payload.baseline_harness_id, payload.baseline_version, harness_id, version)
+        comparison = compare_harness_ids(payload.baseline_harness_id, payload.baseline_version, harness_id, version, payload.mode, payload.replay_case_ids)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     comparison["gate_result"] = evaluate_comparison_gate(comparison)
@@ -117,6 +117,9 @@ def approve_candidate(harness_id: str, version: str, payload: HarnessApproveRequ
     gate = comparison.get("gate_result") or evaluate_comparison_gate(comparison)
     if not gate.get("passed"):
         raise HTTPException(status_code=409, detail="Candidate failed evaluation gates.")
+    policy_diff = comparison.get("policy_diff") or {}
+    if policy_diff.get("requires_explicit_approval_reason") and len(payload.reason.strip()) < 20:
+        raise HTTPException(status_code=409, detail="A safety-weakening Candidate requires an explicit approval reason of at least 20 characters.")
     try:
         result = approve_harness_version(harness_id, version, payload.comparison_id, str(user.get("id", "")), {**gate, "reason": payload.reason})
     except (KeyError, ValueError) as exc:

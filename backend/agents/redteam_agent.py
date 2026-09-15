@@ -105,6 +105,9 @@ def _build_redteam_prompt(payload: dict) -> str:
 待审查声明 draft：
 {payload["draft"]}
 
+本轮 ContextPack（按 RedTeam 角色裁剪）：
+{payload.get("context_pack_text", "")}
+
 请从公众和媒体最可能质疑的角度进行审查，重点分析：
 - 声明是否模板化、空泛或缺少诚意。
 - 是否遗漏关键行动，例如调查、整改、召回、补偿、监管配合、后续更新。

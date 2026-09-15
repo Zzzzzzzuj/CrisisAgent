@@ -281,6 +281,8 @@ publishing actions remain blocked.
 ## P20: Case Memory And ContextPack
 
 P20 adds reviewed case memory, deterministic memory retrieval, and bounded ContextPack previews. It does not change the existing Agent workflow, Prompt, or RAG algorithm; unreviewed external signals are not promoted into long-term memory.
+
+P28 adds runtime ContextPack integration: the fixed Workflow and Dynamic Runtime build bounded, role-specific packs before key Agents, persist snapshots for checkpoint/resume, and degrade safely when context construction is unavailable.
 P22.2 补充 Harness Candidate 的离线门槛与人工审批，候选配置只有在完成率、证据质量、严重失败和工具失败率不退化且人工批准后才可启用。
 
 ### P24.1：Harness 受控迭代链路 Demo

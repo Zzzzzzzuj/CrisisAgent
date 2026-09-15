@@ -6,6 +6,7 @@ from typing import Any
 
 from backend.harness.spec import build_default_harness_spec, new_harness_id, snapshot_with_metadata, validate_harness_spec
 from backend.harness.store import get_harness_repository
+from backend.harness.policy_guardrails import analyze_policy_diff, validate_policy_diff
 
 
 def list_harness_versions() -> list[dict[str, Any]]:
@@ -23,6 +24,15 @@ def get_effective_harness_spec(harness_id: str | None = None, version: str | Non
         raise ValueError(f"HarnessSpec not found: {harness_id}@{version or '*'}")
     active = [item for item in candidates if item.get("metadata", {}).get("status") == "active"]
     return deepcopy(active[-1] if active else candidates[0])
+
+
+def get_runtime_harness_spec(harness_id: str | None = None, version: str | None = None) -> dict[str, Any]:
+    """Resolve only an active HarnessSpec for a new production-path run."""
+    spec = get_effective_harness_spec(harness_id, version)
+    status = spec.get("metadata", {}).get("status")
+    if status not in {"active", "ACTIVE"}:
+        raise ValueError(f"HarnessSpec is not active: {harness_id}@{version or '*'}")
+    return spec
 
 
 def create_harness_version(spec: dict[str, Any], parent_version: str | None = None) -> dict[str, Any]:
@@ -85,6 +95,8 @@ def copy_harness_version(source_id: str, source_version: str, new_version: str) 
 
 
 ALLOWED_CANDIDATE_FIELDS = {
+    "skills_tools.timeout_ms",
+    "skills_tools.max_retries",
     "skills_tools.execution_budget.max_steps",
     "skills_tools.execution_budget.max_retries",
     "skills_tools.execution_budget.max_runtime_ms",
@@ -118,6 +130,11 @@ def update_candidate_harness(harness_id: str, version: str, changes: dict[str, A
             for path, value in changes.items():
                 _set_path(updated, path, value)
             validate_candidate_mutations(updated)
+            parent = get_effective_harness_spec(harness_id, metadata.get("parent_version")) if metadata.get("parent_version") else None
+            if parent:
+                policy_diff = analyze_policy_diff(parent, updated)
+                validate_policy_diff(policy_diff)
+                updated["metadata"]["policy_diff"] = deepcopy(policy_diff)
             updated["metadata"].update({"change_summary": change_summary, "changed_fields": changed_fields, "status": "draft"})
             validate_harness_spec(updated)
             specs[specs.index(spec)] = updated
@@ -134,6 +151,11 @@ def validate_candidate_mutations(spec: dict[str, Any]) -> None:
     if "max_context_pollution_rate" in retrieval and retrieval["max_context_pollution_rate"] > 1:
         raise ValueError("max_context_pollution_rate must be at most 1.")
     budget = spec.get("skills_tools", {}).get("execution_budget", {})
+    tools = spec.get("skills_tools", {})
+    if "timeout_ms" in tools and (not isinstance(tools["timeout_ms"], int) or isinstance(tools["timeout_ms"], bool) or tools["timeout_ms"] <= 0):
+        raise ValueError("timeout_ms must be a positive integer.")
+    if "max_retries" in tools and (not isinstance(tools["max_retries"], int) or isinstance(tools["max_retries"], bool) or tools["max_retries"] < 0):
+        raise ValueError("max_retries must be a non-negative integer.")
     for key in ("max_steps", "max_runtime_ms", "max_same_call"):
         if key in budget and (not isinstance(budget[key], int) or isinstance(budget[key], bool) or budget[key] <= 0):
             raise ValueError(f"{key} must be a positive integer.")

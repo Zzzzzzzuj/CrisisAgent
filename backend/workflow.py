@@ -7,6 +7,8 @@ from backend.config import get_config
 from backend.schemas import AgentTraceItem, CrisisRunRequest, CrisisRunResponse, ScoreBundle, ToolTraceItem
 from backend.storage import save_session
 from backend.harness.service import get_effective_harness_spec
+from backend.core.state import AgentState
+from backend.core.context_pack_runtime import ContextPackRuntimeProvider, inject_context_pack
 
 
 def _now_iso() -> str:
@@ -53,7 +55,7 @@ def _append_trace(
             rag=rag,
             memory=memory,
             context=context,
-            tools=tools or [],
+        tools=tools or [],
         )
     )
 
@@ -94,11 +96,23 @@ def _record_step(
     mock_runner=None,
     requested_mode: str = "mock",
     harness_spec: dict | None = None,
+    runtime_state: AgentState | None = None,
 ):
     start_time = _now_iso()
+    context_pack = None
+    context_trace = None
+    if runtime_state is not None:
+        key = {"Agent B": "legal", "Agent D": "redteam", "Agent E": "decision"}.get(agent)
+        if agent == "Agent C":
+            key = "writer_v2" if "第二版" in name else "writer"
+        context_pack = ContextPackRuntimeProvider().build_for_agent(runtime_state, key) if key else None
+        if isinstance(agent_input, dict):
+            agent_input = inject_context_pack(agent_input, context_pack)
     output = runner(agent_input)
     end_time = _now_iso()
     clean_output = _strip_result_metadata(output)
+    if runtime_state is not None:
+        runtime_state.set_result(key or agent, clean_output)
 
     fallback_candidate = False
     if requested_mode == "llm" and mock_runner is not None:
@@ -108,6 +122,10 @@ def _record_step(
     rag = legal_agent.get_last_rag_info() if agent == "Agent B" else None
     memory = writer_agent.get_last_memory_info() if agent == "Agent C" and requested_mode == "llm" else None
     context = writer_agent.get_last_context_info() if agent == "Agent C" and requested_mode == "llm" else None
+    if context is not None and context_pack is not None:
+        context_trace = {**context, "context_pack_hash": context_pack.get("context_pack_hash"),
+                         "selected_count": len(context_pack.get("selected_case_ids", [])),
+                         "dropped_count": len(context_pack.get("dropped_fields", []))}
     tools = _get_agent_tools(agent)
     _append_trace(
         trace,
@@ -122,7 +140,7 @@ def _record_step(
         status,
         rag,
         memory,
-        context,
+        context_trace if context_trace is not None else context,
         tools,
         harness_spec,
     )
@@ -134,6 +152,8 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
     trace: list[AgentTraceItem] = []
     requested_mode = get_config().agent_mode
     harness_spec = get_effective_harness_spec()
+    runtime_state = AgentState(session_id=session_id, plan_id="fixed-workflow", event=request.event,
+                               metadata={"harness_spec": deepcopy(harness_spec)})
 
     sentiment_output = _record_step(
         trace=trace,
@@ -143,6 +163,8 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         runner=sentiment_agent.run,
         mock_runner=sentiment_agent._run_mock,
         requested_mode=requested_mode,
+        harness_spec=harness_spec,
+        runtime_state=runtime_state,
     )
 
     first_draft_input = {
@@ -157,6 +179,8 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         runner=writer_agent.generate_first_draft,
         mock_runner=writer_agent._run_mock,
         requested_mode=requested_mode,
+        harness_spec=harness_spec,
+        runtime_state=runtime_state,
     )
 
     redteam_input = {
@@ -171,6 +195,8 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         runner=redteam_agent.run,
         mock_runner=redteam_agent._run_mock,
         requested_mode=requested_mode,
+        harness_spec=harness_spec,
+        runtime_state=runtime_state,
     )
 
     legal_input = {
@@ -178,6 +204,7 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         "draft": first_draft_output["statement"],
         "redteam_review": redteam_output,
         "sentiment_analysis": sentiment_output,
+        "harness_spec": harness_spec,
     }
     legal_output = _record_step(
         trace=trace,
@@ -187,6 +214,8 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         runner=legal_agent.run,
         mock_runner=legal_agent._run_mock,
         requested_mode=requested_mode,
+        harness_spec=harness_spec,
+        runtime_state=runtime_state,
     )
 
     second_draft_input = {
@@ -203,6 +232,8 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         runner=writer_agent.generate_second_draft,
         mock_runner=None,
         requested_mode="mock",
+        harness_spec=harness_spec,
+        runtime_state=runtime_state,
     )
 
     decision_input = {
@@ -220,6 +251,8 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         runner=decision_agent.run,
         mock_runner=decision_agent._run_mock,
         requested_mode=requested_mode,
+        harness_spec=harness_spec,
+        runtime_state=runtime_state,
     )
 
     response = CrisisRunResponse(
@@ -231,5 +264,7 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
 
     saved_session = response.model_dump()
     saved_session["harness_spec"] = harness_spec
+    saved_session["context_pack_snapshots"] = deepcopy(runtime_state.metadata.get("context_pack_snapshots", {}))
+    saved_session["context_pack_refs"] = deepcopy(runtime_state.metadata.get("context_pack_refs", {}))
     save_session(session_id, saved_session)
     return response

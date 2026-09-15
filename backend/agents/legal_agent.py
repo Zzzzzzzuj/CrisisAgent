@@ -257,6 +257,9 @@ def _build_legal_prompt(payload: dict, legal_context: str) -> str:
 {legal_context}
 legal_context: {legal_context}
 
+本轮 ContextPack（按 Legal 角色裁剪）：
+{payload.get("context_pack_text", "")}
+
 审查要求：
 - 优先参考 retrieved_context / legal_context 中的法律风险规范、企业危机回应规范和历史案例经验。
 - 不要编造不存在的法律条文；如果知识不足，请在建议中保持审慎表达。

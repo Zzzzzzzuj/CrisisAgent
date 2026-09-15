@@ -7,9 +7,12 @@ from backend.core.adapter import build_agent_input
 from backend.core.state import AgentState
 from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
 from backend.harness.spec import harness_trace_reference
+from backend.core.harness_runtime import get_runtime_context
+from backend.core.context_pack_runtime import ContextPackRuntimeProvider, inject_context_pack
 
 
 AgentRunner = Callable[[dict], dict]
+_CONTEXT_PACK_PROVIDER = ContextPackRuntimeProvider()
 AGENT_REGISTRY: dict[str, AgentRunner] = {
     "sentiment": sentiment_agent.run,
     "writer": writer_agent.run,
@@ -24,6 +27,9 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
     registry = agent_registry or AGENT_REGISTRY
     plan_id = plan.get("plan_id")
     agent_state = _ensure_state(plan_id, state)
+    runtime_context = get_runtime_context(agent_state)
+    if runtime_context is not None:
+        agent_state.metadata.setdefault("harness_runtime_context", runtime_context.trace_metadata())
     executed_agents = []
 
     for item in plan.get("plan", []):
@@ -42,15 +48,17 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
 
         try:
             reset_last_llm_trace()
-            payload = build_agent_input(agent_name, agent_state)
+            payload = build_agent_input(agent_name, agent_state, runtime_context=runtime_context)
+            if runtime_context is not None:
+                payload = inject_context_pack(payload, _CONTEXT_PACK_PROVIDER.build_for_agent(agent_state, agent_name))
             output = registry[agent_name](_adapt_payload_for_runner(agent_name, payload))
         except Exception as exc:
             error = f"{exc.__class__.__name__}: {exc}"
             agent_state.mark_failed(agent_name, error)
             trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "failed", None, error)
             trace_item.update(_collect_llm_metadata())
-            if agent_state.metadata.get("harness_spec"):
-                trace_item["harness"] = harness_trace_reference(agent_state.metadata["harness_spec"])
+            if runtime_context is not None:
+                trace_item.update(runtime_context.trace_metadata())
             agent_state.add_trace(trace_item)
             continue
 
@@ -60,8 +68,11 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
         agent_state.set_result(agent_name, clean_output)
         trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", clean_output, None)
         trace_item.update(_collect_trace_metadata(agent_name, output_metadata))
-        if agent_state.metadata.get("harness_spec"):
-            trace_item["harness"] = harness_trace_reference(agent_state.metadata["harness_spec"])
+        if runtime_context is not None:
+            trace_item.update(runtime_context.trace_metadata())
+        context_ref = (agent_state.metadata.get("context_pack_refs") or {}).get(agent_name)
+        if runtime_context is not None and context_ref:
+            trace_item["context_pack"] = deepcopy(context_ref)
         agent_state.add_trace(trace_item)
 
     agent_state.current_agent = None

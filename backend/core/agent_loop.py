@@ -9,6 +9,7 @@ from backend.core.plan_validator import validate_plan
 from backend.core.policy import evaluate_human_policy
 from backend.core.runtime_evaluator import evaluate_runtime_state
 from backend.core.state import COMPLETED, FAILED, RUNNING, AgentState
+from backend.harness.service import get_effective_harness_spec
 
 
 def run_agent_loop(
@@ -34,7 +35,7 @@ def run_agent_loop(
         session_id=str(uuid4()),
         plan_id="",
         event=event,
-        metadata={"planner_input": planner_input},
+        metadata={"planner_input": planner_input, "harness_spec": get_effective_harness_spec()},
     )
     iterations = []
 

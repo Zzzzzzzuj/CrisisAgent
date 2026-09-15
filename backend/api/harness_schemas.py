@@ -40,6 +40,9 @@ class HarnessCandidatePatchRequest(BaseModel):
 class HarnessEvaluateRequest(BaseModel):
     baseline_harness_id: str = Field(..., min_length=1)
     baseline_version: str = Field(..., min_length=1)
+    mode: str = "golden"
+    replay_case_ids: list[str] | None = None
+    mode: str = "golden"
     model_config = ConfigDict(extra="forbid")
 
 
