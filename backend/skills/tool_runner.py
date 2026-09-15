@@ -52,11 +52,14 @@ class ToolRunner:
         fallback_handlers: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] | None = None,
         policy_checker: Callable[[Any, dict[str, Any]], tuple[bool, str]] | None = None,
         budget: ToolExecutionBudget | None = None,
+        harness_spec: dict[str, Any] | None = None,
     ):
         self.registry = registry
         self.fallback_handlers = fallback_handlers or {}
         self.policy_checker = policy_checker
-        self.budget = budget or ToolExecutionBudget()
+        self.harness_spec = harness_spec or {}
+        configured_budget = self.harness_spec.get("skills_tools", {}).get("execution_budget", {}) if isinstance(self.harness_spec, dict) else {}
+        self.budget = budget or ToolExecutionBudget(**{key: configured_budget[key] for key in ("max_steps", "max_retries", "max_runtime_ms", "max_same_call") if key in configured_budget})
 
     def run(
         self,
@@ -99,7 +102,11 @@ class ToolRunner:
         except Exception as exc:
             return self._result(tool_name, started, error_code=TOOL_INPUT_INVALID, error_message=str(exc))
 
-        max_retries = max(0, int(definition.max_retries))
+        tool_policy = self.harness_spec.get("skills_tools", {}) if isinstance(self.harness_spec, dict) else {}
+        definition_overrides = {item.get("name"): item for item in tool_policy.get("definitions", []) if isinstance(item, dict)}
+        override = definition_overrides.get(tool_name, {})
+        max_retries = max(0, int(override.get("max_retries", definition.max_retries)))
+        timeout_ms = int(override.get("timeout_ms", definition.timeout_ms))
         attempts = 0
         last_code = TOOL_EXECUTION_FAILED
         last_message = "Tool execution failed."
@@ -125,7 +132,7 @@ class ToolRunner:
                 attempt=attempts,
             )
             try:
-                output = self._execute_with_timeout(definition.handler, validated_payload, definition.timeout_ms)
+                output = self._execute_with_timeout(definition.handler, validated_payload, timeout_ms)
                 if not isinstance(output, dict):
                     raise _ToolFailure(TOOL_OUTPUT_INVALID, "Tool output must be a JSON object.")
                 try:

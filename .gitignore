@@ -32,6 +32,9 @@ data/ingestion_runs.runtime.json
 data/crisis_events.runtime.json
 data/event_agent_runs.runtime.json
 data/eval_runs.runtime.json
+data/harness_specs.runtime.json
+data/harness_comparisons.runtime.json
+data/harness_proposals.runtime.json
 data/eval_report.json
 data/audit_logs.runtime.json
 data/collected_items.runtime.json
@@ -45,3 +48,8 @@ data/product_storage_export.json
 # Local Codex acceptance artifacts
 .codex_*.log
 .codex_*.json
+
+# Runtime data
+data/*.runtime.json
+.pytest_cache/
+__pycache__/

@@ -224,3 +224,27 @@ export function getEvalOverview() {
 export function getEvalRegression() {
   return api.get("/api/evals/regression").then((response) => response.data);
 }
+
+export function listHarnesses() {
+  return api.get("/api/harnesses").then((response) => response.data);
+}
+
+export function getHarness(harnessId, version) {
+  return api.get(`/api/harnesses/${harnessId}/${version}`).then((response) => response.data);
+}
+
+export function listHarnessComparisons() {
+  return api.get("/api/harness-comparisons").then((response) => response.data);
+}
+
+export function getHarnessComparison(comparisonId, format = "json") {
+  return api.get(`/api/harness-comparisons/${comparisonId}`, { params: { format } }).then((response) => response.data);
+}
+
+export function listHarnessProposals() {
+  return api.get("/api/harness-proposals").then((response) => response.data);
+}
+
+export function getHarnessProposal(proposalId) {
+  return api.get(`/api/harness-proposals/${proposalId}`).then((response) => response.data);
+}

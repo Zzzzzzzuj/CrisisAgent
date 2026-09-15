@@ -25,6 +25,9 @@ from backend.api.source_routes import router as source_router
 from backend.api.tool_routes import router as tool_router
 from backend.api.case_memory_routes import router as case_memory_router
 from backend.api.context_pack_routes import router as context_pack_router
+from backend.api.harness_routes import router as harness_router
+from backend.api.harness_comparison_routes import router as harness_comparison_router
+from backend.api.proposal_routes import router as proposal_router
 from backend.api.collected_item_routes import router as collected_item_router
 from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import run_dynamic_agent
@@ -80,6 +83,9 @@ app.include_router(report_router)
 app.include_router(tool_router)
 app.include_router(case_memory_router)
 app.include_router(context_pack_router)
+app.include_router(harness_router)
+app.include_router(harness_comparison_router)
+app.include_router(proposal_router)
 app.include_router(collected_item_router)
 from backend.api.watchlist_routes import router as watchlist_router
 from backend.api.live_monitor_routes import router as live_monitor_router
@@ -159,7 +165,11 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
         raise HTTPException(status_code=422, detail="Field 'event' is required.")
 
     if is_async_runtime_enabled():
-        state = create_queued_dynamic_session(event, created_by=current_user)
+        state = create_queued_dynamic_session(
+            event,
+            created_by=current_user,
+            metadata={"harness_id": request.get("harness_id"), "harness_version": request.get("harness_version")},
+        )
         submit_dynamic_session(state.session_id)
         reasoning = state.metadata.get("reasoning_mode", {})
         return {
@@ -177,7 +187,12 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
             "recommended_execution_policy": reasoning.get("recommended_execution_policy", {}),
         }
 
-    result = run_dynamic_agent(event)
+    harness_args = {
+        key: request[key]
+        for key in ("harness_id", "harness_version")
+        if request.get(key) is not None
+    }
+    result = run_dynamic_agent(event, **harness_args) if harness_args else run_dynamic_agent(event)
     state = _state_from_dynamic_result(result)
     _record_created_by(state, current_user)
     apply_guardrails_to_state(state)
@@ -380,6 +395,7 @@ def _state_from_dynamic_result(result: dict) -> AgentState:
             "planner_input": result.get("planner_input", {}),
             "raw_plan": result.get("raw_plan", {}),
             "validated_plan": result.get("validated_plan", {}),
+            "harness_spec": result.get("harness_spec", {}),
         },
     )
     state.failed_agents = list(result.get("failed_agents", []))

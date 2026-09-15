@@ -63,6 +63,7 @@ def run_event_agent(event_id: str, payload: EventRunRequest, user: dict = Depend
                 "trace": result.get("execution_trace", []),
                 "evaluation": evaluation,
                 "metadata": {"ingestion": ingestion_metadata},
+                "harness_spec": result.get("harness_spec", {}),
                 "error": None,
                 "automatic_publish": False,
                 **owner_fields(user),

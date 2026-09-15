@@ -175,12 +175,17 @@ def run_resume_session_task(session_id: str) -> dict:
         }
 
 
-def run_dynamic_sync(event: str) -> dict:
-    return run_dynamic_sync_with_metadata(event)
+def run_dynamic_sync(event: str, harness_id: str | None = None, harness_version: str | None = None) -> dict:
+    return run_dynamic_sync_with_metadata(event, harness_id=harness_id, harness_version=harness_version)
 
 
-def run_dynamic_sync_with_metadata(event: str, metadata: dict | None = None) -> dict:
-    state = initialize_dynamic_state(event, metadata=metadata)
+def run_dynamic_sync_with_metadata(
+    event: str,
+    metadata: dict | None = None,
+    harness_id: str | None = None,
+    harness_version: str | None = None,
+) -> dict:
+    state = initialize_dynamic_state(event, metadata=metadata, harness_id=harness_id, harness_version=harness_version)
     result = execute_dynamic_state(state)
     evaluation = evaluate_runtime_state(state)
     policy = evaluate_human_policy(state, evaluation)

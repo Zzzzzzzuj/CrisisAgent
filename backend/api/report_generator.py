@@ -46,8 +46,10 @@ def build_crisis_report(event: dict[str, Any], run: dict[str, Any]) -> dict[str,
             "scores": run.get("scores") if isinstance(run.get("scores"), dict) else {},
             "final_statement_preview": str(run.get("final_statement_preview", "")),
             "automatic_publish": False,
+            "harness_spec": run.get("harness_spec") or {},
         },
         "trace": trace_summary,
+        "harness_spec": run.get("harness_spec") or {},
         "human_review": {
             "human_review_required": human_review_required,
             "policy_triggers": policy_triggers,
@@ -74,6 +76,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     trace = report.get("trace", {})
     review = report.get("human_review", {})
     safety = report.get("safety", {})
+    harness = run.get("harness_spec") or {}
 
     lines = [
         "# CrisisAgent 危机处理报告",
@@ -107,6 +110,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- session_id：{run.get('session_id', '')}",
         f"- run_status：{run.get('run_status', '')}",
         f"- mode：{run.get('mode', '')}",
+        f"- harness：{harness.get('metadata', {}).get('harness_id', 'not_available')}@{harness.get('metadata', {}).get('version', 'not_available')}",
         f"- agent 顺序：{_display_list(trace.get('agent_order'))}",
         f"- scores：{_inline_json(run.get('scores', {}))}",
         "",
@@ -181,7 +185,15 @@ def _build_trace_summary(trace: list[dict[str, Any]]) -> dict[str, Any]:
         "redteam_issues": redteam_issues,
         "legal_rag_evidence": legal_rag or {"status": "not_available", "evidence_chunks": []},
         "decision_final_statement": decision_statement,
+        "harness_reference": _trace_harness_reference(trace),
     }
+
+
+def _trace_harness_reference(trace: list[dict[str, Any]]) -> dict[str, Any]:
+    for item in trace:
+        if isinstance(item, dict) and isinstance(item.get("harness"), dict):
+            return item["harness"]
+    return {}
 
 
 def _approval_status(run: dict[str, Any], required: bool) -> str | None:

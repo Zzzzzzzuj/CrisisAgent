@@ -281,3 +281,8 @@ publishing actions remain blocked.
 ## P20: Case Memory And ContextPack
 
 P20 adds reviewed case memory, deterministic memory retrieval, and bounded ContextPack previews. It does not change the existing Agent workflow, Prompt, or RAG algorithm; unreviewed external signals are not promoted into long-term memory.
+P22.2 补充 Harness Candidate 的离线门槛与人工审批，候选配置只有在完成率、证据质量、严重失败和工具失败率不退化且人工批准后才可启用。
+
+### P24.1：Harness 受控迭代链路 Demo
+
+P24.1 统一 P21-P24 的文档、测试口径和演示案例。当前已验证 Failure Diagnosis -> Proposal -> Candidate -> Golden Case Evaluation -> 人工审批 -> Enable/Rollback；完整 Replay Runner 和自动优化仍未完成。

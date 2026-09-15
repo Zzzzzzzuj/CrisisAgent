@@ -47,6 +47,17 @@ flowchart LR
 
 The product flow is separate from the safety controls: source collection is allowlisted and disabled by default; high-risk outputs are drafts, not publications; and external tool access is restricted to an audited, read-only allowlist.
 
+### Controlled Harness Iteration
+
+```mermaid
+flowchart LR
+    A["Bad Case / Trace"] --> B["Failure Diagnosis"] --> C["Proposal DRAFT"]
+    C --> D{"Human ACCEPTED?"} --> E["Candidate + Golden Case Evaluation"]
+    E --> F{"Human APPROVED?"} --> G["Enable"] --> H["Rollback if needed"]
+```
+
+Harness iteration is a versioned, human-approved comparison process, not automatic modification of the production Agent.
+
 ## Tech Stack
 
 - **Backend:** Python 3.11, FastAPI, Pydantic, SQLAlchemy/Alembic
@@ -112,6 +123,10 @@ python scripts\run_eval_center.py --pretty --min-pass-rate 0.8
 - [HTTP Tool API](docs/HTTP_TOOL_API.md)
 - [Eval CI gate and golden cases](docs/EVAL_CI_GATE.md)
 - [Project boundaries](docs/PROJECT_BOUNDARIES.md)
+- [HarnessSpec](docs/HARNESS_SPEC.md)
+- [Trace failure diagnosis](docs/P22_TRACE_FAILURE_DIAGNOSIS.md)
+- [Harness proposals](docs/HARNESS_PROPOSALS.md)
+- [Controlled Harness iteration demo](docs/HARNESS_ITERATION_DEMO.md)
 - [Workspace security and audit](docs/WORKSPACE_SECURITY_AUDIT.md)
 - [Product MVP roadmap](docs/PRODUCT_MVP_ROADMAP.md)
 

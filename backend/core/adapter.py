@@ -39,7 +39,7 @@ def _build_redteam_input(state: AgentState) -> dict:
 def _build_legal_input(state: AgentState) -> dict:
     writer_result = state.get_result("writer") or {}
     planner_input = state.metadata.get("planner_input", {})
-    return {
+    payload = {
         "event": state.event,
         "draft": writer_result.get("statement", ""),
         "redteam_review": state.get_result("redteam") or {},
@@ -47,6 +47,9 @@ def _build_legal_input(state: AgentState) -> dict:
         "planner_input": planner_input,
         "category": planner_input.get("category") if isinstance(planner_input, dict) else None,
     }
+    if state.metadata.get("harness_spec"):
+        payload["harness_spec"] = state.metadata["harness_spec"]
+    return payload
 
 
 def _build_writer_v2_input(state: AgentState) -> dict:

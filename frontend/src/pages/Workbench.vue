@@ -46,6 +46,9 @@ import {
   runSafeTool,
   listCaseMemories,
   buildContextPack,
+  listHarnesses,
+  listHarnessComparisons,
+  listHarnessProposals,
 } from "../api";
 
 const sources = ref([]);
@@ -105,6 +108,10 @@ const contextPackLoading = ref(false);
 const contextPackTargetAgent = ref("writer");
 const contextPackBudget = ref(3000);
 const contextPackCompressionMode = ref("auto");
+const harnesses = ref([]);
+const harnessLoading = ref(false);
+const harnessComparisons = ref([]);
+const harnessProposals = ref([]);
 const workspaceUser = ref({ id: "demo-system", role: "admin" });
 const isViewer = computed(() => workspaceUser.value.role === "viewer");
 const isSourceManager = computed(() => workspaceUser.value.role === "admin");
@@ -158,7 +165,7 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
-    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools(), loadCollectedItems(), loadWatchlists(), loadMonitorRuns(), loadAlerts(), loadMonitoringEval(), loadCaseMemories()]);
+    await Promise.all([loadSources(), loadRuns(), loadEvents(), loadDashboard(), loadEvalCenter(), loadSafeTools(), loadCollectedItems(), loadWatchlists(), loadMonitorRuns(), loadAlerts(), loadMonitoringEval(), loadCaseMemories(), loadHarnesses()]);
     if (workspaceUser.value.role === "admin") await loadAuditLogs();
     else auditLogs.value = [];
   } catch (err) {
@@ -207,6 +214,20 @@ async function loadAuditLogs() {
     auditError.value = err.response?.data?.detail || "审计日志加载失败";
   } finally {
     auditLoading.value = false;
+  }
+}
+
+async function loadHarnesses() {
+  harnessLoading.value = true;
+  try {
+    const data = await listHarnesses();
+    harnesses.value = data.harnesses || [];
+    const comparisons = await listHarnessComparisons();
+    harnessComparisons.value = comparisons.comparisons || [];
+    const proposals = await listHarnessProposals();
+    harnessProposals.value = proposals.proposals || [];
+  } finally {
+    harnessLoading.value = false;
   }
 }
 
@@ -603,6 +624,15 @@ function compactOutput(value) {
 
     <p v-if="error" class="error workbench-error">{{ error }}</p>
     <p v-if="loading" class="muted">正在加载工作台数据...</p>
+
+    <article class="page-card workbench-card">
+      <div class="section-heading"><div><p class="eyebrow">P21 HarnessSpec</p><h3>运行规范版本预览</h3></div><button class="ghost-button" :disabled="harnessLoading" @click="loadHarnesses">{{ harnessLoading ? '加载中...' : '刷新版本' }}</button></div>
+      <p class="muted tiny-text">HarnessSpec 只保存实际运行规则的版本快照；默认固定 Workflow、Agent 顺序和现有策略不变，配置创建/启用/回滚仅允许离线人工操作。</p>
+      <div v-if="harnesses.length" class="data-list compact-list"><div v-for="harness in harnesses" :key="`${harness.metadata.harness_id}-${harness.metadata.version}`" class="data-row"><div><strong>{{ harness.metadata.harness_id }} · v{{ harness.metadata.version }}</strong><small>{{ harness.metadata.description }}</small><small v-if="harness.metadata.approval">审批：{{ harness.metadata.approval.reviewer }} · {{ harness.metadata.approval.reason || '已记录' }}</small><small v-if="harness.metadata.rejection">拒绝：{{ harness.metadata.rejection.reason }}</small></div><span>{{ harness.metadata.status }} · {{ harness.workflow.agent_order.join(' → ') }}</span></div></div>
+      <p v-else class="empty-inline">暂无 HarnessSpec 版本。</p>
+      <div v-if="harnessComparisons.length" class="data-list compact-list"><div v-for="comparison in harnessComparisons.slice(0, 3)" :key="comparison.comparison_id" class="data-row"><div><strong>{{ comparison.baseline.harness_id }}@{{ comparison.baseline.version }} vs {{ comparison.candidate.harness_id }}@{{ comparison.candidate.version }}</strong><small>case {{ comparison.case_count }} · hash {{ comparison.candidate.spec_hash }}</small></div><span>门槛：{{ comparison.gate_result ? (comparison.gate_result.passed ? '通过' : '未通过') : '未评估' }} · 完成率差异 {{ comparison.delta.task_completion_rate }}</span></div></div>
+      <div v-if="harnessProposals.length" class="data-list compact-list"><div v-for="proposal in harnessProposals.slice(0, 5)" :key="proposal.proposal_id" class="data-row"><div><strong>{{ proposal.proposal_id }}</strong><small>{{ proposal.failure_tags?.join('、') || '无失败标签' }} · {{ proposal.rationale }}</small><small>后续验证计划：{{ proposal.expected_validation?.replay_case_ids?.join('、') || 'Golden Cases' }}</small></div><span>{{ proposal.status }} · {{ proposal.recommended_harness_areas?.join('、') || '仅需检查' }}</span></div></div>
+    </article>
 
     <article v-if="workspaceUser.role === 'admin'" class="page-card workbench-card audit-card">
       <div class="section-heading"><div><p class="eyebrow">P12 Workspace Security</p><h3>Audit Log 审计日志</h3></div><button class="ghost-button" :disabled="auditLoading" @click="loadAuditLogs">{{ auditLoading ? '加载中...' : '刷新审计日志' }}</button></div>

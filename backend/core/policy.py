@@ -25,6 +25,7 @@ def evaluate_human_policy(
     if include_trace_triggers:
         triggers.extend(_find_rag_evidence_quality_triggers(state, trace_start_index))
         triggers.extend(_find_llm_fallback_triggers(state, trace_start_index))
+        triggers.extend(_find_tool_review_triggers(state, trace_start_index))
 
     return {
         "required": bool(triggers),
@@ -97,6 +98,10 @@ def _find_llm_fallback_triggers(state: AgentState, trace_start_index: int = 0) -
 
 
 def _find_rag_evidence_quality_triggers(state: AgentState, trace_start_index: int = 0) -> list[str]:
+    harness_spec = state.metadata.get("harness_spec") or {}
+    review_policy = harness_spec.get("review_policy", {})
+    retrieval_policy = harness_spec.get("retrieval_policy", {})
+    configured = review_policy.get("triggers", {}) if isinstance(review_policy, dict) else {}
     for item in state.trace[max(trace_start_index, 0) :]:
         rag = item.get("rag") if isinstance(item, dict) else None
         if not isinstance(rag, dict):
@@ -105,9 +110,36 @@ def _find_rag_evidence_quality_triggers(state: AgentState, trace_start_index: in
         if (
             isinstance(evidence_quality, dict)
             and evidence_quality.get("should_trigger_human_review") is True
+            and retrieval_policy.get("evidence_gate_human_review", True) is not False
+            and configured.get("evidence_low_confidence", True) is not False
         ):
             return ["rag_evidence_low_confidence"]
     return []
+
+
+def _find_tool_review_triggers(state: AgentState, trace_start_index: int = 0) -> list[str]:
+    configured = ((state.metadata.get("harness_spec") or {}).get("review_policy", {}) or {}).get("triggers", {})
+    mapping = {
+        "TOOL_TIMEOUT": ("tool_timeout", "tool_timeout"),
+        "TOOL_RETRY_EXHAUSTED": ("tool_retry_exhausted", "tool_retry_exhausted"),
+        "TOOL_OUTPUT_INVALID": ("tool_output_invalid", "tool_output_invalid"),
+        "TOOL_LOOP_DETECTED": ("tool_loop_detected", "tool_loop_detected"),
+    }
+    found = []
+    for item in state.trace[max(trace_start_index, 0):]:
+        if not isinstance(item, dict):
+            continue
+        candidates = [item.get("error_code")]
+        for key in ("tool", "tool_result"):
+            value = item.get(key)
+            if isinstance(value, dict):
+                candidates.append(value.get("error_code"))
+        for code in candidates:
+            tag_config = mapping.get(str(code or ""))
+            if tag_config and configured.get(tag_config[0], True) is not False:
+                if tag_config[0] not in found:
+                    found.append(tag_config[0])
+    return found
 
 
 def _build_reason(triggers: list[str]) -> str:

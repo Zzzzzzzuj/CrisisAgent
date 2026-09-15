@@ -6,6 +6,7 @@ from backend.agents import decision_agent, legal_agent, redteam_agent, sentiment
 from backend.core.adapter import build_agent_input
 from backend.core.state import AgentState
 from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
+from backend.harness.spec import harness_trace_reference
 
 
 AgentRunner = Callable[[dict], dict]
@@ -48,6 +49,8 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
             agent_state.mark_failed(agent_name, error)
             trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "failed", None, error)
             trace_item.update(_collect_llm_metadata())
+            if agent_state.metadata.get("harness_spec"):
+                trace_item["harness"] = harness_trace_reference(agent_state.metadata["harness_spec"])
             agent_state.add_trace(trace_item)
             continue
 
@@ -57,6 +60,8 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
         agent_state.set_result(agent_name, clean_output)
         trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", clean_output, None)
         trace_item.update(_collect_trace_metadata(agent_name, output_metadata))
+        if agent_state.metadata.get("harness_spec"):
+            trace_item["harness"] = harness_trace_reference(agent_state.metadata["harness_spec"])
         agent_state.add_trace(trace_item)
 
     agent_state.current_agent = None

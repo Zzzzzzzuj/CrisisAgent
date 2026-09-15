@@ -7,9 +7,15 @@ from backend.core.guardrail_runtime import apply_guardrails_to_state
 from backend.core.plan_validator import validate_plan
 from backend.core.reasoning_mode import apply_reasoning_mode_to_state
 from backend.core.state import RUNNING, AgentState
+from backend.harness.service import get_effective_harness_spec
 
 
-def run_dynamic_agent(event: str, agent_registry: dict | None = None) -> dict:
+def run_dynamic_agent(
+    event: str,
+    agent_registry: dict | None = None,
+    harness_id: str | None = None,
+    harness_version: str | None = None,
+) -> dict:
     planner_input = {
         "event": event,
         "category": _infer_category(event),
@@ -21,7 +27,7 @@ def run_dynamic_agent(event: str, agent_registry: dict | None = None) -> dict:
         session_id=str(uuid4()),
         plan_id=validated_plan["plan_id"],
         event=event,
-        metadata={"planner_input": planner_input},
+        metadata={"planner_input": planner_input, "harness_spec": get_effective_harness_spec(harness_id, harness_version)},
     )
     apply_reasoning_mode_to_state(state)
     execution_result = execute_dynamic_plan_for_state(
@@ -44,6 +50,7 @@ def run_dynamic_agent(event: str, agent_registry: dict | None = None) -> dict:
         "results": state.get_all_results(),
         "failed_agents": list(state.failed_agents),
         "execution_trace": list(state.trace),
+        "harness_spec": deepcopy(state.metadata.get("harness_spec", {})),
         **_reasoning_mode_response(state),
     }
 
@@ -52,6 +59,8 @@ def initialize_dynamic_state(
     event: str,
     session_id: str | None = None,
     metadata: dict | None = None,
+    harness_id: str | None = None,
+    harness_version: str | None = None,
 ) -> AgentState:
     planner_input = {
         "event": event,
@@ -63,6 +72,12 @@ def initialize_dynamic_state(
         for key, value in metadata.items():
             if key not in initial_metadata:
                 initial_metadata[key] = deepcopy(value)
+    if "harness_spec" not in initial_metadata:
+        selected_id = harness_id or initial_metadata.get("harness_id")
+        selected_version = harness_version or initial_metadata.get("harness_version")
+        initial_metadata["harness_spec"] = get_effective_harness_spec(selected_id, selected_version)
+    initial_metadata.pop("harness_id", None)
+    initial_metadata.pop("harness_version", None)
 
     state = AgentState(
         session_id=session_id or str(uuid4()),
@@ -149,6 +164,7 @@ def build_dynamic_result(
         "results": state.get_all_results(),
         "failed_agents": list(state.failed_agents),
         "execution_trace": list(state.trace),
+        "harness_spec": deepcopy(state.metadata.get("harness_spec", {})),
         **_reasoning_mode_response(state),
     }
 

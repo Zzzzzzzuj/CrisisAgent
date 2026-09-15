@@ -6,6 +6,7 @@ from backend.agents import decision_agent, legal_agent, redteam_agent, sentiment
 from backend.config import get_config
 from backend.schemas import AgentTraceItem, CrisisRunRequest, CrisisRunResponse, ScoreBundle, ToolTraceItem
 from backend.storage import save_session
+from backend.harness.service import get_effective_harness_spec
 
 
 def _now_iso() -> str:
@@ -36,6 +37,7 @@ def _append_trace(
     memory: dict | None = None,
     context: dict | None = None,
     tools: list[ToolTraceItem] | None = None,
+    harness_spec: dict | None = None,
 ) -> None:
     trace.append(
         AgentTraceItem(
@@ -91,6 +93,7 @@ def _record_step(
     runner,
     mock_runner=None,
     requested_mode: str = "mock",
+    harness_spec: dict | None = None,
 ):
     start_time = _now_iso()
     output = runner(agent_input)
@@ -121,6 +124,7 @@ def _record_step(
         memory,
         context,
         tools,
+        harness_spec,
     )
     return clean_output
 
@@ -129,6 +133,7 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
     session_id = str(uuid4())
     trace: list[AgentTraceItem] = []
     requested_mode = get_config().agent_mode
+    harness_spec = get_effective_harness_spec()
 
     sentiment_output = _record_step(
         trace=trace,
@@ -224,5 +229,7 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
         agent_trace=trace,
     )
 
-    save_session(session_id, response.model_dump())
+    saved_session = response.model_dump()
+    saved_session["harness_spec"] = harness_spec
+    save_session(session_id, saved_session)
     return response

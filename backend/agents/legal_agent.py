@@ -379,6 +379,7 @@ def _retrieve_legal_context(payload: dict) -> str:
     evidence_quality = evaluate_rag_evidence_quality(
         evidence_chunks=evidence_chunks,
         expected_source_category=expected_source_category,
+        **_evidence_gate_policy(payload),
         fallback_used=fallback_used,
     )
     _set_rag_info(
@@ -399,6 +400,16 @@ def _retrieve_legal_context(payload: dict) -> str:
     )
     logger.info("%s RAG retrieved %s sources: %s", AGENT_NAME, len(sources), sources)
     return retrieval_result.get("context", "")
+
+
+def _evidence_gate_policy(payload: dict) -> dict:
+    spec = payload.get("harness_spec") if isinstance(payload, dict) else None
+    policy = spec.get("retrieval_policy", {}) if isinstance(spec, dict) else {}
+    return {
+        "min_score": float(policy.get("min_score", 0.1)),
+        "min_rerank_score": float(policy.get("min_rerank_score", 0.1)),
+        "max_context_pollution_rate": float(policy.get("max_context_pollution_rate", 0.5)),
+    }
 
 
 def _normalize_rag_chunks(chunks: list[dict], retrieval_query: str = "") -> list[dict]:
