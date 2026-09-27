@@ -26,6 +26,10 @@ class ToolDefinition:
     timeout_ms: int = 3000
     max_retries: int = 0
     fallback_policy: str = "none"
+    skill_id: str | None = None
+    agent_allowlist: tuple[str, ...] = ()
+    preconditions: tuple[str, ...] = ()
+    budget: dict[str, Any] = field(default_factory=dict, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -44,12 +48,19 @@ class ToolDefinition:
             "timeout_ms": self.timeout_ms,
             "max_retries": self.max_retries,
             "fallback_policy": self.fallback_policy,
+            "skill_id": self.skill_id or self.name,
+            "agent_allowlist": list(self.agent_allowlist),
+            "preconditions": list(self.preconditions),
+            "budget": self.budget,
         }
 
 
 @dataclass(frozen=True)
 class AgentSkill(ToolDefinition):
     """Backward-compatible name for the existing internal skill abstraction."""
+
+
+SkillDefinition = ToolDefinition
 
 
 @dataclass(frozen=True)

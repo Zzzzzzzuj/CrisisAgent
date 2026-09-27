@@ -26,6 +26,7 @@ def evaluate_human_policy(
         triggers.extend(_find_rag_evidence_quality_triggers(state, trace_start_index))
         triggers.extend(_find_llm_fallback_triggers(state, trace_start_index))
         triggers.extend(_find_tool_review_triggers(state, trace_start_index))
+        triggers.extend(_find_skill_review_triggers(state, trace_start_index))
 
     return {
         "required": bool(triggers),
@@ -146,3 +147,18 @@ def _build_reason(triggers: list[str]) -> str:
     if not triggers:
         return ""
     return "Human review required: " + ", ".join(triggers)
+
+
+def _find_skill_review_triggers(state: AgentState, trace_start_index: int = 0) -> list[str]:
+    results = state.metadata.get("skill_runtime_results") or {}
+    triggers = []
+    for agent_name, execution in results.items():
+        for item in execution.get("results", []) if isinstance(execution, dict) else []:
+            if item.get("success") or not item.get("human_review_required"):
+                continue
+            tag = "skill_failure"
+            if item.get("error_code"):
+                tag = "skill_" + str(item["error_code"]).lower()
+            if tag not in triggers:
+                triggers.append(tag)
+    return triggers

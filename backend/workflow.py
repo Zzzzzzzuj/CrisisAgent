@@ -9,6 +9,7 @@ from backend.storage import save_session
 from backend.harness.service import get_effective_harness_spec
 from backend.core.state import AgentState
 from backend.core.context_pack_runtime import ContextPackRuntimeProvider, inject_context_pack
+from backend.skills.skill_selector import SkillSelector
 
 
 def _now_iso() -> str:
@@ -101,6 +102,7 @@ def _record_step(
     start_time = _now_iso()
     context_pack = None
     context_trace = None
+    skill_run = None
     if runtime_state is not None:
         key = {"Agent B": "legal", "Agent D": "redteam", "Agent E": "decision"}.get(agent)
         if agent == "Agent C":
@@ -108,6 +110,9 @@ def _record_step(
         context_pack = ContextPackRuntimeProvider().build_for_agent(runtime_state, key) if key else None
         if isinstance(agent_input, dict):
             agent_input = inject_context_pack(agent_input, context_pack)
+            if key:
+                skill_run = SkillSelector().select_and_execute(runtime_state, key, agent_input)
+                agent_input["skill_results"] = deepcopy(skill_run)
     output = runner(agent_input)
     end_time = _now_iso()
     clean_output = _strip_result_metadata(output)
@@ -120,6 +125,32 @@ def _record_step(
 
     mode, fallback, status = _resolve_mode_and_fallback(requested_mode, fallback_candidate)
     rag = legal_agent.get_last_rag_info() if agent == "Agent B" else None
+    if agent == "Agent B" and isinstance(output, dict):
+        claim_extraction = (output.get("_metadata") or {}).get("claim_extraction")
+        if isinstance(claim_extraction, dict):
+            rag = {**(rag or {}), **deepcopy(claim_extraction)}
+            if runtime_state is not None:
+                runtime_state.metadata["legal_claim_extraction"] = deepcopy(claim_extraction)
+        claim_relation = (output.get("_metadata") or {}).get("claim_evidence_relation")
+        if isinstance(claim_relation, dict):
+            rag = {**(rag or {}), **deepcopy(claim_relation)}
+            if runtime_state is not None:
+                runtime_state.metadata["legal_claim_relation"] = deepcopy(claim_relation)
+        claim_coverage = (output.get("_metadata") or {}).get("claim_coverage")
+        if isinstance(claim_coverage, dict):
+            rag = {**(rag or {}), **deepcopy(claim_coverage)}
+            if runtime_state is not None:
+                runtime_state.metadata["legal_claim_coverage"] = deepcopy(claim_coverage)
+        recommendation = (output.get("_metadata") or {}).get("claim_action_recommendation")
+        if isinstance(recommendation, dict):
+            rag = {**(rag or {}), **deepcopy(recommendation)}
+            if runtime_state is not None:
+                runtime_state.metadata["legal_claim_action_recommendation"] = deepcopy(recommendation)
+        targeted = (output.get("_metadata") or {}).get("targeted_legal_search")
+        if isinstance(targeted, dict):
+            rag = {**(rag or {}), **deepcopy(targeted)}
+            if runtime_state is not None:
+                runtime_state.metadata["legal_targeted_search"] = deepcopy(targeted)
     memory = writer_agent.get_last_memory_info() if agent == "Agent C" and requested_mode == "llm" else None
     context = writer_agent.get_last_context_info() if agent == "Agent C" and requested_mode == "llm" else None
     if context is not None and context_pack is not None:
@@ -266,5 +297,12 @@ def run_crisis_workflow(request: CrisisRunRequest) -> CrisisRunResponse:
     saved_session["harness_spec"] = harness_spec
     saved_session["context_pack_snapshots"] = deepcopy(runtime_state.metadata.get("context_pack_snapshots", {}))
     saved_session["context_pack_refs"] = deepcopy(runtime_state.metadata.get("context_pack_refs", {}))
+    saved_session["skill_runtime_results"] = deepcopy(runtime_state.metadata.get("skill_runtime_results", {}))
+    saved_session["skill_selection"] = deepcopy(runtime_state.metadata.get("skill_selection", {}))
+    saved_session["legal_claim_extraction"] = deepcopy(runtime_state.metadata.get("legal_claim_extraction", {}))
+    saved_session["legal_claim_relation"] = deepcopy(runtime_state.metadata.get("legal_claim_relation", {}))
+    saved_session["legal_claim_coverage"] = deepcopy(runtime_state.metadata.get("legal_claim_coverage", {}))
+    saved_session["legal_claim_action_recommendation"] = deepcopy(runtime_state.metadata.get("legal_claim_action_recommendation", {}))
+    saved_session["legal_targeted_search"] = deepcopy(runtime_state.metadata.get("legal_targeted_search", {}))
     save_session(session_id, saved_session)
     return response

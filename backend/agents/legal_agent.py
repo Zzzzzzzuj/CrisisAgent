@@ -3,6 +3,11 @@ from contextvars import ContextVar
 from copy import deepcopy
 
 from backend.config import get_config
+from backend.agents.legal_claim_extractor import extract_claims
+from backend.agents.legal_claim_relation import build_legal_claim_relations, evidence_ref
+from backend.agents.legal_claim_coverage import build_claim_coverage
+from backend.agents.legal_action_policy import recommend_legal_actions
+from backend.agents.legal_targeted_search import execute_recommended_targeted_search
 from backend.llm import LLMClient
 from backend.llm.client import get_last_llm_trace, record_llm_fallback
 from backend.llm.parser import parse_json_response, validate_required_fields
@@ -45,6 +50,8 @@ _DEFAULT_RAG_INFO = {
 }
 _LAST_RAG_INFO = deepcopy(_DEFAULT_RAG_INFO)
 _RAG_INFO_CONTEXT: ContextVar[dict] = ContextVar("legal_rag_info_context", default=deepcopy(_DEFAULT_RAG_INFO))
+_RAW_CHUNKS_CONTEXT: ContextVar[list[dict]] = ContextVar("legal_raw_chunks_context", default=[])
+_RELATION_CONTEXT: ContextVar[dict] = ContextVar("legal_relation_context", default={})
 REQUIRED_FIELDS = (
     "legal_risks",
     "safe_points",
@@ -56,11 +63,15 @@ REQUIRED_FIELDS = (
 
 def run(payload: dict) -> dict:
     config = get_config()
+    _RAW_CHUNKS_CONTEXT.set([])
+    _RELATION_CONTEXT.set({"legal_claim_relations": [], "relation_status": "skipped"})
+    claim_extraction = extract_claims(payload.get("draft", ""), config.agent_mode, call_llm)
 
     if config.agent_mode == "llm":
         _set_rag_info(enabled=True, hit=False, sources=[])
         try:
-            return _attach_metadata(_run_llm(payload))
+            return _attach_metadata(_run_llm(payload, claim_extraction), claim_extraction=claim_extraction,
+                                    allow_targeted_search=True)
         except Exception as exc:
             logger.warning(
                 "%s fallback to mock mode due to llm failure: %s | %s",
@@ -69,10 +80,10 @@ def run(payload: dict) -> dict:
                 str(exc),
             )
             llm_trace = record_llm_fallback(AGENT_NAME, exc)
-            return _attach_metadata(_run_mock(payload), llm_trace=llm_trace)
+            return _attach_metadata(_run_mock(payload), llm_trace=llm_trace, claim_extraction=claim_extraction)
 
     _set_rag_info(enabled=False, hit=False, sources=[])
-    return _attach_metadata(_run_mock(payload))
+    return _attach_metadata(_run_mock(payload), claim_extraction=claim_extraction)
 
 
 def get_last_rag_info() -> dict:
@@ -193,8 +204,20 @@ def _run_mock(payload: dict) -> dict:
     )
 
 
-def _run_llm(payload: dict) -> dict:
+def _run_llm(payload: dict, claim_extraction: dict | None = None) -> dict:
     legal_context = _retrieve_legal_context(payload)
+    try:
+        relation = build_legal_claim_relations(
+            (claim_extraction or {}).get("legal_claims", []),
+            _RAW_CHUNKS_CONTEXT.get(),
+            mode="llm",
+            llm_call=call_llm,
+        )
+    except Exception as exc:
+        logger.warning("Legal claim relation failed safely: %s", exc.__class__.__name__)
+        relation = {"legal_claim_relations": [], "relation_status": "fallback",
+                    "relation_status_reason": "execution_error"}
+    _RELATION_CONTEXT.set(relation)
     prompt = _build_legal_prompt(payload, legal_context)
     raw_text = call_llm(prompt)
     parsed = parse_json_response(raw_text)
@@ -282,6 +305,7 @@ legal_context: {legal_context}
 
 
 def _retrieve_legal_context(payload: dict) -> str:
+    _RAW_CHUNKS_CONTEXT.set([])
     query = _build_retrieval_query(payload)
     expected_source_category = _resolve_expected_source_category(payload)
     if not _is_rag_enabled():
@@ -347,6 +371,8 @@ def _retrieve_legal_context(payload: dict) -> str:
         )
         return ""
 
+    raw_chunks = retrieval_result.get("chunks", [])
+    _RAW_CHUNKS_CONTEXT.set(deepcopy(raw_chunks) if isinstance(raw_chunks, list) else [])
     sources = retrieval_result.get("sources", [])
     chunks = _normalize_rag_chunks(retrieval_result.get("chunks", []), query)
     source_names = []
@@ -424,6 +450,7 @@ def _normalize_rag_chunks(chunks: list[dict], retrieval_query: str = "") -> list
         normalized_chunks.append(
             {
                 "chunk_id": chunk.get("chunk_id"),
+                "evidence_ref": evidence_ref(chunk),
                 "document_id": metadata.get("document_id"),
                 "document_version": metadata.get("document_version"),
                 "source": chunk.get("source"),
@@ -454,14 +481,45 @@ def _not_applicable_evidence_quality(reason: str) -> dict:
     }
 
 
-def _attach_metadata(output: dict, llm_trace: dict | None = None) -> dict:
+def _attach_metadata(output: dict, llm_trace: dict | None = None, claim_extraction: dict | None = None,
+                     allow_targeted_search: bool = False) -> dict:
     enriched = dict(output)
+    original_llm_trace = deepcopy(llm_trace if llm_trace is not None else get_last_llm_trace())
+    extraction = deepcopy(claim_extraction or {"legal_claims": [], "claim_extraction_status": "failed"})
+    relation = deepcopy(_RELATION_CONTEXT.get())
+    try:
+        coverage = build_claim_coverage(extraction.get("legal_claims", []), relation)
+    except Exception as exc:
+        logger.warning("Legal claim coverage failed safely: %s", exc.__class__.__name__)
+        coverage = {"claim_coverage": []}
+    rag_info = get_last_rag_info()
+    try:
+        recommendation = recommend_legal_actions(extraction, coverage, relation, rag_info)
+    except Exception as exc:
+        logger.warning("Legal action recommendation failed safely: %s", exc.__class__.__name__)
+        recommendation = {"claim_action_recommendations": [], "recommendation_status": "fallback"}
+    targeted = {"targeted_search_executions": []}
+    if allow_targeted_search:
+        try:
+            targeted = execute_recommended_targeted_search(
+                extraction, coverage, relation, recommendation, rag_info,
+                retrieve_call=retrieve, relation_call=build_legal_claim_relations,
+                llm_call=call_llm, mode="llm",
+            )
+        except Exception as exc:
+            logger.warning("Legal targeted search failed safely: %s", exc.__class__.__name__)
+            targeted = {"targeted_search_executions": [], "targeted_search_status": "failed",
+                        "failure_type": exc.__class__.__name__}
     metadata = {
-        "rag": get_last_rag_info(),
+        "rag": rag_info,
+        "claim_extraction": extraction,
+        "claim_evidence_relation": relation,
+        "claim_coverage": coverage,
+        "claim_action_recommendation": recommendation,
+        "targeted_legal_search": targeted,
     }
-    llm = llm_trace if llm_trace is not None else get_last_llm_trace()
-    if llm:
-        metadata["llm"] = deepcopy(llm)
+    if original_llm_trace:
+        metadata["llm"] = original_llm_trace
     enriched["_metadata"] = metadata
     return enriched
 
@@ -477,6 +535,7 @@ def _build_evidence_chunks(chunks: list[dict], source_details: list[dict]) -> li
             evidence.append(
                 {
                     "chunk_id": chunk.get("chunk_id"),
+                    "evidence_ref": chunk.get("evidence_ref"),
                     "document_id": chunk.get("document_id"),
                     "document_version": chunk.get("document_version"),
                     "source": chunk.get("source"),

@@ -9,10 +9,12 @@ from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
 from backend.harness.spec import harness_trace_reference
 from backend.core.harness_runtime import get_runtime_context
 from backend.core.context_pack_runtime import ContextPackRuntimeProvider, inject_context_pack
+from backend.skills.skill_selector import SkillSelector
 
 
 AgentRunner = Callable[[dict], dict]
 _CONTEXT_PACK_PROVIDER = ContextPackRuntimeProvider()
+_SKILL_SELECTOR = SkillSelector()
 AGENT_REGISTRY: dict[str, AgentRunner] = {
     "sentiment": sentiment_agent.run,
     "writer": writer_agent.run,
@@ -51,6 +53,8 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
             payload = build_agent_input(agent_name, agent_state, runtime_context=runtime_context)
             if runtime_context is not None:
                 payload = inject_context_pack(payload, _CONTEXT_PACK_PROVIDER.build_for_agent(agent_state, agent_name))
+                skill_run = _SKILL_SELECTOR.select_and_execute(agent_state, agent_name, payload)
+                payload["skill_results"] = deepcopy(skill_run)
             output = registry[agent_name](_adapt_payload_for_runner(agent_name, payload))
         except Exception as exc:
             error = f"{exc.__class__.__name__}: {exc}"
@@ -66,6 +70,16 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
         output_metadata = _extract_result_metadata(output)
         clean_output = _strip_result_metadata(output)
         agent_state.set_result(agent_name, clean_output)
+        if agent_name == "legal" and isinstance(output_metadata.get("claim_extraction"), dict):
+            agent_state.metadata["legal_claim_extraction"] = deepcopy(output_metadata["claim_extraction"])
+        if agent_name == "legal" and isinstance(output_metadata.get("claim_evidence_relation"), dict):
+            agent_state.metadata["legal_claim_relation"] = deepcopy(output_metadata["claim_evidence_relation"])
+        if agent_name == "legal" and isinstance(output_metadata.get("claim_coverage"), dict):
+            agent_state.metadata["legal_claim_coverage"] = deepcopy(output_metadata["claim_coverage"])
+        if agent_name == "legal" and isinstance(output_metadata.get("claim_action_recommendation"), dict):
+            agent_state.metadata["legal_claim_action_recommendation"] = deepcopy(output_metadata["claim_action_recommendation"])
+        if agent_name == "legal" and isinstance(output_metadata.get("targeted_legal_search"), dict):
+            agent_state.metadata["legal_targeted_search"] = deepcopy(output_metadata["targeted_legal_search"])
         trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", clean_output, None)
         trace_item.update(_collect_trace_metadata(agent_name, output_metadata))
         if runtime_context is not None:
@@ -73,6 +87,7 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
         context_ref = (agent_state.metadata.get("context_pack_refs") or {}).get(agent_name)
         if runtime_context is not None and context_ref:
             trace_item["context_pack"] = deepcopy(context_ref)
+            trace_item["skills"] = deepcopy((agent_state.metadata.get("skill_runtime_results") or {}).get(agent_name, {}))
         agent_state.add_trace(trace_item)
 
     agent_state.current_agent = None
@@ -170,6 +185,31 @@ def _collect_trace_metadata(agent_name: str | None, result_metadata: dict) -> di
         trace_metadata["rag"] = deepcopy(result_metadata["rag"])
     else:
         trace_metadata.update(_collect_agent_metadata(agent_name))
+    if agent_name == "legal" and isinstance(result_metadata.get("claim_extraction"), dict):
+        trace_metadata["rag"] = {
+            **trace_metadata.get("rag", {}),
+            **deepcopy(result_metadata["claim_extraction"]),
+        }
+    if agent_name == "legal" and isinstance(result_metadata.get("claim_evidence_relation"), dict):
+        trace_metadata["rag"] = {
+            **trace_metadata.get("rag", {}),
+            **deepcopy(result_metadata["claim_evidence_relation"]),
+        }
+    if agent_name == "legal" and isinstance(result_metadata.get("claim_coverage"), dict):
+        trace_metadata["rag"] = {
+            **trace_metadata.get("rag", {}),
+            **deepcopy(result_metadata["claim_coverage"]),
+        }
+    if agent_name == "legal" and isinstance(result_metadata.get("claim_action_recommendation"), dict):
+        trace_metadata["rag"] = {
+            **trace_metadata.get("rag", {}),
+            **deepcopy(result_metadata["claim_action_recommendation"]),
+        }
+    if agent_name == "legal" and isinstance(result_metadata.get("targeted_legal_search"), dict):
+        trace_metadata["rag"] = {
+            **trace_metadata.get("rag", {}),
+            **deepcopy(result_metadata["targeted_legal_search"]),
+        }
     return trace_metadata
 
 
