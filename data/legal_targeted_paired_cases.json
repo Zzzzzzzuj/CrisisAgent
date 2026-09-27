@@ -1,0 +1,134 @@
+{
+  "dataset_version": "p33.2-local-kb-v1",
+  "kb_sha256": {
+    "crisis_response.md": "11fcf4a2dca746149e832709cc9542e3ff88c602d74a7d1bea94ad212a130c6a",
+    "data_privacy.md": "9fbeb41f492f6b6565d5e2bfb4d6092fed090dbee6290096465b2e30a0b48ff1",
+    "executive_misconduct.md": "2ac56ea02471e89f02a97b16a3101a972fb6e844a31240b64784af16bdcdac5f",
+    "food_safety.md": "eb599eb174de72105791f4a08091625aba5437e447586b3f886cf09cdfb3c2a8",
+    "legal_risk_rules.md": "7490def8272b9df55bd4879f2865e869c547eec8fe65c0e820602acc79c16ae2",
+    "product_quality.md": "ce694d4c5d866dc4adef42cb46e104df210637cb903ea9d0c17ebfee3a0e02b2",
+    "service_outage.md": "db7b8f11c25c327d1e43c59136dee13ec9f2e9d91bcc5453fdd1af86bdd37eb4"
+  },
+  "cases": [
+    {
+      "case_id": "food_expiry_rule", "label": "positive", "material_kind": "rule_like",
+      "claim": "使用超过保质期的食品原料可能违反食品安全规定",
+      "event_context": "某食品品牌被投诉部分批次疑似使用过期原料，调查尚未完成。",
+      "draft_context": "我们正在核查涉事批次。使用超过保质期的食品原料可能违反食品安全规定，结论以核查为准。",
+      "redteam_context": {"issues": ["不得把尚未查清的指控写成既定事实"], "suggestions": ["核查原料批次和生产记录"]},
+      "expected_evidence_refs": ["food_safety.md#section-1:chunk-0"]
+    },
+    {
+      "case_id": "food_regulator", "label": "positive", "material_kind": "response_guidance",
+      "claim": "食品安全事件应配合市场监管部门调查",
+      "event_context": "某餐饮企业的食品安全投诉受到监管关注。",
+      "draft_context": "公司正在核查相关投诉，如监管部门介入，将配合调查。食品安全事件应配合市场监管部门调查。",
+      "redteam_context": {"issues": ["监管介入范围尚未确定"], "suggestions": ["避免宣称已有调查结论"]},
+      "expected_evidence_refs": ["food_safety.md#section-2:chunk-0"]
+    },
+    {
+      "case_id": "food_consumer_updates", "label": "positive", "material_kind": "response_guidance",
+      "claim": "食品安全争议回应应说明消费者投诉受理与后续检测进展",
+      "event_context": "多位消费者反馈食品质量担忧，品牌尚在排查。",
+      "draft_context": "我们理解消费者担忧，将说明投诉受理、批次排查与检测进展。食品安全争议回应应说明消费者投诉受理与后续检测进展。",
+      "redteam_context": {"issues": ["只有道歉没有具体后续安排"], "suggestions": ["交代检测与进展通知"]},
+      "expected_evidence_refs": ["food_safety.md#section-3:chunk-0"]
+    },
+    {
+      "case_id": "premature_illegality", "label": "positive", "material_kind": "response_constraint",
+      "claim": "调查完成前不应直接宣称企业已经构成违法",
+      "event_context": "食品原料指控尚无调查结论。",
+      "draft_context": "调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。",
+      "redteam_context": {"issues": ["提前定责有法律风险"], "suggestions": ["使用以核查结果为前提的表述"]},
+      "expected_evidence_refs": ["legal_risk_rules.md#section-1:chunk-0"]
+    },
+    {
+      "case_id": "absolute_promise", "label": "positive", "material_kind": "response_constraint",
+      "claim": "危机回应不应作出绝不发生或负责到底的绝对化承诺",
+      "event_context": "产品安全投诉引发要求企业保证不再发生的舆论。",
+      "draft_context": "危机回应不应作出绝不发生或负责到底的绝对化承诺，应说明具体核查安排。",
+      "redteam_context": {"issues": ["绝对化承诺无法保证"], "suggestions": ["说明可执行的整改步骤"]},
+      "expected_evidence_refs": ["legal_risk_rules.md#section-2:chunk-0"]
+    },
+    {
+      "case_id": "conditional_responsibility", "label": "positive", "material_kind": "response_constraint",
+      "claim": "承担法律责任应以核查发现违反要求为条件",
+      "event_context": "消费者要求品牌立刻承认全部赔偿责任。",
+      "draft_context": "承担法律责任应以核查发现违反要求为条件，公司会继续核实事实。",
+      "redteam_context": {"issues": ["责任表述过满"], "suggestions": ["给出条件式责任表达"]},
+      "expected_evidence_refs": ["legal_risk_rules.md#section-3:chunk-0"]
+    },
+    {
+      "case_id": "privacy_initial_response", "label": "positive", "material_kind": "response_guidance",
+      "claim": "个人信息疑似泄露时不应在事实未查清前确认泄露范围",
+      "event_context": "用户反馈疑似个人信息泄露，企业仍在调查。",
+      "draft_context": "个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。",
+      "redteam_context": {"issues": ["泄露范围未经证实"], "suggestions": ["说明核查状态"]},
+      "expected_evidence_refs": ["data_privacy.md#section-1:chunk-0"]
+    },
+    {
+      "case_id": "privacy_access_logs", "label": "positive", "material_kind": "response_guidance",
+      "claim": "数据安全事件应排查访问日志、权限配置与异常下载",
+      "event_context": "平台用户担忧异常账号访问数据。",
+      "draft_context": "数据安全事件应排查访问日志、权限配置与异常下载，具体结果尚待确认。",
+      "redteam_context": {"issues": ["尚无内部日志结论"], "suggestions": ["避免认定泄露已发生"]},
+      "expected_evidence_refs": ["data_privacy.md#section-3:chunk-0"]
+    },
+    {
+      "case_id": "product_recall_assessment", "label": "positive", "material_kind": "response_guidance",
+      "claim": "型号存在安全隐患时应评估召回、停售或维修措施",
+      "event_context": "某型号电器被投诉发热，企业尚未完成检测。",
+      "draft_context": "型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。",
+      "redteam_context": {"issues": ["未验证型号问题就承诺召回"], "suggestions": ["以检测结果为前提"]},
+      "expected_evidence_refs": ["product_quality.md#section-5:chunk-0"]
+    },
+    {
+      "case_id": "service_order_reconciliation", "label": "positive", "material_kind": "response_guidance",
+      "claim": "服务恢复后应通知用户并核对订单及补偿安排",
+      "event_context": "平台支付故障后已有部分交易恢复。",
+      "draft_context": "服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。",
+      "redteam_context": {"issues": ["只说恢复没有说明用户权益"], "suggestions": ["提供订单核对渠道"]},
+      "expected_evidence_refs": ["service_outage.md#section-5:chunk-0"]
+    },
+    {
+      "case_id": "executive_full_context", "label": "positive", "material_kind": "response_guidance",
+      "claim": "高管言论争议应核实传播片段与完整上下文",
+      "event_context": "网络传播一段企业负责人的争议言论片段。",
+      "draft_context": "高管言论争议应核实传播片段与完整上下文，不能提前定性。",
+      "redteam_context": {"issues": ["片段可能缺少上下文"], "suggestions": ["核查原始完整材料"]},
+      "expected_evidence_refs": ["executive_misconduct.md#section-2:chunk-0"]
+    },
+    {
+      "case_id": "crisis_overpromise", "label": "positive", "material_kind": "response_guidance",
+      "claim": "危机回应应给出可执行的核查行动并避免过度承诺",
+      "event_context": "品牌受到服务投诉，用户要求立即给出处理时间。",
+      "draft_context": "危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。",
+      "redteam_context": {"issues": ["整改时间尚未确认"], "suggestions": ["写明已开始的行动"]},
+      "expected_evidence_refs": ["crisis_response.md#section-3:chunk-0"]
+    },
+    {
+      "case_id": "negative_environment_fine", "label": "negative",
+      "claim": "非法排放工业废水的具体罚款额度应按环保法规确定",
+      "event_context": "企业被指向河道排放工业废水。",
+      "draft_context": "我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。",
+      "redteam_context": {"issues": ["罚款金额缺乏依据"], "suggestions": ["不得引用未核实的法条"]},
+      "expected_evidence_refs": []
+    },
+    {
+      "case_id": "negative_securities_disclosure", "label": "negative",
+      "claim": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断",
+      "event_context": "某上市公司被质疑内幕交易。",
+      "draft_context": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断，公司尚未完成核实。",
+      "redteam_context": {"issues": ["不能编造披露期限"], "suggestions": ["核查真实法律依据"]},
+      "expected_evidence_refs": []
+    },
+    {
+      "case_id": "negative_copyright_license", "label": "negative",
+      "claim": "音乐版权许可费的法定计算方式需要版权领域规则",
+      "event_context": "平台被指未经许可播放音乐。",
+      "draft_context": "音乐版权许可费的法定计算方式需要版权领域规则，当前不得预判责任。",
+      "redteam_context": {"issues": ["版权许可事实不明"], "suggestions": ["不要自行给出收费公式"]},
+      "expected_evidence_refs": []
+    }
+  ]
+}
