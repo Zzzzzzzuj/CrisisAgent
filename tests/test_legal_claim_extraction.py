@@ -116,6 +116,8 @@ def test_extraction_failure_does_not_break_fixed_workflow(monkeypatch):
 def test_existing_legal_rag_and_review_still_run_after_extraction_fallback(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "llm")
     monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
     calls = {"retrieval": 0}
     monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **kwargs: {"need_rag": True,

@@ -36,6 +36,12 @@ def _ref(chunk) -> str:
     return f"{source}#section-{metadata['section_index']}:chunk-{metadata['chunk_index']}"
 
 
+def _normalized_kb_hash(path: Path) -> str:
+    text = path.read_bytes().decode("utf-8")
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 class _RecordingHybrid:
     def __init__(self, delegate):
         self.delegate = delegate
@@ -70,7 +76,7 @@ def _validate_frozen_set(data: dict, kb_dir: Path) -> set[str]:
     if not isinstance(hashes, dict) or set(hashes) != {p.name for p in kb_dir.glob("*.md")}:
         raise ValueError("Frozen KB file inventory does not match the local KB.")
     for filename, expected_hash in hashes.items():
-        actual_hash = hashlib.sha256((kb_dir / filename).read_bytes()).hexdigest()
+        actual_hash = _normalized_kb_hash(kb_dir / filename)
         if actual_hash != expected_hash:
             raise ValueError(f"Frozen KB changed: {filename}")
     available_refs = {_ref(chunk) for chunk in load_chunks(kb_dir)}

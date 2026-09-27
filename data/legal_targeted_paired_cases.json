@@ -2,12 +2,12 @@
   "dataset_version": "p33.2-local-kb-v1",
   "kb_sha256": {
     "crisis_response.md": "11fcf4a2dca746149e832709cc9542e3ff88c602d74a7d1bea94ad212a130c6a",
-    "data_privacy.md": "9fbeb41f492f6b6565d5e2bfb4d6092fed090dbee6290096465b2e30a0b48ff1",
-    "executive_misconduct.md": "2ac56ea02471e89f02a97b16a3101a972fb6e844a31240b64784af16bdcdac5f",
+    "data_privacy.md": "4a1c236425a99819910f409e1e03da0d545e68085f0b281c0798acec701176f0",
+    "executive_misconduct.md": "0d419cf49bedeec52d5c9d7369ebc416a4df9ab129beb7e24d2ffea444da995a",
     "food_safety.md": "eb599eb174de72105791f4a08091625aba5437e447586b3f886cf09cdfb3c2a8",
     "legal_risk_rules.md": "7490def8272b9df55bd4879f2865e869c547eec8fe65c0e820602acc79c16ae2",
-    "product_quality.md": "ce694d4c5d866dc4adef42cb46e104df210637cb903ea9d0c17ebfee3a0e02b2",
-    "service_outage.md": "db7b8f11c25c327d1e43c59136dee13ec9f2e9d91bcc5453fdd1af86bdd37eb4"
+    "product_quality.md": "8021efccf78852269a8e80c9129de45dbc3739de87049246ce89affcc3e00c28",
+    "service_outage.md": "c27d4c52dfd2cdffd321001af4c8aae3639e0ab9d706e022c32d192e81401612"
   },
   "cases": [
     {

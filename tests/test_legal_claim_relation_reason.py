@@ -120,6 +120,8 @@ def test_deterministic_exception_has_execution_reason(monkeypatch):
 def test_retrieval_status_stays_separate_from_relation_reason(monkeypatch, need_rag, chunks, status):
     monkeypatch.setenv("AGENT_MODE", "llm")
     monkeypatch.setenv("LLM_API_KEY", "fake-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
     monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **_: {"need_rag": need_rag})
     monkeypatch.setattr(legal_agent, "retrieve", lambda *_args, **_kwargs: {

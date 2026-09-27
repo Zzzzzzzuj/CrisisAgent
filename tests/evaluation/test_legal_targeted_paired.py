@@ -1,15 +1,54 @@
+import hashlib
 import json
 import socket
 from copy import deepcopy
 
 import pytest
 
-from evaluation.legal_targeted_paired import DEFAULT_CASES, run_legal_targeted_paired_eval
+from evaluation.legal_targeted_paired import (
+    DEFAULT_CASES,
+    _normalized_kb_hash,
+    _validate_frozen_set,
+    run_legal_targeted_paired_eval,
+)
 
 
 @pytest.fixture(scope="module")
 def report():
     return run_legal_targeted_paired_eval()
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n", "\r"])
+def test_frozen_kb_hash_ignores_only_newline_style(tmp_path, monkeypatch, newline):
+    kb_dir = tmp_path / "kb"
+    kb_dir.mkdir()
+    path = kb_dir / "rule.md"
+    path.write_bytes(f"First line{newline}Second line{newline}".encode("utf-8"))
+    expected = hashlib.sha256(b"First line\nSecond line\n").hexdigest()
+    data = {
+        "kb_sha256": {"rule.md": expected},
+        "cases": [{
+            "case_id": "negative", "label": "negative", "expected_evidence_refs": [],
+            "claim": "claim", "event_context": "event", "draft_context": "draft",
+            "redteam_context": {},
+        }],
+    }
+    monkeypatch.setattr("evaluation.legal_targeted_paired.load_chunks", lambda _path: [])
+    assert _normalized_kb_hash(path) == expected
+    assert _validate_frozen_set(data, kb_dir) == set()
+
+
+@pytest.mark.parametrize("changed", ["First line\nSecond text\n", "First line \nSecond line\n",
+                                             "First line\nSecond line!\n"])
+def test_frozen_kb_hash_rejects_content_and_whitespace_changes(tmp_path, monkeypatch, changed):
+    kb_dir = tmp_path / "kb"
+    kb_dir.mkdir()
+    path = kb_dir / "rule.md"
+    path.write_bytes(changed.encode("utf-8"))
+    data = {"kb_sha256": {"rule.md": hashlib.sha256(b"First line\nSecond line\n").hexdigest()}}
+    monkeypatch.setattr("evaluation.legal_targeted_paired.load_chunks", lambda _path: [])
+    with pytest.raises(ValueError, match="Frozen KB changed: rule.md"):
+        _validate_frozen_set(data, kb_dir)
 
 
 def test_frozen_set_and_hash_backend(report):

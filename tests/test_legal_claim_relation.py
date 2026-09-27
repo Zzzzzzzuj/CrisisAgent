@@ -170,6 +170,8 @@ def test_mock_legal_does_not_invent_rag_evidence(monkeypatch):
 def test_shadow_relation_does_not_change_legal_output_or_prompt(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "llm")
     monkeypatch.setenv("LLM_API_KEY", "fake-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
     monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **_: {"need_rag": True})
     monkeypatch.setattr(legal_agent, "retrieve", lambda *_args, **_kwargs: {
@@ -197,6 +199,8 @@ def test_shadow_relation_does_not_change_legal_output_or_prompt(monkeypatch):
 def test_relation_module_exception_does_not_interrupt_legal_review(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "llm")
     monkeypatch.setenv("LLM_API_KEY", "fake-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
     get_config.cache_clear()
     monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **_: {"need_rag": True})
     monkeypatch.setattr(legal_agent, "retrieve", lambda *_args, **_kwargs: {
