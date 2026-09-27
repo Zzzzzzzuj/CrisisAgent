@@ -5,10 +5,11 @@ from datetime import datetime, timezone
 from backend.core.checkpoint import load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import execute_dynamic_state, initialize_dynamic_state
 from backend.core.human import request_review
+from backend.core.human_fact_runtime import FACT_KEY, FINAL_REVIEW
 from backend.core.policy import evaluate_human_policy
 from backend.core.resume import resume_agent_loop
 from backend.core.runtime_evaluator import evaluate_runtime_state
-from backend.core.state import COMPLETED, FAILED, QUEUED, RUNNING, AgentState
+from backend.core.state import COMPLETED, FAILED, QUEUED, RUNNING, WAITING_HUMAN, AgentState
 
 
 _EXECUTOR = ThreadPoolExecutor(max_workers=int(os.getenv("RUNTIME_WORKERS", "2")))
@@ -123,6 +124,10 @@ def run_dynamic_session_task(session_id: str) -> dict:
         state.set_status(RUNNING)
         save_checkpoint(state)
         result = execute_dynamic_state(state)
+        if state.status == WAITING_HUMAN and state.metadata.get("human_fact"):
+            save_checkpoint(state)
+            return {**result, "status": "waiting_human", "state_status": state.status,
+                    "human_fact_request": state.metadata["human_fact"]["request"]}
         evaluation = evaluate_runtime_state(state)
         policy = evaluate_human_policy(state, evaluation)
         state.metadata["evaluation"] = evaluation
@@ -135,6 +140,8 @@ def run_dynamic_session_task(session_id: str) -> dict:
                 policy_result=policy,
                 evaluation=evaluation,
             )
+            if state.metadata.get(FACT_KEY):
+                state.metadata["human_wait_type"] = FINAL_REVIEW
             status = "waiting_human"
         else:
             state.set_status(COMPLETED)
@@ -187,6 +194,10 @@ def run_dynamic_sync_with_metadata(
 ) -> dict:
     state = initialize_dynamic_state(event, metadata=metadata, harness_id=harness_id, harness_version=harness_version)
     result = execute_dynamic_state(state)
+    if state.status == WAITING_HUMAN and state.metadata.get("human_fact"):
+        save_checkpoint(state)
+        return {**result, "status": "waiting_human", "state_status": state.status,
+                "human_fact_request": state.metadata["human_fact"]["request"]}
     evaluation = evaluate_runtime_state(state)
     policy = evaluate_human_policy(state, evaluation)
     state.metadata["evaluation"] = evaluation
@@ -199,6 +210,8 @@ def run_dynamic_sync_with_metadata(
             policy_result=policy,
             evaluation=evaluation,
         )
+        if state.metadata.get(FACT_KEY):
+            state.metadata["human_wait_type"] = FINAL_REVIEW
         status = "waiting_human"
     else:
         state.set_status(COMPLETED)

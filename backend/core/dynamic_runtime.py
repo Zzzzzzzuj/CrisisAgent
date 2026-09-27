@@ -7,7 +7,7 @@ from backend.core.guardrail_runtime import apply_guardrails_to_state
 from backend.core.harness_runtime import HarnessRuntimeContext
 from backend.core.plan_validator import validate_plan
 from backend.core.reasoning_mode import apply_reasoning_mode_to_state
-from backend.core.state import RUNNING, AgentState
+from backend.core.state import RUNNING, WAITING_HUMAN, AgentState
 from backend.harness.service import get_effective_harness_spec, get_runtime_harness_spec
 
 
@@ -53,6 +53,11 @@ def run_dynamic_agent(
         "failed_agents": list(state.failed_agents),
         "execution_trace": list(state.trace),
         "harness_spec": deepcopy(state.metadata.get("harness_spec", {})),
+        "state_status": state.status,
+        "human_fact_request": deepcopy((state.metadata.get("human_fact") or {}).get("request")),
+        "human_fact": deepcopy(state.metadata.get("human_fact")),
+        "legal_claim_extraction": deepcopy(state.metadata.get("legal_claim_extraction")),
+        "legal_claim_coverage": deepcopy(state.metadata.get("legal_claim_coverage")),
         **_reasoning_mode_response(state),
     }
 
