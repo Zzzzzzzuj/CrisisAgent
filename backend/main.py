@@ -37,8 +37,10 @@ from backend.core.human import approve, reject
 from backend.core.policy import evaluate_human_policy
 from backend.core.reasoning_mode import apply_reasoning_mode_to_state
 from backend.core.runtime_evaluator import evaluate_runtime_state
-from backend.core.state import COMPLETED, RUNNING, AgentState
+from backend.core.state import COMPLETED, RUNNING, WAITING_HUMAN, AgentState
 from backend.core.resume import resume_agent_loop
+from backend.core.human_fact_resume import submit_human_fact_response
+from backend.core.human_fact_runtime import FACT_INPUT, FACT_KEY, FINAL_REVIEW
 from backend.core.runtime_tasks import (
     create_queued_dynamic_session,
     is_async_runtime_enabled,
@@ -195,6 +197,11 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
     result = run_dynamic_agent(event, **harness_args) if harness_args else run_dynamic_agent(event)
     state = _state_from_dynamic_result(result)
     _record_created_by(state, current_user)
+    if state.status == WAITING_HUMAN and state.metadata.get("human_fact"):
+        save_checkpoint(state)
+        return {**result, "status": "waiting_human", "state_status": state.status,
+                "human_fact_request": state.metadata["human_fact"]["request"],
+                "approval": dict(state.approval)}
     apply_guardrails_to_state(state)
     apply_reasoning_mode_to_state(
         state,
@@ -212,6 +219,8 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
             policy_result=policy,
             evaluation=evaluation,
         )
+        if state.metadata.get(FACT_KEY):
+            state.metadata["human_wait_type"] = FINAL_REVIEW
         status = "waiting_human"
     else:
         state.status = COMPLETED
@@ -281,6 +290,22 @@ def dynamic_followup(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@app.post("/api/dynamic/{session_id}/fact-response")
+def respond_to_dynamic_fact(
+    session_id: str,
+    request: dict,
+    current_user: dict | None = Depends(require_reviewer),
+) -> dict:
+    state = _load_dynamic_state_or_404(session_id)
+    _ensure_session_access(state, current_user)
+    try:
+        if state.metadata.get("human_wait_type") != FACT_INPUT:
+            raise ValueError("Session is not waiting for a human fact response.")
+        return submit_human_fact_response(session_id, request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.post("/api/dynamic/{session_id}/approve")
 def approve_dynamic_session(
     session_id: str,
@@ -288,6 +313,12 @@ def approve_dynamic_session(
     current_user: dict | None = Depends(require_reviewer),
 ) -> dict:
     state = _load_dynamic_state_or_404(session_id)
+    wait_type = state.metadata.get("human_wait_type")
+    if wait_type == FACT_INPUT:
+        raise HTTPException(status_code=409, detail="Human fact input must be submitted through fact-response.")
+    fact = state.metadata.get(FACT_KEY)
+    if fact and wait_type != FINAL_REVIEW:
+        raise HTTPException(status_code=409, detail="Human fact session is not at final review.")
     body = request or {}
     try:
         reviewer_identity = _reviewer_identity(body, current_user)
@@ -301,6 +332,16 @@ def approve_dynamic_session(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if fact and wait_type == FINAL_REVIEW:
+        state.set_status(COMPLETED)
+        state.metadata.pop("human_wait_type", None)
+        fact["phase"] = "COMPLETED"
+        save_checkpoint(state)
+        return {"session_id": session_id, "status": "completed", "state_status": state.status,
+                "approval": dict(state.approval), "results": state.get_all_results(),
+                "execution_trace": _enhance_trace(state.trace),
+                "evaluation": state.metadata.get("evaluation"), "policy": state.metadata.get("policy")}
 
     save_checkpoint(state)
     if is_async_runtime_enabled():
@@ -321,6 +362,12 @@ def reject_dynamic_session(
     current_user: dict | None = Depends(require_reviewer),
 ) -> dict:
     state = _load_dynamic_state_or_404(session_id)
+    wait_type = state.metadata.get("human_wait_type")
+    fact = state.metadata.get(FACT_KEY)
+    if wait_type == FACT_INPUT:
+        raise HTTPException(status_code=409, detail="Human fact input must be submitted through fact-response.")
+    if fact and wait_type != FINAL_REVIEW:
+        raise HTTPException(status_code=409, detail="Human fact session is not at final review.")
     body = request or {}
     try:
         reviewer_identity = _reviewer_identity(body, current_user)
@@ -334,6 +381,15 @@ def reject_dynamic_session(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if fact and wait_type == FINAL_REVIEW:
+        state.metadata.pop("human_wait_type", None)
+        fact["phase"] = "COMPLETED"
+        save_checkpoint(state)
+        return {"session_id": session_id, "status": "rejected", "state_status": state.status,
+                "approval": dict(state.approval), "results": state.get_all_results(),
+                "execution_trace": _enhance_trace(state.trace),
+                "evaluation": state.metadata.get("evaluation"), "policy": state.metadata.get("policy")}
 
     save_checkpoint(state)
     return resume_agent_loop(session_id)
@@ -399,7 +455,12 @@ def _state_from_dynamic_result(result: dict) -> AgentState:
         },
     )
     state.failed_agents = list(result.get("failed_agents", []))
-    state.status = RUNNING
+    if result.get("human_fact"):
+        state.metadata["human_fact"] = result["human_fact"]
+        state.metadata["human_wait_type"] = FACT_INPUT
+        state.metadata["legal_claim_extraction"] = result.get("legal_claim_extraction") or {}
+        state.metadata["legal_claim_coverage"] = result.get("legal_claim_coverage") or {}
+    state.status = WAITING_HUMAN if result.get("state_status") == WAITING_HUMAN else RUNNING
     return state
 
 

@@ -4,6 +4,7 @@ from typing import Callable
 
 from backend.agents import decision_agent, legal_agent, redteam_agent, sentiment_agent, writer_agent
 from backend.core.adapter import build_agent_input
+from backend.core.human_fact_runtime import pause_for_claim
 from backend.core.state import AgentState
 from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
 from backend.harness.spec import harness_trace_reference
@@ -34,7 +35,8 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
         agent_state.metadata.setdefault("harness_runtime_context", runtime_context.trace_metadata())
     executed_agents = []
 
-    for item in plan.get("plan", []):
+    items = plan.get("plan", [])
+    for position, item in enumerate(items):
         agent_name = item.get("agent")
         reason = item.get("reason", "")
         agent_state.current_agent = agent_name
@@ -89,7 +91,8 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
             trace_item["context_pack"] = deepcopy(context_ref)
             trace_item["skills"] = deepcopy((agent_state.metadata.get("skill_runtime_results") or {}).get(agent_name, {}))
         agent_state.add_trace(trace_item)
-
+        if agent_name == "legal" and pause_for_claim(agent_state, items[position + 1:]):
+            break
     agent_state.current_agent = None
     return {
         "plan_id": plan_id,

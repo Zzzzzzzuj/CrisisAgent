@@ -55,12 +55,21 @@ def _build_legal_input(state: AgentState, runtime_context=None) -> dict:
 
 
 def _build_writer_v2_input(state: AgentState) -> dict:
-    return {
+    payload = {
         "event": state.event,
         "first_draft": state.get_result("writer") or {},
         "redteam_review": state.get_result("redteam") or {},
         "legal_review": state.get_result("legal") or {},
     }
+    fact = state.metadata.get("human_fact") or {}
+    response = fact.get("response") or {}
+    if response.get("response_type") == "FACT_UNAVAILABLE":
+        payload["human_fact_revision"] = {
+            "target_claim": (fact.get("request") or {}).get("claim", ""),
+            "fact_currently_unavailable": True,
+            "constraint": "不得保留或改写为同义的确定性企业事实断言，只能说明事实仍待核查。",
+        }
+    return payload
 
 
 def _build_decision_input(state: AgentState) -> dict:

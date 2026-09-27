@@ -346,6 +346,13 @@ def _generate_second_draft_mock(payload: dict) -> dict:
         "对于给消费者和合作伙伴带来的不安，我们再次表示歉意。"
     )
 
+    revision = payload.get("human_fact_revision") or {}
+    if revision.get("fact_currently_unavailable"):
+        statement = statement.replace(
+            "公司已立即启动专项核查，对相关原料、生产流程、仓储管理及涉事批次进行全面排查。",
+            "公司正对相关原料和涉事批次进行专项核查，目前相关事实仍在进一步确认。",
+        )
+
     return _normalize_second_draft_output(
         {
             "statement": statement,
@@ -387,6 +394,9 @@ def _build_writer_v2_prompt(payload: dict) -> str:
 
 法律审核建议 legal_review：
 {payload.get("legal_review", {})}
+
+人工事实回复后的指定 Claim 修订约束（仅本轮事实不可确认时使用）：
+{payload.get("human_fact_revision", {})}
 
 本轮 ContextPack（按 Writer V2 角色裁剪）：
 {payload.get("context_pack_text", "")}
