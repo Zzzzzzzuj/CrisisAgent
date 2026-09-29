@@ -7,7 +7,10 @@ from backend.agents.legal_claim_extractor import extract_claims
 from backend.agents.legal_claim_relation import build_legal_claim_relations, evidence_ref
 from backend.agents.legal_claim_coverage import build_claim_coverage
 from backend.agents.legal_action_policy import recommend_legal_actions
-from backend.agents.legal_targeted_search import execute_recommended_targeted_search
+from backend.agents.legal_targeted_search import (
+    execute_recommended_targeted_search,
+    run_legal_action_loop,
+)
 from backend.llm import LLMClient
 from backend.llm.client import get_last_llm_trace, record_llm_fallback
 from backend.llm.parser import parse_json_response, validate_required_fields
@@ -63,15 +66,24 @@ REQUIRED_FIELDS = (
 
 def run(payload: dict) -> dict:
     config = get_config()
+    dynamic_runtime = isinstance(payload.get("harness_runtime_context"), dict)
     _RAW_CHUNKS_CONTEXT.set([])
     _RELATION_CONTEXT.set({"legal_claim_relations": [], "relation_status": "skipped"})
-    claim_extraction = extract_claims(payload.get("draft", ""), config.agent_mode, call_llm)
+    sentiment = payload.get("sentiment_analysis") or {}
+    claim_extraction = extract_claims(
+        payload.get("draft", ""),
+        config.agent_mode,
+        call_llm,
+        event=payload.get("event", ""),
+        risk_level=sentiment.get("risk_level") if isinstance(sentiment, dict) else None,
+    )
 
     if config.agent_mode == "llm":
         _set_rag_info(enabled=True, hit=False, sources=[])
         try:
             return _attach_metadata(_run_llm(payload, claim_extraction), claim_extraction=claim_extraction,
-                                    allow_targeted_search=True)
+                                    allow_targeted_search=not dynamic_runtime,
+                                    enable_action_loop=dynamic_runtime, action_context=payload)
         except Exception as exc:
             logger.warning(
                 "%s fallback to mock mode due to llm failure: %s | %s",
@@ -80,10 +92,13 @@ def run(payload: dict) -> dict:
                 str(exc),
             )
             llm_trace = record_llm_fallback(AGENT_NAME, exc)
-            return _attach_metadata(_run_mock(payload), llm_trace=llm_trace, claim_extraction=claim_extraction)
+            return _attach_metadata(_run_mock(payload), llm_trace=llm_trace,
+                                    claim_extraction=claim_extraction,
+                                    enable_action_loop=dynamic_runtime, action_context=payload)
 
     _set_rag_info(enabled=False, hit=False, sources=[])
-    return _attach_metadata(_run_mock(payload), claim_extraction=claim_extraction)
+    return _attach_metadata(_run_mock(payload), claim_extraction=claim_extraction,
+                            enable_action_loop=dynamic_runtime, action_context=payload)
 
 
 def get_last_rag_info() -> dict:
@@ -482,7 +497,8 @@ def _not_applicable_evidence_quality(reason: str) -> dict:
 
 
 def _attach_metadata(output: dict, llm_trace: dict | None = None, claim_extraction: dict | None = None,
-                     allow_targeted_search: bool = False) -> dict:
+                     allow_targeted_search: bool = False, enable_action_loop: bool = False,
+                     action_context: dict | None = None) -> dict:
     enriched = dict(output)
     original_llm_trace = deepcopy(llm_trace if llm_trace is not None else get_last_llm_trace())
     extraction = deepcopy(claim_extraction or {"legal_claims": [], "claim_extraction_status": "failed"})
@@ -499,7 +515,36 @@ def _attach_metadata(output: dict, llm_trace: dict | None = None, claim_extracti
         logger.warning("Legal action recommendation failed safely: %s", exc.__class__.__name__)
         recommendation = {"claim_action_recommendations": [], "recommendation_status": "fallback"}
     targeted = {"targeted_search_executions": []}
-    if allow_targeted_search:
+    action_loop = None
+    if enable_action_loop:
+        context = action_context if isinstance(action_context, dict) else {}
+        sentiment = context.get("sentiment_analysis") or {}
+        spec = context.get("harness_spec") or {}
+        retrieval_policy = spec.get("retrieval_policy", {}) if isinstance(spec, dict) else {}
+        loop_policy = retrieval_policy.get("legal_action_loop", {}) if isinstance(retrieval_policy, dict) else {}
+        try:
+            action_loop = run_legal_action_loop(
+                extraction, coverage, relation, rag_info,
+                retrieve_call=retrieve, relation_call=build_legal_claim_relations,
+                llm_call=call_llm, mode=get_config().agent_mode,
+                event=str(context.get("event", "")),
+                risk_level=str(sentiment.get("risk_level", "unknown")) if isinstance(sentiment, dict) else "unknown",
+                policy=loop_policy,
+            )
+            coverage = action_loop["claim_coverage"]
+            relation = action_loop["claim_evidence_relation"]
+            recommendation = action_loop["claim_action_recommendation"]
+            targeted = {"targeted_search_executions": [
+                deepcopy(item) for item in action_loop["actions"]
+                if item.get("selected_action") == "RETRIEVE_LEGAL_EVIDENCE"
+            ]}
+        except Exception as exc:
+            logger.warning("Legal action loop failed safely: %s", exc.__class__.__name__)
+            action_loop = {"status": "stopped", "actions": [], "tool_calls_used": 0,
+                           "remaining_budget": {"rounds": 0, "tool_calls": 0},
+                           "stop_reason": "loop_execution_error",
+                           "failure_type": exc.__class__.__name__}
+    elif allow_targeted_search:
         try:
             targeted = execute_recommended_targeted_search(
                 extraction, coverage, relation, recommendation, rag_info,
@@ -518,6 +563,10 @@ def _attach_metadata(output: dict, llm_trace: dict | None = None, claim_extracti
         "claim_action_recommendation": recommendation,
         "targeted_legal_search": targeted,
     }
+    if action_loop is not None:
+        metadata["legal_action_loop"] = action_loop
+    if isinstance(extraction.get("event_fact_gap_detection"), dict):
+        metadata["event_fact_gap_detection"] = deepcopy(extraction["event_fact_gap_detection"])
     if original_llm_trace:
         metadata["llm"] = original_llm_trace
     enriched["_metadata"] = metadata

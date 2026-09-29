@@ -1,20 +1,17 @@
 import os
 from functools import lru_cache
-from pathlib import Path
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
+from backend.env import load_project_env
+
 
 DEFAULT_DATABASE_URL = "sqlite:///./crisisagent.db"
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-BACKEND_DIR = PROJECT_ROOT / "backend"
 
 
 def _load_database_env() -> None:
-    load_dotenv(PROJECT_ROOT / ".env")
-    load_dotenv(BACKEND_DIR / ".env", override=True)
+    load_project_env()
 
 
 _load_database_env()

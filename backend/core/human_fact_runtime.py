@@ -67,6 +67,11 @@ def pause_for_claim(state, remaining_plan: list[dict]) -> bool:
             "revision_attempted": False,
             "decision_attempted": False,
         }
+        loop = state.metadata.get("legal_action_loop")
+        if isinstance(loop, dict):
+            loop["phase"] = "WAITING_HUMAN"
+            loop["current_gap"] = {"claim_index": index, "claim": claim["claim"]}
+            loop["request_id"] = request["request_id"]
         state.metadata["human_wait_type"] = FACT_INPUT
         state.set_status(WAITING_HUMAN)
         _trace(state, 0, "REQUEST_HUMAN_FACT_VERIFICATION", request["request_id"], index,
@@ -109,6 +114,19 @@ def record_response(state, response: dict) -> dict:
         observation.update({"source": "human_provided", "verification_status": "human_asserted"})
     fact["observation"] = observation
     fact["phase"] = PHASE_RESPONSE_RECORDED
+    loop = state.metadata.get("legal_action_loop")
+    if isinstance(loop, dict):
+        loop["phase"] = PHASE_RESPONSE_RECORDED
+        loop["last_observation"] = {
+            "claim_index": index,
+            "observation_type": "fact_unavailable" if response_type == "FACT_UNAVAILABLE" else "fact_provided",
+            "case_fact_status": "unresolved",
+            "verification_status": observation.get("verification_status"),
+        }
+        loop["stop_reason"] = (
+            "human_fact_unavailable_requires_safe_revision"
+            if response_type == "FACT_UNAVAILABLE" else "human_asserted_requires_review"
+        )
     _trace(state, 1, "HUMAN_FACT_RESPONSE", request["request_id"], index,
            {key: value for key, value in observation.items()}, response_type)
     state.set_status(RUNNING)

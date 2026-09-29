@@ -53,6 +53,20 @@ def test_writer_v2_llm_without_api_key_fallbacks_to_mock(monkeypatch):
     assert result["revisions_from_v1"] == result["revisions"]
 
 
+def test_writer_v2_mock_is_domain_neutral(monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "mock")
+    payload = {
+        **TEST_PAYLOAD,
+        "event": "某互联网平台服务出现异常，目前正在排查。",
+        "first_draft": {"statement": "我们已关注到相关情况。"},
+    }
+    result = writer_agent.generate_second_draft(payload)
+    assert "食品安全" not in result["statement"]
+    assert "原料" not in result["statement"]
+    assert "批次" not in result["statement"]
+    assert "尚未确认" in result["statement"]
+
+
 def test_writer_v2_llm_invalid_json_fallbacks_to_mock(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "llm")
     monkeypatch.setenv("LLM_API_KEY", "test-key")

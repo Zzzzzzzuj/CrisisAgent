@@ -163,7 +163,10 @@ def test_dynamic_rag_sources_come_from_legal_agent_metadata(monkeypatch):
     )
 
     legal_trace = result["execution_trace"][0]
-    assert legal_trace["rag"] == expected_rag
+    assert legal_trace["rag"]["sources"] == expected_rag["sources"]
+    assert legal_trace["rag"]["query_chars"] == len(expected_rag["query"])
+    assert "query" not in legal_trace["rag"]
+    assert "text_preview" not in str(legal_trace["rag"])
     assert legal_trace["rag"]["sources"] == ["legal_risk_rules.md"]
 
 
@@ -322,7 +325,9 @@ def test_dynamic_trace_preserves_source_count_and_chunk_score_layers(monkeypatch
     assert trace_rag["count"] == len(trace_rag["sources"])
     assert len(trace_rag["scores"]) == len(trace_rag["chunks"])
     assert len(trace_rag["rerank_scores"]) == len(trace_rag["chunks"])
-    assert trace_rag == rag_info
+    assert trace_rag["query_chars"] == len(rag_info["query"])
+    assert "query" not in trace_rag
+    assert "text_preview" not in str(trace_rag)
 
 
 def test_dynamic_rag_trace_does_not_affect_other_agents(monkeypatch):

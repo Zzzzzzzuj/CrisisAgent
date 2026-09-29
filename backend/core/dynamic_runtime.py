@@ -58,6 +58,7 @@ def run_dynamic_agent(
         "human_fact": deepcopy(state.metadata.get("human_fact")),
         "legal_claim_extraction": deepcopy(state.metadata.get("legal_claim_extraction")),
         "legal_claim_coverage": deepcopy(state.metadata.get("legal_claim_coverage")),
+        "legal_action_loop": deepcopy(state.metadata.get("legal_action_loop")),
         **_reasoning_mode_response(state),
     }
 
@@ -173,6 +174,11 @@ def build_dynamic_result(
         "failed_agents": list(state.failed_agents),
         "execution_trace": list(state.trace),
         "harness_spec": deepcopy(state.metadata.get("harness_spec", {})),
+        "human_fact_request": deepcopy((state.metadata.get("human_fact") or {}).get("request")),
+        "human_fact": deepcopy(state.metadata.get("human_fact")),
+        "legal_claim_extraction": deepcopy(state.metadata.get("legal_claim_extraction")),
+        "legal_claim_coverage": deepcopy(state.metadata.get("legal_claim_coverage")),
+        "legal_action_loop": deepcopy(state.metadata.get("legal_action_loop")),
         **_reasoning_mode_response(state),
     }
 

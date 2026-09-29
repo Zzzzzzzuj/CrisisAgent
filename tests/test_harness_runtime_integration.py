@@ -37,6 +37,9 @@ def test_unapproved_candidate_cannot_enter_dynamic_runtime(tmp_path, monkeypatch
 
 
 def test_active_harness_is_fixed_in_dynamic_state_and_trace(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "mock")
+    from backend.config import get_config
+    get_config.cache_clear()
     approved, candidate_id = _approved_candidate(tmp_path, monkeypatch)
     enabled = enable_approved_harness_version(candidate_id, "2.0.0")
     state = initialize_dynamic_state("食品安全投诉正在传播。", harness_id=candidate_id, harness_version="2.0.0")
@@ -45,7 +48,8 @@ def test_active_harness_is_fixed_in_dynamic_state_and_trace(tmp_path, monkeypatc
 
     result = execute_dynamic_state(state)
     assert result["executed_agents"] == ["sentiment", "writer", "redteam", "legal", "writer_v2", "decision"]
-    assert all(item["harness"]["harness_version"] == "2.0.0" for item in state.trace if item.get("agent") != "agent_loop")
+    assert all(item["harness"]["harness_version"] == "2.0.0"
+               for item in state.trace if item.get("agent") not in {"agent_loop", "human_fact"})
     assert state.metadata["harness_runtime_context"]["harness"]["harness_version"] == "2.0.0"
 
 

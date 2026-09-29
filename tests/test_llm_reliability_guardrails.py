@@ -22,6 +22,8 @@ from backend.llm.parser import LLMParseError, parse_json_response, validate_requ
 
 
 def test_llm_client_timeout_records_failure_trace(monkeypatch):
+    monkeypatch.delenv("OFFLINE_EVAL", raising=False)
+
     class TimeoutClient:
         def __init__(self, timeout):
             self.timeout = timeout

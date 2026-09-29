@@ -51,6 +51,26 @@ def test_executor_injects_pack_without_changing_agent_result_contract():
     assert captured["context_pack"]["agent_specific_focus"]["target_agent"] == "writer"
     assert state.metadata["context_pack_snapshots"]["writer"]["context_pack_hash"]
     assert result["execution_trace"][0]["context_pack"]["target_agent"] == "writer"
+    assert "context_pack_text" not in str(result["execution_trace"])
+    assert result["execution_trace"][0]["context_pack"]["context_chars"] > 0
+    assert "selected_sections" in result["execution_trace"][0]["context_pack"]
+    assert "rendered_context" not in str(result["execution_trace"])
+
+
+def test_context_retrieval_skill_trace_does_not_duplicate_pack_body():
+    from backend.core.executor import execute
+
+    state = _state()
+    result = execute(
+        {"plan_id": "p28-plan", "plan": [{"agent": "writer", "reason": "test"}]},
+        state,
+        agent_registry={"writer": lambda payload: {"statement": "safe response"}},
+    )
+    trace = result["execution_trace"][0]
+    assert trace["skills"]["results"][0]["success"] is True
+    assert "output" not in trace["skills"]["results"][0]
+    assert "rendered_context" not in str(trace["skills"])
+    assert "context_pack_snapshots" in state.metadata
 
 
 def test_checkpoint_like_copy_keeps_pack_snapshot():

@@ -162,6 +162,14 @@ def get_crisis_session(session_id: str) -> dict:
 
 @app.post("/api/dynamic/run")
 def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_user)) -> dict:
+    if os.getenv("OFFLINE_EVAL", "").strip().casefold() in {"1", "true", "yes", "on"}:
+        from backend.llm.offline_guard import assert_offline_eval_startup
+
+        try:
+            assert_offline_eval_startup()
+        except (RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     event = str(request.get("event", "")).strip()
     if not event:
         raise HTTPException(status_code=422, detail="Field 'event' is required.")
@@ -460,6 +468,8 @@ def _state_from_dynamic_result(result: dict) -> AgentState:
         state.metadata["human_wait_type"] = FACT_INPUT
         state.metadata["legal_claim_extraction"] = result.get("legal_claim_extraction") or {}
         state.metadata["legal_claim_coverage"] = result.get("legal_claim_coverage") or {}
+        if isinstance(result.get("legal_action_loop"), dict):
+            state.metadata["legal_action_loop"] = result["legal_action_loop"]
     state.status = WAITING_HUMAN if result.get("state_status") == WAITING_HUMAN else RUNNING
     return state
 

@@ -3,9 +3,9 @@ import asyncio
 import httpx
 import pytest
 
-from backend.agents.legal_action_policy import recommend_legal_actions
 from backend.agents.legal_claim_coverage import build_claim_coverage
 from backend.agents.legal_claim_extractor import extract_claims
+from backend.agents.legal_targeted_search import run_legal_action_loop
 from backend.core import checkpoint, dynamic_runtime, executor, human_fact_resume
 from backend.core.human_fact_runtime import FACT_INPUT, PHASE_RESPONSE_RECORDED, record_response, revision_is_safe
 from backend.main import app
@@ -30,15 +30,25 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(checkpoint, "CHECKPOINT_PATH", tmp_path / "checkpoints.json")
     calls = {name: 0 for name in ("sentiment", "writer", "redteam", "legal", "writer_v2", "decision")}
     revision = {"statement": "公司已启动专项核查，目前相关事实仍在进一步确认。"}
+    writer_output = {"statement": DRAFT}
 
     def legal(payload):
         calls["legal"] += 1
-        extraction = extract_claims(payload["draft"], "mock")
+        extraction = extract_claims(
+            payload["draft"], "mock", event=payload["event"],
+            risk_level=(payload.get("sentiment_analysis") or {}).get("risk_level"),
+        )
         relation = {"legal_claim_relations": [], "relation_status": "skipped"}
         coverage = build_claim_coverage(extraction["legal_claims"], relation)
-        actions = recommend_legal_actions(extraction, coverage, relation, {"retrieval_status": "disabled"})
+        rag = {"retrieval_status": "disabled", "retrieval_executed": False}
+        loop = run_legal_action_loop(
+            extraction, coverage, relation, rag,
+            retrieve_call=lambda *_args, **_kwargs: pytest.fail("case-fact gap must not call Legal RAG"),
+        )
+        actions = loop["claim_action_recommendation"]
         return {"review_summary": "事实待核查", "_metadata": {"claim_extraction": extraction,
-                "claim_coverage": coverage, "claim_action_recommendation": actions}}
+                "claim_coverage": loop["claim_coverage"], "claim_action_recommendation": actions,
+                "claim_evidence_relation": loop["claim_evidence_relation"], "legal_action_loop": loop}}
 
     def simple(name, result):
         def runner(_payload):
@@ -48,13 +58,13 @@ def runtime(monkeypatch, tmp_path):
 
     def writer_v2(payload):
         calls["writer_v2"] += 1
-        assert payload["human_fact_revision"]["target_claim"] == DRAFT.rstrip("。")
+        assert payload["human_fact_revision"]["target_claim"] == revision.get("expected_claim", DRAFT.rstrip("。"))
         assert payload["human_fact_revision"]["fact_currently_unavailable"] is True
         return {"statement": revision["statement"]}
 
     registry = {
         "sentiment": simple("sentiment", {"risk_level": "high"}),
-        "writer": simple("writer", {"statement": DRAFT}),
+        "writer": simple("writer", writer_output),
         "redteam": simple("redteam", {"attack_summary": "待核实"}),
         "legal": legal,
         "writer_v2": writer_v2,
@@ -64,6 +74,7 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(human_fact_resume, "_build_runtime_registry", lambda: registry)
     monkeypatch.setattr(executor._CONTEXT_PACK_PROVIDER, "build_for_agent", lambda *_: None)
     monkeypatch.setattr(executor._SKILL_SELECTOR, "select_and_execute", lambda *_: {"results": []})
+    revision["writer_output"] = writer_output
     return calls, revision
 
 
@@ -82,10 +93,14 @@ def test_pause_after_legal_and_resume_unavailable_without_replaying(runtime):
     request = started["human_fact_request"]
     assert request["claim_index"] == 0
     assert request["status"] == "pending"
+    assert started["legal_action_loop"]["phase"] == "WAITING_HUMAN"
+    assert started["legal_action_loop"]["actions"][-1]["selected_action"] == "REQUEST_HUMAN_FACT"
     assert calls == {"sentiment": 1, "writer": 1, "redteam": 1, "legal": 1, "writer_v2": 0, "decision": 0}
     session_id = started["session_id"]
     saved = checkpoint.load_checkpoint(session_id)
     assert saved.metadata["human_fact"]["draft"] == DRAFT
+    assert saved.metadata["legal_action_loop"]["phase"] == "WAITING_HUMAN"
+    assert saved.metadata["legal_action_loop"]["current_gap"]["claim_index"] == 0
     assert [step["agent"] for step in saved.metadata["human_fact"]["remaining_plan"]] == ["writer_v2", "decision"]
     response = _request("POST", f"/api/dynamic/{session_id}/fact-response",
                         {"request_id": request["request_id"], "response_type": "FACT_UNAVAILABLE"})
@@ -94,6 +109,9 @@ def test_pause_after_legal_and_resume_unavailable_without_replaying(runtime):
     assert after.metadata["human_fact"]["observation"] == {
         "case_fact_status": "unresolved", "human_verification_attempted": True,
         "fact_currently_unavailable": True}
+    assert after.metadata["legal_action_loop"]["last_observation"]["observation_type"] == "fact_unavailable"
+    assert after.metadata["legal_action_loop"]["next_action"] == "STOP_UNRESOLVED"
+    assert after.metadata["legal_action_loop"]["stop_reason"] == "Human review required: high_risk"
     assert calls == {"sentiment": 1, "writer": 1, "redteam": 1, "legal": 1, "writer_v2": 1, "decision": 1}
     assert [item["action"] for item in after.trace if item.get("agent") == "human_fact"] == [
         "REQUEST_HUMAN_FACT_VERIFICATION", "HUMAN_FACT_RESPONSE", "REVISE_UNVERIFIED_CLAIM", "CONTINUE"]
@@ -101,7 +119,60 @@ def test_pause_after_legal_and_resume_unavailable_without_replaying(runtime):
     duplicate = _request("POST", f"/api/dynamic/{session_id}/fact-response",
                          {"request_id": request["request_id"], "response_type": "FACT_UNAVAILABLE"})
     assert duplicate.status_code == 400
+
+
+def test_data_privacy_event_gap_enters_existing_fact_loop(runtime):
+    calls, revision = runtime
+    revision["expected_claim"] = "数据是否真实泄露、涉及多少用户以及泄露原因"
+    revision["writer_output"]["statement"] = (
+        "我们已关注到相关反馈，公司已启动内部核查程序，将及时同步调查进展。"
+    )
+    event = (
+        "某互联网平台被网友曝光疑似存在用户数据泄露。社交平台流传包含用户手机号和订单信息的截图。"
+        "目前尚未确认数据是否真实泄露、涉及多少用户以及泄露原因。"
+    )
+    response = _request("POST", "/api/dynamic/run", {"event": event})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["state_status"] == "WAITING_HUMAN"
+    request = body["human_fact_request"]
+    assert request["claim"] == "数据是否真实泄露、涉及多少用户以及泄露原因"
+    assert request["status"] == "pending"
+    state = checkpoint.load_checkpoint(body["session_id"])
+    assert state.metadata["legal_claim_extraction"]["legal_claims"][0]["claim_origin"] == "event_fact_gap"
+    assert state.metadata["legal_claim_coverage"]["claim_coverage"][0]["case_fact_status"] == "unresolved"
+    unavailable = _request("POST", f"/api/dynamic/{body['session_id']}/fact-response",
+                            {"request_id": request["request_id"], "response_type": "FACT_UNAVAILABLE"})
+    assert unavailable.status_code == 200, unavailable.text
+    state = checkpoint.load_checkpoint(body["session_id"])
+    assert state.metadata["human_fact"]["observation"]["fact_currently_unavailable"] is True
     assert calls["writer_v2"] == 1
+
+
+def test_data_privacy_fact_provided_stays_human_asserted(runtime):
+    calls, revision = runtime
+    revision["writer_output"]["statement"] = "我们已关注到相关反馈，并将及时同步调查进展。"
+    event = (
+        "某互联网平台被网友曝光疑似存在用户数据泄露。社交平台流传包含用户手机号和订单信息的截图。"
+        "目前尚未确认数据是否真实泄露、涉及多少用户以及泄露原因。"
+    )
+    started = _request("POST", "/api/dynamic/run", {"event": event}).json()
+    request = started["human_fact_request"]
+    provided = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": request["request_id"],
+        "response_type": "FACT_PROVIDED",
+        "fact_text": "内部调查人员提供了一份待复核说明。",
+    })
+    assert provided.status_code == 200, provided.text
+    state = checkpoint.load_checkpoint(started["session_id"])
+    observation = state.metadata["human_fact"]["observation"]
+    assert observation["case_fact_status"] == "unresolved"
+    assert observation["verification_status"] == "human_asserted"
+    assert observation["source"] == "human_provided"
+    assert state.metadata["human_wait_type"] == "FINAL_REVIEW"
+    assert state.metadata["legal_action_loop"]["last_observation"]["observation_type"] == "fact_provided"
+    assert state.metadata["legal_action_loop"]["next_action"] == "STOP_UNRESOLVED"
+    assert calls["writer_v2"] == 0
 
 
 def test_revision_with_paraphrased_assertion_stops_once(runtime):

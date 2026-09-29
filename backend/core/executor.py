@@ -10,6 +10,13 @@ from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
 from backend.harness.spec import harness_trace_reference
 from backend.core.harness_runtime import get_runtime_context
 from backend.core.context_pack_runtime import ContextPackRuntimeProvider, inject_context_pack
+from backend.core.trace_safety import (
+    context_pack_trace_metadata,
+    sanitize_trace_metadata,
+    summarize_skill_trace,
+    summarize_trace_input,
+    summarize_trace_output,
+)
 from backend.skills.skill_selector import SkillSelector
 
 
@@ -80,16 +87,26 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
             agent_state.metadata["legal_claim_coverage"] = deepcopy(output_metadata["claim_coverage"])
         if agent_name == "legal" and isinstance(output_metadata.get("claim_action_recommendation"), dict):
             agent_state.metadata["legal_claim_action_recommendation"] = deepcopy(output_metadata["claim_action_recommendation"])
+        if agent_name == "legal" and isinstance(output_metadata.get("legal_action_loop"), dict):
+            agent_state.metadata["legal_action_loop"] = deepcopy(output_metadata["legal_action_loop"])
         if agent_name == "legal" and isinstance(output_metadata.get("targeted_legal_search"), dict):
             agent_state.metadata["legal_targeted_search"] = deepcopy(output_metadata["targeted_legal_search"])
-        trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success", clean_output, None)
-        trace_item.update(_collect_trace_metadata(agent_name, output_metadata))
+        trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success",
+                                       summarize_trace_output(clean_output), None)
+        trace_item.update(sanitize_trace_metadata(_collect_trace_metadata(agent_name, output_metadata)))
         if runtime_context is not None:
             trace_item.update(runtime_context.trace_metadata())
         context_ref = (agent_state.metadata.get("context_pack_refs") or {}).get(agent_name)
         if runtime_context is not None and context_ref:
-            trace_item["context_pack"] = deepcopy(context_ref)
-            trace_item["skills"] = deepcopy((agent_state.metadata.get("skill_runtime_results") or {}).get(agent_name, {}))
+            snapshots = agent_state.metadata.get("context_pack_snapshots") or {}
+            pack = snapshots.get(agent_name)
+            trace_item["context_pack"] = {
+                **deepcopy(context_ref),
+                **(context_pack_trace_metadata(pack) if isinstance(pack, dict) else {}),
+            }
+            trace_item["skills"] = summarize_skill_trace(
+                (agent_state.metadata.get("skill_runtime_results") or {}).get(agent_name, {})
+            )
         agent_state.add_trace(trace_item)
         if agent_name == "legal" and pause_for_claim(agent_state, items[position + 1:]):
             break
@@ -213,7 +230,9 @@ def _collect_trace_metadata(agent_name: str | None, result_metadata: dict) -> di
             **trace_metadata.get("rag", {}),
             **deepcopy(result_metadata["targeted_legal_search"]),
         }
-    return trace_metadata
+    if agent_name == "legal" and isinstance(result_metadata.get("legal_action_loop"), dict):
+        trace_metadata["legal_action_loop"] = deepcopy(result_metadata["legal_action_loop"])
+    return sanitize_trace_metadata(trace_metadata)
 
 
 def _now_iso() -> str:

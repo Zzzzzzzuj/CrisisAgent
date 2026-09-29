@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from backend.agents import legal_agent
 from backend.agents import legal_claim_extractor
 from backend.config import get_config
@@ -56,6 +58,68 @@ def test_empty_draft_does_not_call_llm():
     assert legal_claim_extractor.extract_claims("  ", "llm", lambda _: 1 / 0) == {
         "legal_claims": [], "claim_extraction_status": "ok"
     }
+
+
+def test_high_risk_event_gap_is_added_as_case_fact_without_domain_keywords():
+    event = "某互联网平台出现异常。社交平台流传相关截图。目前尚未确认数据是否真实泄露、涉及多少用户以及泄露原因。"
+    result = legal_claim_extractor.extract_claims(
+        "我们已关注到相关反馈，并将持续调查。", "mock", event=event, risk_level="high"
+    )
+    assert result["legal_claims"] == [{
+        "claim": "数据是否真实泄露、涉及多少用户以及泄露原因",
+        "requires_legal_rule": False,
+        "requires_case_fact": True,
+        "claim_origin": "event_fact_gap",
+    }]
+    assert result["event_fact_gap_detection"] == {
+        "status": "deterministic_offline_rule",
+        "candidate_count": 1,
+        "reason": "explicit_material_uncertainty",
+        "risk_level": "high",
+    }
+
+
+@pytest.mark.parametrize("event,risk", [
+    ("平台正在改进服务，相关情况仍需关注。", "high"),
+    ("某平台服务中断，尚未确认影响范围和故障原因。", "medium"),
+])
+def test_event_gap_requires_explicit_material_unknown(event, risk):
+    result = legal_claim_extractor.extract_claims(
+        "我们重视用户反馈，将持续跟进。", "mock", event=event, risk_level=risk
+    )
+    if risk == "high":
+        assert result["legal_claims"] == []
+        assert result["event_fact_gap_detection"]["candidate_count"] == 0
+    else:
+        assert len(result["legal_claims"]) == 1
+        assert result["legal_claims"][0]["claim_origin"] == "event_fact_gap"
+
+
+def test_same_explicit_gap_is_detected_independently_of_risk_level():
+    event = "平台服务中断，尚未确认影响范围和故障原因。"
+    outputs = [legal_claim_extractor.extract_claims(
+        "我们正在核查。", "mock", event=event, risk_level=risk
+    )["legal_claims"] for risk in ("low", "medium", "high")]
+    assert outputs[0] == outputs[1] == outputs[2]
+
+
+def test_event_gap_detection_uses_generic_unknown_dimensions_not_case_terms():
+    event = "某机构遇到异常，目前尚未确认涉及范围及发生原因。"
+    result = legal_claim_extractor.extract_claims("我们正在核查。", "mock", event=event, risk_level="low")
+    assert result["legal_claims"][0]["claim_origin"] == "event_fact_gap"
+    assert result["legal_claims"][0]["claim"] == "涉及范围及发生原因"
+
+
+def test_event_gap_rule_generalizes_to_food_safety_and_service_outage():
+    for event in (
+        "某食品品牌受到关注。目前尚未确认涉事批次是否使用相关原料。",
+        "某平台服务中断。目前尚未确认故障原因以及影响范围。",
+    ):
+        result = legal_claim_extractor.extract_claims("我们正在跟进。", "mock",
+                                                       event=event, risk_level="high")
+        assert len(result["legal_claims"]) == 1
+        assert result["legal_claims"][0]["claim_origin"] == "event_fact_gap"
+        assert result["legal_claims"][0]["requires_case_fact"] is True
 
 
 def test_llm_parses_valid_claims_and_deduplicates():
@@ -150,9 +214,10 @@ def test_fixed_workflow_trace_and_session_record_claim_extraction(monkeypatch):
     response = run_crisis_workflow(CrisisRunRequest(event="某食品品牌被曝使用过期原料"))
     legal_trace = response.model_dump()["agent_trace"][3]
     assert legal_trace["rag"]["claim_extraction_status"] == "ok"
-    assert isinstance(legal_trace["rag"]["legal_claims"], list)
+    assert isinstance(legal_trace["rag"]["claim_summaries"], list)
     saved = get_session(response.session_id)
-    assert saved["legal_claim_extraction"]["legal_claims"] == legal_trace["rag"]["legal_claims"]
+    assert len(legal_trace["rag"]["claim_summaries"]) == len(saved["legal_claim_extraction"]["legal_claims"])
+    assert all("claim" not in item for item in legal_trace["rag"]["claim_summaries"])
 
 
 def test_dynamic_executor_state_and_trace_record_claim_extraction(monkeypatch):

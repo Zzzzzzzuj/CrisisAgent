@@ -1,0 +1,127 @@
+{
+  "dataset_id": "dynamic-real-case-v1",
+  "frozen_at": "2026-09-28",
+  "description": "Fictional, natural-language enterprise crisis cases for offline Dynamic Runtime validation. All organizations and events are invented.",
+  "cases": [
+    {
+      "case_id": "privacy-01",
+      "category": "data_privacy",
+      "event": "澄海票务收到多名用户反馈，称个人中心出现陌生设备登录记录，社交平台随后流传一张疑似包含账号和订单编号的截图。技术团队已开始排查，目前尚未确认是否发生数据外流，也不清楚涉及哪些用户信息。我们需要先准备一段面向用户的回应。",
+      "expected_fact_gap": true,
+      "expected_gap_note": "数据是否外流及受影响信息范围会影响回应，且需要企业侧调查结果。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "privacy-02",
+      "category": "data_privacy",
+      "event": "云栖记账的客服收到用户关于异常验证码的咨询。运维人员检查后确认验证码服务发生短时延迟，现有访问日志未显示账户资料被读取；团队已修复发送队列并通知受影响用户。请根据这些已知信息拟一份简短说明。",
+      "expected_fact_gap": false,
+      "expected_gap_note": "输入给出了可用于谨慎回应的已知处置和记录结论；不应额外假定发生泄露。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "privacy-03",
+      "category": "data_privacy",
+      "event": "青屿社区有用户称自己的收货信息出现在他人页面，另有用户表示页面内容可能来自旧订单缓存。产品团队正在核对复现路径，信息是否被其他账号实际查看尚未查明。品牌账号今天需要先回应讨论。",
+      "expected_fact_gap": true,
+      "expected_gap_note": "是否被其他账号查看是影响责任表述的个案事实，现有输入存在相互不同的解释。",
+      "human_response": {"response_type": "FACT_PROVIDED", "fact_text": "内部复核目前确认仅测试账号复现了旧缓存展示，尚未完成全部账号范围核查。"}
+    },
+    {
+      "case_id": "food-01",
+      "category": "food_safety",
+      "event": "禾木轻食的一款即食沙拉被顾客发布视频，称食用后身体不适。门店已经留存同批次样品并暂停该商品销售，检测机构尚未出具结果，现阶段无法确认不适是否与产品有关。请先拟一份不抢先定性的公开回应。",
+      "expected_fact_gap": true,
+      "expected_gap_note": "产品与身体不适是否相关依赖检测及企业调查，不能由法律检索回答。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "food-02",
+      "category": "food_safety",
+      "event": "松岚烘焙接到一宗关于面包包装内异物的投诉。顾客提供了购买凭证，门店登记了商品批次并已退款，品控人员封存了退回商品；目前只有这一宗反馈，企业希望说明已采取的处理措施。",
+      "expected_fact_gap": false,
+      "expected_gap_note": "已有个案材料和处置动作足以支撑有限、谨慎的回应，不需凭空扩展事实。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "food-03",
+      "category": "food_safety",
+      "event": "北辰冷链的一批冷藏甜品被消费者质疑保存温度异常。仓库值班记录显示夜间设备告警后恢复，但门店交接记录中的时间与仓库记录对不上，相关批次是否经历温度超限还没有结论。企业正在联系门店和供应商核对。",
+      "expected_fact_gap": true,
+      "expected_gap_note": "温度记录存在来源冲突，是否超限直接影响产品风险判断。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "quality-01",
+      "category": "product_quality",
+      "event": "栖木电器收到一位用户反馈，称新购的桌面加湿器底座出现渗水。客服已登记订单并安排寄回检测，其他渠道暂未收到相同型号的集中反馈。公司想先向该用户说明处理安排，不对产品原因作提前判断。",
+      "expected_fact_gap": false,
+      "expected_gap_note": "范围明确为单一用户个案，已给出登记和检测安排；回应可限于流程事实。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "quality-02",
+      "category": "product_quality",
+      "event": "岚序数码的无线耳机被用户发帖称充电盒发热。另有帖子说外壳只是正常温热，客服收到的两台退回设备尚未完成检测，现有信息无法判断是否属于同一型号或同一批次。品牌希望回应目前的讨论。",
+      "expected_fact_gap": true,
+      "expected_gap_note": "设备是否异常、报告是否同型号同批次尚无核验结果，存在模糊和冲突信息。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "quality-03",
+      "category": "product_quality",
+      "event": "拾光家居的一款折叠椅出现用户投诉，称连接处松动。企业已完成对退回样品的检查，发现一件螺丝未按要求锁紧，并已暂停该批次出库、联系购买用户安排检查。请整理成公开说明。",
+      "expected_fact_gap": false,
+      "expected_gap_note": "已明确提供企业检查发现和处置，仍应避免扩大到整个产品系列。",
+      "human_response": {"response_type": "FACT_PROVIDED", "fact_text": "经内部复核，已检查样品为一个虚构批次中的单件样品，其他库存已暂停发货等待复检。"}
+    },
+    {
+      "case_id": "outage-01",
+      "category": "service_outage",
+      "event": "白露出行小程序今天上午出现订单页面持续转圈的问题，部分用户称无法查看行程。服务目前已经恢复，技术团队仍在核对故障开始和结束时间，暂时没有确定根因。请准备一段状态说明。",
+      "expected_fact_gap": true,
+      "expected_gap_note": "影响范围、持续时间和故障原因仍未确认，会影响对用户说明。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "outage-02",
+      "category": "service_outage",
+      "event": "岑海云盘昨晚有用户短时无法上传文件。值班记录显示服务中断约十分钟，恢复后上传队列已处理完毕，状态页已更新并向受影响用户发送通知。我们希望对这次服务波动作简洁说明。",
+      "expected_fact_gap": false,
+      "expected_gap_note": "输入给出了时间、恢复和通知状态，可限定结论范围作回应。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "outage-03",
+      "category": "service_outage",
+      "event": "知更零售的商户端在晚间促销时段出现库存数字不同步。商户截图显示部分商品仍可下单，客服记录则显示相关商品已售罄；后台正在核对订单与库存变更记录，是否产生超卖目前没有结论。",
+      "expected_fact_gap": true,
+      "expected_gap_note": "超卖与否依赖订单和库存记录核实，且现有来源相互冲突。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "complaint-01",
+      "category": "consumer_complaint",
+      "event": "一位用户在栖霞阅读的社交账号发帖称，取消连续包月后仍被扣费。客服已找到对应工单并为该用户发起退款核对，暂时没有发现同类问题集中增加。请写一段对该用户及关注者的回应。",
+      "expected_fact_gap": false,
+      "expected_gap_note": "个案工单和处理动作已提供，公开回应应只陈述该个案处理进度。",
+      "human_response": {"response_type": "FACT_PROVIDED", "fact_text": "虚构工单复核确认该账号的取消请求晚于当期扣费时间提交，退款核对仍按流程处理。"}
+    },
+    {
+      "case_id": "complaint-02",
+      "category": "consumer_complaint",
+      "event": "云桥到家收到关于配送延误的投诉。用户称订单晚到两个小时，骑手端记录显示途中等待时间较短，商家出餐记录又缺少一段时间戳；目前无法确认延误主要发生在哪个环节。企业希望先说明正在核对。",
+      "expected_fact_gap": true,
+      "expected_gap_note": "责任环节和延误时间存在记录缺口，不能把任一方陈述直接当作核验事实。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    },
+    {
+      "case_id": "complaint-03",
+      "category": "consumer_complaint",
+      "event": "青芒文具收到一位顾客关于礼盒缺少配件的投诉。门店已根据销售单确认购买日期和商品型号，仓库记录显示该型号的配件包曾漏装，顾客已同意补寄。请帮忙整理对外说明，避免把单个订单问题扩大成普遍质量结论。",
+      "expected_fact_gap": false,
+      "expected_gap_note": "订单、型号和补寄处置均已给出，适合做范围受限的事实陈述。",
+      "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}
+    }
+  ]
+}
