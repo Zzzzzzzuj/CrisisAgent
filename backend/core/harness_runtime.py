@@ -31,6 +31,7 @@ class HarnessRuntimeContext:
                     "min_rerank_score": retrieval.get("min_rerank_score"),
                     "max_context_pollution_rate": retrieval.get("max_context_pollution_rate"),
                     "evidence_gate_human_review": retrieval.get("evidence_gate_human_review", True),
+                    "legal_action_loop": deepcopy(retrieval.get("legal_action_loop", {})),
                 },
                 "review_triggers": deepcopy(review.get("triggers", {})),
                 "execution_budget": deepcopy(tools.get("execution_budget", {})),

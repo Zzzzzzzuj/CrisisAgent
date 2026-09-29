@@ -40,6 +40,19 @@ def test_writer_agent_mock_mode_returns_expected_schema(monkeypatch):
     }
 
 
+def test_writer_v1_mock_is_domain_neutral(monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "mock")
+    get_config.cache_clear()
+    result = writer_agent.generate_first_draft({
+        "event": "某互联网平台服务出现异常，目前正在排查。",
+        "sentiment_analysis": {"risk_level": "medium", "recommended_tone": "谨慎"},
+    })
+    assert "食品安全" not in result["statement"]
+    assert "原料" not in result["statement"]
+    assert "批次" not in result["statement"]
+    assert "尚未确认" in result["statement"]
+
+
 def test_writer_agent_llm_mode_uses_prompt_and_normalization(monkeypatch):
     monkeypatch.setenv("AGENT_MODE", "llm")
     monkeypatch.setenv("LLM_API_KEY", "test-key")

@@ -32,7 +32,11 @@ def _evidence_verification() -> AgentSkill:
 def _context_retrieval() -> AgentSkill:
     return _base("context_retrieval", "Reuse the role-specific ContextPack built by the runtime provider.", ("writer", "legal"),
         {"type": "object", "properties": {"context_pack": {"type": "object"}}, "required": ["context_pack"], "additionalProperties": False},
-        {"type": "object"}, lambda p: {"context_pack": p["context_pack"], "reused": True})
+        {"type": "object"}, lambda p: {
+            "context_pack_hash": p["context_pack"].get("context_pack_hash", ""),
+            "target_agent": p["context_pack"].get("target_agent", ""),
+            "reused": True,
+        })
 
 
 def _constraint_check() -> AgentSkill:

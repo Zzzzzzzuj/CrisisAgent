@@ -85,8 +85,8 @@ def test_fallback_metadata_stays_on_current_trace_only():
     assert second.trace[0]["llm"]["failure_type"] == "timeout"
     assert first.trace[0]["llm"]["fallback_used"] is True
     assert second.trace[0]["llm"]["fallback_used"] is True
-    assert first.trace[0]["rag"]["retrieval_query"] == "query session-fallback-a"
-    assert second.trace[0]["rag"]["retrieval_query"] == "query session-fallback-b"
+    assert first.trace[0]["rag"]["retrieval_query_chars"] == len("query session-fallback-a")
+    assert second.trace[0]["rag"]["retrieval_query_chars"] == len("query session-fallback-b")
 
 
 def _run_failed_metadata_session(session_id: str, failure_type: str) -> AgentState:

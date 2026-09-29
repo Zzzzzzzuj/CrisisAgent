@@ -49,7 +49,12 @@ def test_workflow_runs_and_trace_fields_are_complete_in_mock_mode(monkeypatch):
     first_writer_trace = response["agent_trace"][1]
     assert first_writer_trace["agent"] == "Agent C"
     assert first_writer_trace["memory"] is None
-    assert first_writer_trace["context"] is None
+    assert first_writer_trace["context"]["role"] == "writer"
+    assert first_writer_trace["context"]["context_chars"] > 0
+    assert "event" not in first_writer_trace["input"]
+    assert first_writer_trace["output"]["text_chars"]["statement"] > 0
+    assert "我们已关注" not in str(first_writer_trace["output"])
+    assert "批次" not in str(first_writer_trace)
 
 
 def test_workflow_trace_records_agent_a_tool_success_in_llm_mode(monkeypatch):
@@ -99,7 +104,7 @@ def test_workflow_trace_records_agent_a_tool_success_in_llm_mode(monkeypatch):
     assert len(agent_a_trace["tools"]) == 1
     tool_trace = agent_a_trace["tools"][0]
     assert tool_trace["name"] == "sentiment_analysis"
-    assert tool_trace["input"] == {"event": TEST_EVENT}
+    assert tool_trace["input"]["text_chars"]["event"] == len(TEST_EVENT)
     assert tool_trace["output"] == {
         "emotion": "angry",
         "heat_level": "high",
@@ -150,7 +155,7 @@ def test_workflow_trace_records_agent_a_tool_failure_in_llm_mode(monkeypatch):
     agent_a_trace = response["agent_trace"][0]
     tool_trace = agent_a_trace["tools"][0]
     assert tool_trace["name"] == "sentiment_analysis"
-    assert tool_trace["input"] == {"event": TEST_EVENT}
+    assert tool_trace["input"]["text_chars"]["event"] == len(TEST_EVENT)
     assert tool_trace["output"] is None
     assert tool_trace["success"] is False
     assert tool_trace["duration_ms"] >= 0
@@ -310,7 +315,8 @@ def test_workflow_trace_records_agent_b_rag_info_in_llm_mode(monkeypatch):
     assert legal_trace["rag"]["hit"] is True
     assert legal_trace["rag"]["sources"] == ["food_safety.md", "legal_risk_rules.md"]
     assert legal_trace["rag"]["count"] == 2
-    assert "query" in legal_trace["rag"]
+    assert "query" not in legal_trace["rag"]
+    assert "query_chars" in legal_trace["rag"]
     assert "chunks" in legal_trace["rag"]
     assert "scores" in legal_trace["rag"]
     assert "rerank_scores" in legal_trace["rag"]

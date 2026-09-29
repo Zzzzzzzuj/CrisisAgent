@@ -89,7 +89,8 @@ def test_executor_successful_run_writes_results_to_state():
     assert state.get_result("decision") == {"final_statement": "ok"}
     assert result["results"] == {"decision": {"final_statement": "ok"}}
     assert state.trace[0]["status"] == "success"
-    assert state.trace[0]["output"] == {"final_statement": "ok"}
+    assert state.trace[0]["output"]["text_chars"]["final_statement"] == 2
+    assert "ok" not in str(state.trace[0]["output"])
 
 
 def test_executor_agent_exception_keeps_state_results_intact():

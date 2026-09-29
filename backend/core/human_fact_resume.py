@@ -58,6 +58,8 @@ def _continue_saved_response(state) -> dict:
     save_checkpoint(state)
 
     if response["response_type"] == "FACT_PROVIDED":
+        _update_legal_loop(state, "FINAL_REVIEW", "STOP_UNRESOLVED",
+                           "human_asserted_fact_requires_review")
         _record_action_once(state, 1, "STOP", "human_asserted_fact_requires_review",
                             {"case_fact_status": "unresolved", "verification_status": "human_asserted"})
         return _finish_for_review(state, "human_asserted_fact_requires_review")
@@ -67,6 +69,8 @@ def _continue_saved_response(state) -> dict:
         return _finish_for_review(state, "resume_cursor_invalid")
 
     remaining = fact["remaining_plan"]
+    _update_legal_loop(state, PHASE_CONTINUING, "STOP_UNRESOLVED",
+                       "fact_unavailable_no_repeat_request")
     writer_result = state.get_result("writer_v2")
     if writer_result is None:
         if fact.get("revision_attempted"):
@@ -123,6 +127,7 @@ def _continue_saved_response(state) -> dict:
     state.set_status(COMPLETED)
     state.metadata.pop("human_wait_type", None)
     fact["phase"] = PHASE_COMPLETED
+    _update_legal_loop(state, PHASE_COMPLETED, "STOP_UNRESOLVED", "fact_unavailable_safely_revised")
     save_checkpoint(state)
     return _result(state, "unsupported_claim_removed")
 
@@ -131,6 +136,7 @@ def _finish_for_review(state, reason: str, policy: dict | None = None, evaluatio
     request_review(state, f"Human review required: {reason}", policy_result=policy, evaluation=evaluation)
     state.metadata["human_wait_type"] = FINAL_REVIEW
     state.metadata[FACT_KEY]["phase"] = PHASE_COMPLETED
+    _update_legal_loop(state, FINAL_REVIEW, "STOP_UNRESOLVED", reason)
     save_checkpoint(state)
     return _result(state, reason)
 
@@ -188,3 +194,12 @@ def _result(state, reason: str) -> dict:
             "observation": deepcopy(state.metadata[FACT_KEY]["observation"]),
             "evaluation": deepcopy(state.metadata.get("evaluation")),
             "policy": deepcopy(state.metadata.get("policy")), "stopped_reason": reason}
+
+
+def _update_legal_loop(state, phase: str, next_action: str, stop_reason: str) -> None:
+    loop = state.metadata.get("legal_action_loop")
+    if not isinstance(loop, dict):
+        return
+    loop["phase"] = phase
+    loop["next_action"] = next_action
+    loop["stop_reason"] = stop_reason

@@ -59,6 +59,12 @@ def build_default_harness_spec() -> dict[str, Any]:
             "min_rerank_score": 0.1,
             "max_context_pollution_rate": 0.5,
             "evidence_gate_human_review": True,
+            "legal_action_loop": {
+                "max_rounds": 3,
+                "max_tool_calls": 2,
+                "context_budget": 6000,
+                "max_same_action_per_gap": 2,
+            },
         },
         "review_policy": {
             "policy": "existing_human_review_policy",

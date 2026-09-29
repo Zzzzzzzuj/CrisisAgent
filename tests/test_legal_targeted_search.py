@@ -11,7 +11,10 @@ from backend.agents.legal_action_policy import (
 )
 from backend.agents.legal_claim_coverage import build_claim_coverage
 from backend.agents.legal_claim_relation import build_legal_claim_relations
-from backend.agents.legal_targeted_search import execute_recommended_targeted_search
+from backend.agents.legal_targeted_search import (
+    execute_recommended_targeted_search,
+    run_legal_action_loop,
+)
 from backend.core.executor import _collect_trace_metadata
 from backend.core.policy import evaluate_human_policy
 from backend.core.state import AgentState
@@ -113,6 +116,121 @@ def test_retrieval_exception_and_relation_failure_do_not_escape():
         *inputs(), retrieve_call=lambda *_a, **_kw: {"chunks": [RULE]}, relation_call=broken,
     )
     assert failed_relation["targeted_search_executions"][0]["after_legal_rule_status"] == "uncertain"
+
+
+def test_action_loop_updates_observation_and_does_not_repeat_resolved_gap():
+    args = inputs()
+    calls = []
+
+    def fake_retrieve(query, top_k):
+        calls.append(query)
+        return {"chunks": [RULE], "sources": []}
+
+    result = run_legal_action_loop(*args[:3], args[4], retrieve_call=fake_retrieve)
+    assert len(calls) == 1
+    assert result["claim_coverage"]["claim_coverage"][0]["legal_rule_status"] == "candidate_found"
+    assert [row["selected_action"] for row in result["actions"]] == [
+        "RETRIEVE_LEGAL_EVIDENCE", "USE_EXISTING_EVIDENCE", "STOP_RESOLVED"
+    ]
+    assert result["actions"][0]["observation_type"] == "retrieval_hit"
+    assert result["actions"][0]["remaining_budget"]["tool_calls"] == 1
+    assert result["stop_reason"] == "task_evidence_requirements_resolved"
+
+
+def test_second_gap_action_reads_first_gap_observation():
+    claims = [
+        {"claim": CLAIM, "requires_legal_rule": True, "requires_case_fact": False},
+        {"claim": "产品召回应遵守相关要求", "requires_legal_rule": True, "requires_case_fact": False},
+    ]
+    args = inputs(claims=claims)
+    calls = []
+
+    def fake_retrieve(query, top_k):
+        calls.append(query)
+        chunk = RULE if CLAIM in query else {
+            "chunk_id": "recall-rule", "source": "product-law",
+            "text": "产品经营者必须召回存在安全问题的产品。",
+        }
+        return {"chunks": [chunk], "sources": []}
+
+    result = run_legal_action_loop(*args[:3], args[4], retrieve_call=fake_retrieve)
+    searches = [row for row in result["actions"] if row.get("selected_action") == "RETRIEVE_LEGAL_EVIDENCE"]
+    assert len(calls) == 2 and len(searches) == 2
+    assert [row["claim_index"] for row in searches] == [0, 1]
+    assert searches[1]["previous_observation"]["claim_index"] == 0
+    assert searches[1]["previous_observation"]["legal_rule_status"] == "candidate_found"
+    assert all(row["context_chars"] <= result["context_budget"] for row in searches)
+
+
+def test_no_hit_and_tool_failure_stop_without_retrying_same_gap():
+    no_hit_calls = []
+    no_hit = run_legal_action_loop(
+        *inputs()[:3], inputs()[4],
+        retrieve_call=lambda query, top_k: no_hit_calls.append(query) or {"chunks": []},
+    )
+    assert len(no_hit_calls) == 1
+    assert no_hit["actions"][0]["observation_type"] == "retrieval_no_hit"
+    assert no_hit["stop_reason"] == "no_eligible_action_after_observation"
+
+    timeout_calls = []
+
+    def transient_then_hit(*_args, **_kwargs):
+        timeout_calls.append(True)
+        if len(timeout_calls) == 1:
+            raise TimeoutError()
+        return {"chunks": [RULE], "sources": []}
+
+    timeout = run_legal_action_loop(*inputs()[:3], inputs()[4], retrieve_call=transient_then_hit)
+    assert len(timeout_calls) == 2
+    assert timeout["actions"][0]["observation_type"] == "tool_timeout"
+    assert timeout["actions"][0]["stop_reason"] == "bounded_retry_pending"
+    assert timeout["actions"][1]["previous_observation"]["type"] == "tool_timeout"
+    assert timeout["actions"][1]["selected_action"] == "RETRIEVE_LEGAL_EVIDENCE"
+    assert timeout["stop_reason"] == "task_evidence_requirements_resolved"
+
+    exhausted = run_legal_action_loop(
+        *inputs()[:3], inputs()[4],
+        retrieve_call=lambda *_args, **_kwargs: (_ for _ in ()).throw(TimeoutError()),
+    )
+    assert len(exhausted["actions"]) == 2
+    assert exhausted["stop_reason"] == "tool_failure"
+
+    invalid = run_legal_action_loop(
+        *inputs()[:3], inputs()[4], retrieve_call=lambda *_args, **_kwargs: {"chunks": "invalid"},
+    )
+    assert invalid["actions"][0]["observation_type"] == "invalid_output"
+    assert invalid["stop_reason"] == "tool_failure"
+
+
+def test_loop_respects_round_and_tool_budgets_and_existing_evidence():
+    claims = [
+        {"claim": CLAIM, "requires_legal_rule": True, "requires_case_fact": False},
+        {"claim": "产品召回应遵守相关要求", "requires_legal_rule": True, "requires_case_fact": False},
+    ]
+    args = inputs(claims=claims)
+    calls = []
+    bounded = run_legal_action_loop(
+        *args[:3], args[4],
+        retrieve_call=lambda query, top_k: calls.append(query) or {"chunks": [RULE]},
+        policy={"max_tool_calls": 1, "max_rounds": 3, "context_budget": 6000,
+                "max_same_action_per_gap": 1},
+    )
+    assert len(calls) == 1
+    assert bounded["stop_reason"] == "tool_budget_exhausted"
+    assert bounded["remaining_budget"]["tool_calls"] == 0
+
+    evidence = {"chunk_id": "rule", "source": "food-law", "text": RULE["text"]}
+    initial_relation = build_legal_claim_relations([claims[0]], [evidence])
+    covered = build_claim_coverage([claims[0]], initial_relation)
+    extraction = {"legal_claims": [claims[0]], "claim_extraction_status": "ok"}
+    no_call = run_legal_action_loop(
+        extraction, covered, initial_relation,
+        {"query": "broad", "retrieval_status": "executed_with_hits",
+         "retrieval_executed": True, "fallback_used": False},
+        retrieve_call=lambda *_args, **_kwargs: pytest.fail("sufficient evidence must not be searched again"),
+    )
+    assert no_call["tool_calls_used"] == 0
+    assert no_call["actions"][-1]["selected_action"] == "STOP_RESOLVED"
 
 
 def test_p31a_relation_is_required_for_coverage_change():

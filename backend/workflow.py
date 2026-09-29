@@ -9,6 +9,12 @@ from backend.storage import save_session
 from backend.harness.service import get_effective_harness_spec
 from backend.core.state import AgentState
 from backend.core.context_pack_runtime import ContextPackRuntimeProvider, inject_context_pack
+from backend.core.trace_safety import (
+    context_pack_trace_metadata,
+    sanitize_trace_metadata,
+    summarize_trace_input,
+    summarize_trace_output,
+)
 from backend.skills.skill_selector import SkillSelector
 
 
@@ -72,7 +78,7 @@ def _get_agent_tools(agent: str) -> list[ToolTraceItem]:
     return [
         ToolTraceItem(
             name=tool_info["name"],
-            input=tool_info.get("input"),
+            input=summarize_trace_input(tool_info.get("input")),
             output=tool_info.get("output"),
             success=bool(tool_info.get("success")),
             duration_ms=float(tool_info.get("duration_ms", 0.0)),
@@ -153,23 +159,27 @@ def _record_step(
                 runtime_state.metadata["legal_targeted_search"] = deepcopy(targeted)
     memory = writer_agent.get_last_memory_info() if agent == "Agent C" and requested_mode == "llm" else None
     context = writer_agent.get_last_context_info() if agent == "Agent C" and requested_mode == "llm" else None
-    if context is not None and context_pack is not None:
-        context_trace = {**context, "context_pack_hash": context_pack.get("context_pack_hash"),
-                         "selected_count": len(context_pack.get("selected_case_ids", [])),
-                         "dropped_count": len(context_pack.get("dropped_fields", []))}
+    if context_pack is not None:
+        context_trace = context_pack_trace_metadata(context_pack)
+        context_trace.update({
+            "selected_count": len(context_pack.get("selected_case_ids", [])),
+            "dropped_count": len(context_pack.get("dropped_fields", [])),
+        })
+        if context is not None:
+            context_trace.update(context)
     tools = _get_agent_tools(agent)
     _append_trace(
         trace,
         agent,
         name,
-        agent_input,
-        clean_output,
+        summarize_trace_input(agent_input),
+        summarize_trace_output(clean_output),
         start_time,
         end_time,
         mode,
         fallback,
         status,
-        rag,
+        sanitize_trace_metadata(rag),
         memory,
         context_trace if context_trace is not None else context,
         tools,
