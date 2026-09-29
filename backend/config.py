@@ -2,10 +2,10 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 
-from dotenv import load_dotenv
+from backend.env import load_project_env
 
 
-load_dotenv()
+load_project_env()
 
 
 @dataclass(frozen=True)

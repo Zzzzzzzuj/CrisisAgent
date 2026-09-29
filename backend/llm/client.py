@@ -8,6 +8,7 @@ from time import perf_counter
 import httpx
 
 from backend.llm.config import LLMConfig, get_llm_config
+from backend.llm.offline_guard import assert_external_model_call_allowed
 from backend.logger import get_logger
 
 
@@ -65,6 +66,11 @@ class LLMClient:
 
         if self.config.provider != "openai_compatible":
             raise ValueError(f"Unsupported LLM_PROVIDER: {self.config.provider}")
+
+        assert_external_model_call_allowed(
+            provider=self.config.provider,
+            operation="chat.completions",
+        )
 
         url = _build_chat_completions_url(self.config.base_url)
         headers = {

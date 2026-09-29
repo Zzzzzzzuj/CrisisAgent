@@ -1,5 +1,3 @@
-import os
-
 from backend.agents import sentiment_agent
 from backend.config import get_config
 
@@ -47,5 +45,4 @@ def test_sentiment_agent_normalize_output_maps_emotion_and_tone():
 
 
 def teardown_module():
-    os.environ.pop("AGENT_MODE", None)
     get_config.cache_clear()

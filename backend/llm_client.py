@@ -1,6 +1,7 @@
 import httpx
 
 from backend.config import get_config
+from backend.llm.offline_guard import assert_external_model_call_allowed
 from backend.logger import get_logger
 
 
@@ -19,6 +20,11 @@ def call_llm(prompt: str) -> str:
 
     if config.agent_mode != "llm":
         raise RuntimeError("call_llm() is only available when AGENT_MODE=llm.")
+
+    assert_external_model_call_allowed(
+        provider="openai_compatible",
+        operation="chat.completions",
+    )
 
     url = _build_chat_completions_url(config.llm_base_url or "")
     headers = {

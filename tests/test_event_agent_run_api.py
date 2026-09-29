@@ -5,6 +5,7 @@ import asyncio
 import httpx
 
 from backend.api.event_store import JsonCrisisEventStore
+from backend.config import get_config
 from backend.main import app
 
 
@@ -44,7 +45,8 @@ def _seed_event(monkeypatch, tmp_path) -> str:
 
 
 def test_event_run_uses_mock_runtime_and_preserves_ingestion_metadata(monkeypatch, tmp_path):
-    monkeypatch.setenv("AGENT_MODE", "llm")
+    monkeypatch.setenv("AGENT_MODE", "mock")
+    get_config.cache_clear()
     event_id = _seed_event(monkeypatch, tmp_path)
 
     response = _request("POST", f"/api/events/{event_id}/run", {})
