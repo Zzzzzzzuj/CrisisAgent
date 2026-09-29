@@ -1,0 +1,1 @@
+{"block_stage": "socket_connect", "logical_host": null, "logical_scheme": null, "proxy_detected": false, "reason_code": "TRANSPORT_NOT_ALLOWED", "transport_host": "127.0.0.1", "transport_port": 52591}

@@ -1,0 +1,5496 @@
+{
+  "dataset_version": "p33.2-local-kb-v1",
+  "kb_sha256": {
+    "crisis_response.md": "11fcf4a2dca746149e832709cc9542e3ff88c602d74a7d1bea94ad212a130c6a",
+    "data_privacy.md": "9fbeb41f492f6b6565d5e2bfb4d6092fed090dbee6290096465b2e30a0b48ff1",
+    "executive_misconduct.md": "2ac56ea02471e89f02a97b16a3101a972fb6e844a31240b64784af16bdcdac5f",
+    "food_safety.md": "eb599eb174de72105791f4a08091625aba5437e447586b3f886cf09cdfb3c2a8",
+    "legal_risk_rules.md": "7490def8272b9df55bd4879f2865e869c547eec8fe65c0e820602acc79c16ae2",
+    "product_quality.md": "ce694d4c5d866dc4adef42cb46e104df210637cb903ea9d0c17ebfee3a0e02b2",
+    "service_outage.md": "db7b8f11c25c327d1e43c59136dee13ec9f2e9d91bcc5453fdd1af86bdd37eb4"
+  },
+  "configuration": {
+    "kb": "frozen_local_markdown",
+    "embedding": "hash-128",
+    "vector_backend": "json",
+    "pipeline": "RagPipelineRetriever",
+    "top_k": 3,
+    "min_rerank_score": 0.1,
+    "reranker": "RuleBasedReranker"
+  },
+  "positive_cases": 12,
+  "negative_cases": 3,
+  "paired_outcome_counts": {
+    "BOTH": 11,
+    "TARGETED_ONLY": 1,
+    "BROAD_ONLY": 0,
+    "NEITHER": 0
+  },
+  "p33_eligible_positive_cases": 8,
+  "p33_eligible_paired_outcome_counts": {
+    "BOTH": 8,
+    "TARGETED_ONLY": 0,
+    "BROAD_ONLY": 0,
+    "NEITHER": 0
+  },
+  "hit_at_1": {
+    "broad": 8,
+    "targeted": 8
+  },
+  "hit_at_3": {
+    "broad": 11,
+    "targeted": 12
+  },
+  "target_retrieved_relation_coverage": {
+    "broad": {
+      "candidate_found": 1,
+      "uncertain": 2,
+      "no_candidate": 8
+    },
+    "targeted": {
+      "candidate_found": 1,
+      "uncertain": 4,
+      "no_candidate": 7
+    }
+  },
+  "by_material_kind": {
+    "response_constraint": {
+      "cases": 3,
+      "broad_hit_at_3": 2,
+      "targeted_hit_at_3": 3,
+      "p33_eligible_targeted_only": 0
+    },
+    "response_guidance": {
+      "cases": 8,
+      "broad_hit_at_3": 8,
+      "targeted_hit_at_3": 8,
+      "p33_eligible_targeted_only": 0
+    },
+    "rule_like": {
+      "cases": 1,
+      "broad_hit_at_3": 1,
+      "targeted_hit_at_3": 1,
+      "p33_eligible_targeted_only": 0
+    }
+  },
+  "latency_ms_median": {
+    "broad": 11.823,
+    "targeted": 10.697
+  },
+  "additional_retrieval_call_per_eligible_case": 1,
+  "cases": [
+    {
+      "case_id": "food_expiry_rule",
+      "label": "positive",
+      "material_kind": "rule_like",
+      "claim": "使用超过保质期的食品原料可能违反食品安全规定",
+      "expected_evidence_refs": [
+        "food_safety.md#section-1:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：某食品品牌被投诉部分批次疑似使用过期原料，调查尚未完成。\n声明草稿：我们正在核查涉事批次。使用超过保质期的食品原料可能违反食品安全规定，结论以核查为准。\n红队问题：['不得把尚未查清的指控写成既定事实']\n红队建议：['核查原料批次和生产记录']",
+        "rewritten_queries": [
+          "事件：某食品品牌被投诉部分批次疑似使用过期原料，调查尚未完成。\n声明草稿：我们正在核查涉事批次。使用超过保质期的食品原料可能违反食品安全规定，结论以核查为准。\n红队问题：['不得把尚未查清的指控写成既定事实']\n红队建议：['核查原料批次和生产记录']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "rewritten_query_count": 6,
+        "pipeline_query_calls": [
+          "事件：某食品品牌被投诉部分批次疑似使用过期原料，调查尚未完成。\n声明草稿：我们正在核查涉事批次。使用超过保质期的食品原料可能违反食品安全规定，结论以核查为准。\n红队问题：['不得把尚未查清的指控写成既定事实']\n红队建议：['核查原料批次和生产记录']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "top_k": 3,
+        "latency_ms": 14.921,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "food_safety.md#section-0:chunk-0",
+          "food_safety.md#section-1:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "legal_risk_rules.md#section-0:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "product_quality.md#section-4:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "score": 0.3442,
+            "rerank_score": 0.3554
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.3509
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.3227,
+            "rerank_score": 0.3198
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.2565,
+            "rerank_score": 0.294
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2879
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2849
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.281
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.4083,
+            "rerank_score": 0.196
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.18
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "score": 0.2887,
+            "rerank_score": 0.1386
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.253,
+            "rerank_score": 0.1259
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1245
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.3291,
+            "rerank_score": 0.0632
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.2868,
+            "rerank_score": 0.0325
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2637,
+            "rerank_score": 0.021
+          },
+          {
+            "rank": 16,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": -0.0122
+          },
+          {
+            "rank": 17,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.1684,
+            "rerank_score": -0.0247
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "chunk_id": "food_safety.md#17",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3442,
+            "rerank_score": 0.3554,
+            "matched_query": "事件：某食品品牌被投诉部分批次疑似使用过期原料，调查尚未完成。\n声明草稿：我们正在核查涉事批次。使用超过保质期的食品原料可能违反食品安全规定，结论以核查为准。\n红队问题：['不得把尚未查清的指控写成既定事实']\n红队建议：['核查原料批次和生产记录']",
+            "first_recall_query": "事件：某食品品牌被投诉部分批次疑似使用过期原料，调查尚未完成。\n声明草稿：我们正在核查涉事批次。使用超过保质期的食品原料可能违反食品安全规定，结论以核查为准。\n红队问题：['不得把尚未查清的指控写成既定事实']\n红队建议：['核查原料批次和生产记录']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.375,
+            "rerank_score": 0.3509,
+            "matched_query": "监管调查",
+            "first_recall_query": "监管调查"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "chunk_id": "food_safety.md#16",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3227,
+            "rerank_score": 0.3198,
+            "matched_query": "食品安全风险",
+            "first_recall_query": "食品安全风险"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#17",
+              "relation": "candidate_rule_relevant"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:b05b305856dc86418d8e93557427b3ee6678fab85d1b4cb43e077475673e780e",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#16",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "candidate_found",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "CONTINUE",
+          "action_reason": "candidate_rule_available"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "使用超过保质期的食品原料可能违反食品安全规定\n相关法律规定",
+        "rewritten_queries": [
+          "使用超过保质期的食品原料可能违反食品安全规定\n相关法律规定",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "rewritten_query_count": 6,
+        "pipeline_query_calls": [
+          "使用超过保质期的食品原料可能违反食品安全规定\n相关法律规定",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "top_k": 3,
+        "latency_ms": 12.738,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "food_safety.md#section-0:chunk-0",
+          "food_safety.md#section-1:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "legal_risk_rules.md#section-0:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "product_quality.md#section-4:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.3762
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "score": 0.254,
+            "rerank_score": 0.3558
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.3227,
+            "rerank_score": 0.3457
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.2565,
+            "rerank_score": 0.3193
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.3108
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.3108
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.2769,
+            "rerank_score": 0.3052
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.3039
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "score": 0.2887,
+            "rerank_score": 0.2505
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.253,
+            "rerank_score": 0.2441
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2427
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.4083,
+            "rerank_score": 0.196
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.18
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.2868,
+            "rerank_score": 0.045
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": -0.0075
+          },
+          {
+            "rank": 16,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.1684,
+            "rerank_score": -0.0184
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.375,
+            "rerank_score": 0.3762,
+            "matched_query": "监管调查",
+            "first_recall_query": "监管调查"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "chunk_id": "food_safety.md#17",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.254,
+            "rerank_score": 0.3558,
+            "matched_query": "使用超过保质期的食品原料可能违反食品安全规定\n相关法律规定",
+            "first_recall_query": "使用超过保质期的食品原料可能违反食品安全规定\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "chunk_id": "food_safety.md#16",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3227,
+            "rerank_score": 0.3457,
+            "matched_query": "食品安全风险",
+            "first_recall_query": "食品安全风险"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:b05b305856dc86418d8e93557427b3ee6678fab85d1b4cb43e077475673e780e",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#17",
+              "relation": "candidate_rule_relevant"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#16",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "candidate_found",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "CONTINUE",
+          "action_reason": "candidate_rule_available"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "危机回应",
+          "法律责任表达",
+          "消费者沟通",
+          "监管调查",
+          "食品安全风险"
+        ],
+        "shared_count": 5,
+        "broad_only": [
+          "事件：某食品品牌被投诉部分批次疑似使用过期原料，调查尚未完成。\n声明草稿：我们正在核查涉事批次。使用超过保质期的食品原料可能违反食品安全规定，结论以核查为准。\n红队问题：['不得把尚未查清的指控写成既定事实']\n红队建议：['核查原料批次和生产记录']"
+        ],
+        "targeted_only": [
+          "使用超过保质期的食品原料可能违反食品安全规定\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 1,
+      "targeted_rank": 2,
+      "p33_eligible_from_broad": false,
+      "rank_delta_broad_minus_targeted": -1,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "food_safety.md#section-1:chunk-0",
+        "score": 0.3442,
+        "rerank_score": 0.3554
+      },
+      "targeted_target_full_rerank": {
+        "rank": 2,
+        "evidence_ref": "food_safety.md#section-1:chunk-0",
+        "score": 0.254,
+        "rerank_score": 0.3558
+      }
+    },
+    {
+      "case_id": "food_regulator",
+      "label": "positive",
+      "material_kind": "response_guidance",
+      "claim": "食品安全事件应配合市场监管部门调查",
+      "expected_evidence_refs": [
+        "food_safety.md#section-2:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：某餐饮企业的食品安全投诉受到监管关注。\n声明草稿：公司正在核查相关投诉，如监管部门介入，将配合调查。食品安全事件应配合市场监管部门调查。\n红队问题：['监管介入范围尚未确定']\n红队建议：['避免宣称已有调查结论']",
+        "rewritten_queries": [
+          "事件：某餐饮企业的食品安全投诉受到监管关注。\n声明草稿：公司正在核查相关投诉，如监管部门介入，将配合调查。食品安全事件应配合市场监管部门调查。\n红队问题：['监管介入范围尚未确定']\n红队建议：['避免宣称已有调查结论']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "rewritten_query_count": 6,
+        "pipeline_query_calls": [
+          "事件：某餐饮企业的食品安全投诉受到监管关注。\n声明草稿：公司正在核查相关投诉，如监管部门介入，将配合调查。食品安全事件应配合市场监管部门调查。\n红队问题：['监管介入范围尚未确定']\n红队建议：['避免宣称已有调查结论']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "top_k": 3,
+        "latency_ms": 13.725,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "food_safety.md#section-0:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "legal_risk_rules.md#section-0:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "product_quality.md#section-4:chunk-0",
+          "product_quality.md#section-5:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.3755,
+            "rerank_score": 0.3756
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.3754
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.3227,
+            "rerank_score": 0.3223
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2911
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2874
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.2842
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.4083,
+            "rerank_score": 0.196
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.18
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "score": 0.2887,
+            "rerank_score": 0.1386
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.253,
+            "rerank_score": 0.127
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1256
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.2854,
+            "rerank_score": 0.0405
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.2868,
+            "rerank_score": 0.0337
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "score": 0.2352,
+            "rerank_score": 0.0126
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": -0.008
+          },
+          {
+            "rank": 16,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.1684,
+            "rerank_score": -0.0217
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": "food_safety.md#18",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3755,
+            "rerank_score": 0.3756,
+            "matched_query": "事件：某餐饮企业的食品安全投诉受到监管关注。\n声明草稿：公司正在核查相关投诉，如监管部门介入，将配合调查。食品安全事件应配合市场监管部门调查。\n红队问题：['监管介入范围尚未确定']\n红队建议：['避免宣称已有调查结论']",
+            "first_recall_query": "事件：某餐饮企业的食品安全投诉受到监管关注。\n声明草稿：公司正在核查相关投诉，如监管部门介入，将配合调查。食品安全事件应配合市场监管部门调查。\n红队问题：['监管介入范围尚未确定']\n红队建议：['避免宣称已有调查结论']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.375,
+            "rerank_score": 0.3754,
+            "matched_query": "监管调查",
+            "first_recall_query": "事件：某餐饮企业的食品安全投诉受到监管关注。\n声明草稿：公司正在核查相关投诉，如监管部门介入，将配合调查。食品安全事件应配合市场监管部门调查。\n红队问题：['监管介入范围尚未确定']\n红队建议：['避免宣称已有调查结论']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "chunk_id": "food_safety.md#16",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3227,
+            "rerank_score": 0.3223,
+            "matched_query": "食品安全风险",
+            "first_recall_query": "食品安全风险"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#18",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:b05b305856dc86418d8e93557427b3ee6678fab85d1b4cb43e077475673e780e",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#16",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "食品安全事件应配合市场监管部门调查\n相关法律规定",
+        "rewritten_queries": [
+          "食品安全事件应配合市场监管部门调查\n相关法律规定",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "rewritten_query_count": 6,
+        "pipeline_query_calls": [
+          "食品安全事件应配合市场监管部门调查\n相关法律规定",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "top_k": 3,
+        "latency_ms": 12.611,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "food_safety.md#section-0:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "legal_risk_rules.md#section-0:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "product_quality.md#section-4:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.3752
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.3264,
+            "rerank_score": 0.3519
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.3227,
+            "rerank_score": 0.2953
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2604
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2604
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.2535
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "score": 0.2887,
+            "rerank_score": 0.2521
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.253,
+            "rerank_score": 0.2349
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2335
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.4083,
+            "rerank_score": 0.196
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.18
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.2868,
+            "rerank_score": 0.1511
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.2522,
+            "rerank_score": 0.1345
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.1034
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.1684,
+            "rerank_score": 0.093
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.375,
+            "rerank_score": 0.3752,
+            "matched_query": "监管调查",
+            "first_recall_query": "食品安全事件应配合市场监管部门调查\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": "food_safety.md#18",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3264,
+            "rerank_score": 0.3519,
+            "matched_query": "食品安全事件应配合市场监管部门调查\n相关法律规定",
+            "first_recall_query": "食品安全事件应配合市场监管部门调查\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "chunk_id": "food_safety.md#16",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3227,
+            "rerank_score": 0.2953,
+            "matched_query": "食品安全风险",
+            "first_recall_query": "食品安全风险"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:b05b305856dc86418d8e93557427b3ee6678fab85d1b4cb43e077475673e780e",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#18",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#16",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "危机回应",
+          "法律责任表达",
+          "消费者沟通",
+          "监管调查",
+          "食品安全风险"
+        ],
+        "shared_count": 5,
+        "broad_only": [
+          "事件：某餐饮企业的食品安全投诉受到监管关注。\n声明草稿：公司正在核查相关投诉，如监管部门介入，将配合调查。食品安全事件应配合市场监管部门调查。\n红队问题：['监管介入范围尚未确定']\n红队建议：['避免宣称已有调查结论']"
+        ],
+        "targeted_only": [
+          "食品安全事件应配合市场监管部门调查\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 1,
+      "targeted_rank": 1,
+      "p33_eligible_from_broad": true,
+      "rank_delta_broad_minus_targeted": 0,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "food_safety.md#section-2:chunk-0",
+        "score": 0.3755,
+        "rerank_score": 0.3756
+      },
+      "targeted_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "food_safety.md#section-2:chunk-0",
+        "score": 0.375,
+        "rerank_score": 0.3752
+      }
+    },
+    {
+      "case_id": "food_consumer_updates",
+      "label": "positive",
+      "material_kind": "response_guidance",
+      "claim": "食品安全争议回应应说明消费者投诉受理与后续检测进展",
+      "expected_evidence_refs": [
+        "food_safety.md#section-3:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：多位消费者反馈食品质量担忧，品牌尚在排查。\n声明草稿：我们理解消费者担忧，将说明投诉受理、批次排查与检测进展。食品安全争议回应应说明消费者投诉受理与后续检测进展。\n红队问题：['只有道歉没有具体后续安排']\n红队建议：['交代检测与进展通知']",
+        "rewritten_queries": [
+          "事件：多位消费者反馈食品质量担忧，品牌尚在排查。\n声明草稿：我们理解消费者担忧，将说明投诉受理、批次排查与检测进展。食品安全争议回应应说明消费者投诉受理与后续检测进展。\n红队问题：['只有道歉没有具体后续安排']\n红队建议：['交代检测与进展通知']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "rewritten_query_count": 6,
+        "pipeline_query_calls": [
+          "事件：多位消费者反馈食品质量担忧，品牌尚在排查。\n声明草稿：我们理解消费者担忧，将说明投诉受理、批次排查与检测进展。食品安全争议回应应说明消费者投诉受理与后续检测进展。\n红队问题：['只有道歉没有具体后续安排']\n红队建议：['交代检测与进展通知']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "top_k": 3,
+        "latency_ms": 13.761,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "crisis_response.md#section-1:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "food_safety.md#section-0:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "legal_risk_rules.md#section-0:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "product_quality.md#section-4:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.3656,
+            "rerank_score": 0.3727
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.3476
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.3227,
+            "rerank_score": 0.3208
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.3172
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.4083,
+            "rerank_score": 0.2996
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.2565,
+            "rerank_score": 0.2907
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2859
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.2836
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.2308,
+            "rerank_score": 0.2243
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "score": 0.2887,
+            "rerank_score": 0.1386
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.253,
+            "rerank_score": 0.1214
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.12
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.2868,
+            "rerank_score": 0.0366
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2697,
+            "rerank_score": 0.035
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.0015
+          },
+          {
+            "rank": 16,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.1684,
+            "rerank_score": -0.0275
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "chunk_id": "food_safety.md#19",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3656,
+            "rerank_score": 0.3727,
+            "matched_query": "事件：多位消费者反馈食品质量担忧，品牌尚在排查。\n声明草稿：我们理解消费者担忧，将说明投诉受理、批次排查与检测进展。食品安全争议回应应说明消费者投诉受理与后续检测进展。\n红队问题：['只有道歉没有具体后续安排']\n红队建议：['交代检测与进展通知']",
+            "first_recall_query": "事件：多位消费者反馈食品质量担忧，品牌尚在排查。\n声明草稿：我们理解消费者担忧，将说明投诉受理、批次排查与检测进展。食品安全争议回应应说明消费者投诉受理与后续检测进展。\n红队问题：['只有道歉没有具体后续安排']\n红队建议：['交代检测与进展通知']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.375,
+            "rerank_score": 0.3476,
+            "matched_query": "监管调查",
+            "first_recall_query": "监管调查"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "chunk_id": "food_safety.md#16",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3227,
+            "rerank_score": 0.3208,
+            "matched_query": "食品安全风险",
+            "first_recall_query": "食品安全风险"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#19",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:b05b305856dc86418d8e93557427b3ee6678fab85d1b4cb43e077475673e780e",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#16",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "食品安全争议回应应说明消费者投诉受理与后续检测进展\n相关法律规定",
+        "rewritten_queries": [
+          "食品安全争议回应应说明消费者投诉受理与后续检测进展\n相关法律规定",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "rewritten_query_count": 6,
+        "pipeline_query_calls": [
+          "食品安全争议回应应说明消费者投诉受理与后续检测进展\n相关法律规定",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "top_k": 3,
+        "latency_ms": 12.803,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "food_safety.md#section-0:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "legal_risk_rules.md#section-0:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "product_quality.md#section-4:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.3464,
+            "rerank_score": 0.3414
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.31
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.4083,
+            "rerank_score": 0.306
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2952
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.29
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.3227,
+            "rerank_score": 0.2849
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.2565,
+            "rerank_score": 0.2531
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.25
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "score": 0.2887,
+            "rerank_score": 0.2486
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.253,
+            "rerank_score": 0.2314
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.23
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.2868,
+            "rerank_score": 0.1522
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2384,
+            "rerank_score": 0.138
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.1195
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.1684,
+            "rerank_score": 0.0899
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "chunk_id": "food_safety.md#19",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.3464,
+            "rerank_score": 0.3414,
+            "matched_query": "食品安全争议回应应说明消费者投诉受理与后续检测进展\n相关法律规定",
+            "first_recall_query": "食品安全争议回应应说明消费者投诉受理与后续检测进展\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.375,
+            "rerank_score": 0.31,
+            "matched_query": "监管调查",
+            "first_recall_query": "监管调查"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "chunk_id": "crisis_response.md#0",
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.4083,
+            "rerank_score": 0.306,
+            "matched_query": "危机回应",
+            "first_recall_query": "危机回应"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#19",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:b05b305856dc86418d8e93557427b3ee6678fab85d1b4cb43e077475673e780e",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "crisis_response.md#0",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "危机回应",
+          "法律责任表达",
+          "消费者沟通",
+          "监管调查",
+          "食品安全风险"
+        ],
+        "shared_count": 5,
+        "broad_only": [
+          "事件：多位消费者反馈食品质量担忧，品牌尚在排查。\n声明草稿：我们理解消费者担忧，将说明投诉受理、批次排查与检测进展。食品安全争议回应应说明消费者投诉受理与后续检测进展。\n红队问题：['只有道歉没有具体后续安排']\n红队建议：['交代检测与进展通知']"
+        ],
+        "targeted_only": [
+          "食品安全争议回应应说明消费者投诉受理与后续检测进展\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 1,
+      "targeted_rank": 1,
+      "p33_eligible_from_broad": true,
+      "rank_delta_broad_minus_targeted": 0,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "food_safety.md#section-3:chunk-0",
+        "score": 0.3656,
+        "rerank_score": 0.3727
+      },
+      "targeted_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "food_safety.md#section-3:chunk-0",
+        "score": 0.3464,
+        "rerank_score": 0.3414
+      }
+    },
+    {
+      "case_id": "premature_illegality",
+      "label": "positive",
+      "material_kind": "response_constraint",
+      "claim": "调查完成前不应直接宣称企业已经构成违法",
+      "expected_evidence_refs": [
+        "legal_risk_rules.md#section-1:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']",
+        "rewritten_queries": [
+          "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "rewritten_query_count": 6,
+        "pipeline_query_calls": [
+          "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "top_k": 3,
+        "latency_ms": 13.476,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "food_safety.md#section-0:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "legal_risk_rules.md#section-0:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "product_quality.md#section-4:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.3268,
+            "rerank_score": 0.3605
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.3551
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.2912,
+            "rerank_score": 0.3149
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.3227,
+            "rerank_score": 0.3143
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.4083,
+            "rerank_score": 0.3004
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.375,
+            "rerank_score": 0.2844
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2833
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "food_safety.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2794
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.2764
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "score": 0.2887,
+            "rerank_score": 0.2517
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.253,
+            "rerank_score": 0.2365
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.2351
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.2831,
+            "rerank_score": 0.0377
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.2868,
+            "rerank_score": 0.0336
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": -0.0101
+          },
+          {
+            "rank": 16,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.1684,
+            "rerank_score": -0.0233
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": "legal_risk_rules.md#21",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.3268,
+            "rerank_score": 0.3605,
+            "matched_query": "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']",
+            "first_recall_query": "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.375,
+            "rerank_score": 0.3551,
+            "matched_query": "监管调查",
+            "first_recall_query": "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "chunk_id": "food_safety.md#18",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.2912,
+            "rerank_score": 0.3149,
+            "matched_query": "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']",
+            "first_recall_query": "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#21",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:b05b305856dc86418d8e93557427b3ee6678fab85d1b4cb43e077475673e780e",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#18",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "调查完成前不应直接宣称企业已经构成违法\n相关法律规定",
+        "rewritten_queries": [
+          "调查完成前不应直接宣称企业已经构成违法\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "调查完成前不应直接宣称企业已经构成违法\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 10.912,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-5:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.4084
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3524
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.3376,
+            "rerank_score": 0.3304
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3063,
+            "rerank_score": 0.2594
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.2495
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.181,
+            "rerank_score": 0.1993
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "score": 0.2505,
+            "rerank_score": 0.1314
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1312
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2215,
+            "rerank_score": 0.1231
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1938,
+            "rerank_score": 0.1042
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.1727,
+            "rerank_score": 0.0885
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.4084,
+            "matched_query": "避免提前定责",
+            "first_recall_query": "调查完成前不应直接宣称企业已经构成违法\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3524,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "调查完成前不应直接宣称企业已经构成违法\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": "legal_risk_rules.md#21",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.3376,
+            "rerank_score": 0.3304,
+            "matched_query": "调查完成前不应直接宣称企业已经构成违法\n相关法律规定",
+            "first_recall_query": "调查完成前不应直接宣称企业已经构成违法\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e6dd4a6106a1f47d897210ab7411825435b72b3f2b06d5e502fd7af9839ea53f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:dec5688b11671c9610f608cd6353f05fbeb2ad305b70492790bd5897737ba8fd",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#21",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [],
+        "shared_count": 0,
+        "broad_only": [
+          "事件：食品原料指控尚无调查结论。\n声明草稿：调查完成前不应直接宣称企业已经构成违法。公司将根据核查结果回应。\n红队问题：['提前定责有法律风险']\n红队建议：['使用以核查结果为前提的表述']",
+          "食品安全风险",
+          "危机回应",
+          "监管调查",
+          "消费者沟通",
+          "法律责任表达"
+        ],
+        "targeted_only": [
+          "调查完成前不应直接宣称企业已经构成违法\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 1,
+      "targeted_rank": 1,
+      "p33_eligible_from_broad": true,
+      "rank_delta_broad_minus_targeted": 0,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+        "score": 0.3268,
+        "rerank_score": 0.3605
+      },
+      "targeted_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+        "score": 0.5,
+        "rerank_score": 0.4084
+      }
+    },
+    {
+      "case_id": "absolute_promise",
+      "label": "positive",
+      "material_kind": "response_constraint",
+      "claim": "危机回应不应作出绝不发生或负责到底的绝对化承诺",
+      "expected_evidence_refs": [
+        "legal_risk_rules.md#section-2:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：产品安全投诉引发要求企业保证不再发生的舆论。\n声明草稿：危机回应不应作出绝不发生或负责到底的绝对化承诺，应说明具体核查安排。\n红队问题：['绝对化承诺无法保证']\n红队建议：['说明可执行的整改步骤']",
+        "rewritten_queries": [
+          "事件：产品安全投诉引发要求企业保证不再发生的舆论。\n声明草稿：危机回应不应作出绝不发生或负责到底的绝对化承诺，应说明具体核查安排。\n红队问题：['绝对化承诺无法保证']\n红队建议：['说明可执行的整改步骤']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "事件：产品安全投诉引发要求企业保证不再发生的舆论。\n声明草稿：危机回应不应作出绝不发生或负责到底的绝对化承诺，应说明具体核查安排。\n红队问题：['绝对化承诺无法保证']\n红队建议：['说明可执行的整改步骤']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.393,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-4:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.271,
+            "rerank_score": 0.2494
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.2455
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.2455
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2893,
+            "rerank_score": 0.1607
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.159
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3063,
+            "rerank_score": 0.1525
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1394
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "executive_misconduct.md#section-4:chunk-0",
+            "score": 0.2729,
+            "rerank_score": 0.1387
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2215,
+            "rerank_score": 0.1158
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1938,
+            "rerank_score": 0.1007
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.1459,
+            "rerank_score": 0.0755
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "chunk_id": "crisis_response.md#3",
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.271,
+            "rerank_score": 0.2494,
+            "matched_query": "事件：产品安全投诉引发要求企业保证不再发生的舆论。\n声明草稿：危机回应不应作出绝不发生或负责到底的绝对化承诺，应说明具体核查安排。\n红队问题：['绝对化承诺无法保证']\n红队建议：['说明可执行的整改步骤']",
+            "first_recall_query": "事件：产品安全投诉引发要求企业保证不再发生的舆论。\n声明草稿：危机回应不应作出绝不发生或负责到底的绝对化承诺，应说明具体核查安排。\n红队问题：['绝对化承诺无法保证']\n红队建议：['说明可执行的整改步骤']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.2455,
+            "matched_query": "避免提前定责",
+            "first_recall_query": "避免提前定责"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.2455,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "条件式责任表达"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "crisis_response.md#3",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e6dd4a6106a1f47d897210ab7411825435b72b3f2b06d5e502fd7af9839ea53f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:dec5688b11671c9610f608cd6353f05fbeb2ad305b70492790bd5897737ba8fd",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "危机回应不应作出绝不发生或负责到底的绝对化承诺\n相关法律规定",
+        "rewritten_queries": [
+          "危机回应不应作出绝不发生或负责到底的绝对化承诺\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "危机回应不应作出绝不发生或负责到底的绝对化承诺\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 10.27,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-5:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3507
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3507
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.3386,
+            "rerank_score": 0.3215
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.2961
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3063,
+            "rerank_score": 0.2577
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.1727,
+            "rerank_score": 0.2053
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.1459,
+            "rerank_score": 0.1807
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "score": 0.261,
+            "rerank_score": 0.136
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2215,
+            "rerank_score": 0.1315
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1259
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1938,
+            "rerank_score": 0.1037
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3507,
+            "matched_query": "避免提前定责",
+            "first_recall_query": "避免提前定责"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3507,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "危机回应不应作出绝不发生或负责到底的绝对化承诺\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "chunk_id": "legal_risk_rules.md#22",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.3386,
+            "rerank_score": 0.3215,
+            "matched_query": "危机回应不应作出绝不发生或负责到底的绝对化承诺\n相关法律规定",
+            "first_recall_query": "危机回应不应作出绝不发生或负责到底的绝对化承诺\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e6dd4a6106a1f47d897210ab7411825435b72b3f2b06d5e502fd7af9839ea53f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:dec5688b11671c9610f608cd6353f05fbeb2ad305b70492790bd5897737ba8fd",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#22",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "依法依规处理",
+          "条件式责任表达",
+          "绝对化承诺风险",
+          "避免提前定责"
+        ],
+        "shared_count": 4,
+        "broad_only": [
+          "事件：产品安全投诉引发要求企业保证不再发生的舆论。\n声明草稿：危机回应不应作出绝不发生或负责到底的绝对化承诺，应说明具体核查安排。\n红队问题：['绝对化承诺无法保证']\n红队建议：['说明可执行的整改步骤']"
+        ],
+        "targeted_only": [
+          "危机回应不应作出绝不发生或负责到底的绝对化承诺\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "TARGETED_ONLY",
+      "broad_rank": null,
+      "targeted_rank": 3,
+      "p33_eligible_from_broad": false,
+      "rank_delta_broad_minus_targeted": null,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 4,
+        "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+        "score": 0.2893,
+        "rerank_score": 0.1607
+      },
+      "targeted_target_full_rerank": {
+        "rank": 3,
+        "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+        "score": 0.3386,
+        "rerank_score": 0.3215
+      }
+    },
+    {
+      "case_id": "conditional_responsibility",
+      "label": "positive",
+      "material_kind": "response_constraint",
+      "claim": "承担法律责任应以核查发现违反要求为条件",
+      "expected_evidence_refs": [
+        "legal_risk_rules.md#section-3:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：消费者要求品牌立刻承认全部赔偿责任。\n声明草稿：承担法律责任应以核查发现违反要求为条件，公司会继续核实事实。\n红队问题：['责任表述过满']\n红队建议：['给出条件式责任表达']",
+        "rewritten_queries": [
+          "事件：消费者要求品牌立刻承认全部赔偿责任。\n声明草稿：承担法律责任应以核查发现违反要求为条件，公司会继续核实事实。\n红队问题：['责任表述过满']\n红队建议：['给出条件式责任表达']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "事件：消费者要求品牌立刻承认全部赔偿责任。\n声明草稿：承担法律责任应以核查发现违反要求为条件，公司会继续核实事实。\n红队问题：['责任表述过满']\n红队建议：['给出条件式责任表达']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.62,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-1:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3748
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3579
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3296,
+            "rerank_score": 0.2931
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.2487
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.181,
+            "rerank_score": 0.1984
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.1459,
+            "rerank_score": 0.1879
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.304,
+            "rerank_score": 0.1502
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "executive_misconduct.md#section-1:chunk-0",
+            "score": 0.2756,
+            "rerank_score": 0.1387
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1264
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2215,
+            "rerank_score": 0.1106
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.1727,
+            "rerank_score": 0.0871
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3748,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "事件：消费者要求品牌立刻承认全部赔偿责任。\n声明草稿：承担法律责任应以核查发现违反要求为条件，公司会继续核实事实。\n红队问题：['责任表述过满']\n红队建议：['给出条件式责任表达']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3579,
+            "matched_query": "避免提前定责",
+            "first_recall_query": "避免提前定责"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": "legal_risk_rules.md#23",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.3296,
+            "rerank_score": 0.2931,
+            "matched_query": "事件：消费者要求品牌立刻承认全部赔偿责任。\n声明草稿：承担法律责任应以核查发现违反要求为条件，公司会继续核实事实。\n红队问题：['责任表述过满']\n红队建议：['给出条件式责任表达']",
+            "first_recall_query": "事件：消费者要求品牌立刻承认全部赔偿责任。\n声明草稿：承担法律责任应以核查发现违反要求为条件，公司会继续核实事实。\n红队问题：['责任表述过满']\n红队建议：['给出条件式责任表达']"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:dec5688b11671c9610f608cd6353f05fbeb2ad305b70492790bd5897737ba8fd",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e6dd4a6106a1f47d897210ab7411825435b72b3f2b06d5e502fd7af9839ea53f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#23",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "承担法律责任应以核查发现违反要求为条件\n相关法律规定",
+        "rewritten_queries": [
+          "承担法律责任应以核查发现违反要求为条件\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "承担法律责任应以核查发现违反要求为条件\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 10.697,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.4054
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3646
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3486,
+            "rerank_score": 0.3327
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.2754,
+            "rerank_score": 0.2568
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.2501
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2402,
+            "rerank_score": 0.2282
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1258
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2215,
+            "rerank_score": 0.1122
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1938,
+            "rerank_score": 0.1047
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.1727,
+            "rerank_score": 0.0887
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.4054,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "承担法律责任应以核查发现违反要求为条件\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3646,
+            "matched_query": "避免提前定责",
+            "first_recall_query": "承担法律责任应以核查发现违反要求为条件\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": "legal_risk_rules.md#23",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.3486,
+            "rerank_score": 0.3327,
+            "matched_query": "承担法律责任应以核查发现违反要求为条件\n相关法律规定",
+            "first_recall_query": "承担法律责任应以核查发现违反要求为条件\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:dec5688b11671c9610f608cd6353f05fbeb2ad305b70492790bd5897737ba8fd",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e6dd4a6106a1f47d897210ab7411825435b72b3f2b06d5e502fd7af9839ea53f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#23",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "依法依规处理",
+          "条件式责任表达",
+          "绝对化承诺风险",
+          "避免提前定责"
+        ],
+        "shared_count": 4,
+        "broad_only": [
+          "事件：消费者要求品牌立刻承认全部赔偿责任。\n声明草稿：承担法律责任应以核查发现违反要求为条件，公司会继续核实事实。\n红队问题：['责任表述过满']\n红队建议：['给出条件式责任表达']"
+        ],
+        "targeted_only": [
+          "承担法律责任应以核查发现违反要求为条件\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 1,
+      "targeted_rank": 1,
+      "p33_eligible_from_broad": false,
+      "rank_delta_broad_minus_targeted": 0,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+        "score": 0.5,
+        "rerank_score": 0.3748
+      },
+      "targeted_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+        "score": 0.5,
+        "rerank_score": 0.4054
+      }
+    },
+    {
+      "case_id": "privacy_initial_response",
+      "label": "positive",
+      "material_kind": "response_guidance",
+      "claim": "个人信息疑似泄露时不应在事实未查清前确认泄露范围",
+      "expected_evidence_refs": [
+        "data_privacy.md#section-1:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']",
+        "rewritten_queries": [
+          "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']",
+          "隐私风险回应",
+          "用户数据保护",
+          "整改说明",
+          "事实核查"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']",
+          "隐私风险回应",
+          "用户数据保护",
+          "整改说明",
+          "事实核查"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.275,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "data_privacy.md#section-1:chunk-0",
+          "data_privacy.md#section-2:chunk-0",
+          "data_privacy.md#section-4:chunk-0",
+          "data_privacy.md#section-5:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-1:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-2:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "score": 0.3073,
+            "rerank_score": 0.1913
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.3068,
+            "rerank_score": 0.1779
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1638
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "data_privacy.md#section-2:chunk-0",
+            "score": 0.2959,
+            "rerank_score": 0.1552
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1353
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "data_privacy.md#section-4:chunk-0",
+            "score": 0.2432,
+            "rerank_score": 0.132
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "data_privacy.md#section-5:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1288
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1266
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1244
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "score": 0.2014,
+            "rerank_score": 0.1164
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2024,
+            "rerank_score": 0.1125
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.1912,
+            "rerank_score": 0.094
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1865,
+            "rerank_score": 0.0939
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "chunk_id": "data_privacy.md#5",
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.3073,
+            "rerank_score": 0.1913,
+            "matched_query": "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']",
+            "first_recall_query": "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "chunk_id": "product_quality.md#25",
+            "document_id": null,
+            "document_version": null,
+            "source": "product_quality.md",
+            "score": 0.3068,
+            "rerank_score": 0.1779,
+            "matched_query": "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']",
+            "first_recall_query": "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.25,
+            "rerank_score": 0.1638,
+            "matched_query": "事实核查",
+            "first_recall_query": "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "data_privacy.md#5",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "product_quality.md#25",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e44df940ec613c41094081d7cc724586fc2e29070336285151b4eea43e563acc",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "个人信息疑似泄露时不应在事实未查清前确认泄露范围\n相关法律规定",
+        "rewritten_queries": [
+          "个人信息疑似泄露时不应在事实未查清前确认泄露范围\n相关法律规定",
+          "隐私风险回应",
+          "用户数据保护",
+          "整改说明",
+          "事实核查"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "个人信息疑似泄露时不应在事实未查清前确认泄露范围\n相关法律规定",
+          "隐私风险回应",
+          "用户数据保护",
+          "整改说明",
+          "事实核查"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.005,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "data_privacy.md#section-1:chunk-0",
+          "data_privacy.md#section-2:chunk-0",
+          "data_privacy.md#section-4:chunk-0",
+          "data_privacy.md#section-5:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-1:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "service_outage.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "score": 0.291,
+            "rerank_score": 0.2121
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1924
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1538
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "data_privacy.md#section-2:chunk-0",
+            "score": 0.2757,
+            "rerank_score": 0.1468
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "service_outage.md#section-3:chunk-0",
+            "score": 0.2711,
+            "rerank_score": 0.1446
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "data_privacy.md#section-4:chunk-0",
+            "score": 0.2432,
+            "rerank_score": 0.1312
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2024,
+            "rerank_score": 0.1309
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "score": 0.2014,
+            "rerank_score": 0.1305
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "data_privacy.md#section-5:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1248
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1248
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1248
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1865,
+            "rerank_score": 0.0943
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.1912,
+            "rerank_score": 0.0918
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "chunk_id": "data_privacy.md#5",
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.291,
+            "rerank_score": 0.2121,
+            "matched_query": "个人信息疑似泄露时不应在事实未查清前确认泄露范围\n相关法律规定",
+            "first_recall_query": "个人信息疑似泄露时不应在事实未查清前确认泄露范围\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.25,
+            "rerank_score": 0.1924,
+            "matched_query": "事实核查",
+            "first_recall_query": "个人信息疑似泄露时不应在事实未查清前确认泄露范围\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "executive_misconduct.md",
+            "score": 0.25,
+            "rerank_score": 0.1538,
+            "matched_query": "事实核查",
+            "first_recall_query": "隐私风险回应"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "data_privacy.md#5",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e44df940ec613c41094081d7cc724586fc2e29070336285151b4eea43e563acc",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:502092402c1488aa80af633553ca94572885de2bbbb889d2509b955fe60752ab",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "事实核查",
+          "整改说明",
+          "用户数据保护",
+          "隐私风险回应"
+        ],
+        "shared_count": 4,
+        "broad_only": [
+          "事件：用户反馈疑似个人信息泄露，企业仍在调查。\n声明草稿：个人信息疑似泄露时不应在事实未查清前确认泄露范围。我们正在核查。\n红队问题：['泄露范围未经证实']\n红队建议：['说明核查状态']"
+        ],
+        "targeted_only": [
+          "个人信息疑似泄露时不应在事实未查清前确认泄露范围\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 1,
+      "targeted_rank": 1,
+      "p33_eligible_from_broad": true,
+      "rank_delta_broad_minus_targeted": 0,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "data_privacy.md#section-1:chunk-0",
+        "score": 0.3073,
+        "rerank_score": 0.1913
+      },
+      "targeted_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "data_privacy.md#section-1:chunk-0",
+        "score": 0.291,
+        "rerank_score": 0.2121
+      }
+    },
+    {
+      "case_id": "privacy_access_logs",
+      "label": "positive",
+      "material_kind": "response_guidance",
+      "claim": "数据安全事件应排查访问日志、权限配置与异常下载",
+      "expected_evidence_refs": [
+        "data_privacy.md#section-3:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：平台用户担忧异常账号访问数据。\n声明草稿：数据安全事件应排查访问日志、权限配置与异常下载，具体结果尚待确认。\n红队问题：['尚无内部日志结论']\n红队建议：['避免认定泄露已发生']",
+        "rewritten_queries": [
+          "事件：平台用户担忧异常账号访问数据。\n声明草稿：数据安全事件应排查访问日志、权限配置与异常下载，具体结果尚待确认。\n红队问题：['尚无内部日志结论']\n红队建议：['避免认定泄露已发生']",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范",
+          "隐私风险回应"
+        ],
+        "rewritten_query_count": 6,
+        "pipeline_query_calls": [
+          "事件：平台用户担忧异常账号访问数据。\n声明草稿：数据安全事件应排查访问日志、权限配置与异常下载，具体结果尚待确认。\n红队问题：['尚无内部日志结论']\n红队建议：['避免认定泄露已发生']",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范",
+          "隐私风险回应"
+        ],
+        "top_k": 3,
+        "latency_ms": 14.551,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "crisis_response.md#section-1:chunk-0",
+          "data_privacy.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "executive_misconduct.md#section-4:chunk-0",
+          "food_safety.md#section-1:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-2:chunk-0",
+          "product_quality.md#section-4:chunk-0",
+          "service_outage.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.2462
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "data_privacy.md#section-3:chunk-0",
+            "score": 0.319,
+            "rerank_score": 0.2456
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.3333,
+            "rerank_score": 0.16
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.2995,
+            "rerank_score": 0.1499
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.12
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "service_outage.md#section-3:chunk-0",
+            "score": 0.3333,
+            "rerank_score": 0.052
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.2727,
+            "rerank_score": 0.0378
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "executive_misconduct.md#section-4:chunk-0",
+            "score": 0.2751,
+            "rerank_score": 0.0262
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.2652,
+            "rerank_score": 0.0194
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.0118
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2,
+            "rerank_score": -0.0053
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "score": 0.2014,
+            "rerank_score": -0.0067
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2024,
+            "rerank_score": -0.0087
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": -0.0094
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.1912,
+            "rerank_score": -0.0137
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.5,
+            "rerank_score": 0.2462,
+            "matched_query": "持续同步进展",
+            "first_recall_query": "公众担忧回应"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "data_privacy.md#section-3:chunk-0",
+            "chunk_id": "data_privacy.md#7",
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.319,
+            "rerank_score": 0.2456,
+            "matched_query": "事件：平台用户担忧异常账号访问数据。\n声明草稿：数据安全事件应排查访问日志、权限配置与异常下载，具体结果尚待确认。\n红队问题：['尚无内部日志结论']\n红队建议：['避免认定泄露已发生']",
+            "first_recall_query": "事件：平台用户担忧异常账号访问数据。\n声明草稿：数据安全事件应排查访问日志、权限配置与异常下载，具体结果尚待确认。\n红队问题：['尚无内部日志结论']\n红队建议：['避免认定泄露已发生']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "chunk_id": "crisis_response.md#0",
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.3333,
+            "rerank_score": 0.16,
+            "matched_query": "初次回应规范",
+            "first_recall_query": "初次回应规范"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:6d002c716e01be1885bc1cb8aa6f129c199485e106bec58e325021934a2e2b8f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "data_privacy.md#7",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "crisis_response.md#0",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "数据安全事件应排查访问日志、权限配置与异常下载\n相关法律规定",
+        "rewritten_queries": [
+          "数据安全事件应排查访问日志、权限配置与异常下载\n相关法律规定",
+          "隐私风险回应",
+          "用户数据保护",
+          "整改说明",
+          "事实核查"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "数据安全事件应排查访问日志、权限配置与异常下载\n相关法律规定",
+          "隐私风险回应",
+          "用户数据保护",
+          "整改说明",
+          "事实核查"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.963,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "data_privacy.md#section-1:chunk-0",
+          "data_privacy.md#section-2:chunk-0",
+          "data_privacy.md#section-3:chunk-0",
+          "data_privacy.md#section-4:chunk-0",
+          "data_privacy.md#section-5:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-1:chunk-0",
+          "product_quality.md#section-2:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "data_privacy.md#section-3:chunk-0",
+            "score": 0.372,
+            "rerank_score": 0.2646
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "data_privacy.md#section-3:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.2232
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1461
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "data_privacy.md#section-5:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1411
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "data_privacy.md#section-5:chunk-0",
+            "score": 0.2471,
+            "rerank_score": 0.1397
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "score": 0.2221,
+            "rerank_score": 0.1327
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "data_privacy.md#section-4:chunk-0",
+            "score": 0.2432,
+            "rerank_score": 0.1278
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.125
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.125
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "data_privacy.md#section-2:chunk-0",
+            "score": 0.2084,
+            "rerank_score": 0.1211
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.12
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.1912,
+            "rerank_score": 0.1028
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "score": 0.2014,
+            "rerank_score": 0.1027
+          },
+          {
+            "rank": 14,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2024,
+            "rerank_score": 0.1022
+          },
+          {
+            "rank": 15,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1865,
+            "rerank_score": 0.0945
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "data_privacy.md#section-3:chunk-0",
+            "chunk_id": "data_privacy.md#7",
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.372,
+            "rerank_score": 0.2646,
+            "matched_query": "数据安全事件应排查访问日志、权限配置与异常下载\n相关法律规定",
+            "first_recall_query": "数据安全事件应排查访问日志、权限配置与异常下载\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "data_privacy.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.2857,
+            "rerank_score": 0.2232,
+            "matched_query": "数据安全事件应排查访问日志、权限配置与异常下载\n相关法律规定",
+            "first_recall_query": "数据安全事件应排查访问日志、权限配置与异常下载\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "data_privacy.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.25,
+            "rerank_score": 0.1461,
+            "matched_query": "事实核查",
+            "first_recall_query": "用户数据保护"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "data_privacy.md#7",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:04bc563f3ee9aa77d15577b03331448d60422e1c33ed7d0e9772f06f20e7cb5f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e44df940ec613c41094081d7cc724586fc2e29070336285151b4eea43e563acc",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "隐私风险回应"
+        ],
+        "shared_count": 1,
+        "broad_only": [
+          "事件：平台用户担忧异常账号访问数据。\n声明草稿：数据安全事件应排查访问日志、权限配置与异常下载，具体结果尚待确认。\n红队问题：['尚无内部日志结论']\n红队建议：['避免认定泄露已发生']",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范"
+        ],
+        "targeted_only": [
+          "数据安全事件应排查访问日志、权限配置与异常下载\n相关法律规定",
+          "用户数据保护",
+          "整改说明",
+          "事实核查"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 2,
+      "targeted_rank": 1,
+      "p33_eligible_from_broad": true,
+      "rank_delta_broad_minus_targeted": 1,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 2,
+        "evidence_ref": "data_privacy.md#section-3:chunk-0",
+        "score": 0.319,
+        "rerank_score": 0.2456
+      },
+      "targeted_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "data_privacy.md#section-3:chunk-0",
+        "score": 0.372,
+        "rerank_score": 0.2646
+      }
+    },
+    {
+      "case_id": "product_recall_assessment",
+      "label": "positive",
+      "material_kind": "response_guidance",
+      "claim": "型号存在安全隐患时应评估召回、停售或维修措施",
+      "expected_evidence_refs": [
+        "product_quality.md#section-5:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：某型号电器被投诉发热，企业尚未完成检测。\n声明草稿：型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。\n红队问题：['未验证型号问题就承诺召回']\n红队建议：['以检测结果为前提']",
+        "rewritten_queries": [
+          "事件：某型号电器被投诉发热，企业尚未完成检测。\n声明草稿：型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。\n红队问题：['未验证型号问题就承诺召回']\n红队建议：['以检测结果为前提']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "事件：某型号电器被投诉发热，企业尚未完成检测。\n声明草稿：型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。\n红队问题：['未验证型号问题就承诺召回']\n红队建议：['以检测结果为前提']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 12.603,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-5:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.2419
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.32,
+            "rerank_score": 0.2244
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "score": 0.2701,
+            "rerank_score": 0.2157
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3063,
+            "rerank_score": 0.1489
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.141
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.1358
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.181,
+            "rerank_score": 0.0907
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.1727,
+            "rerank_score": 0.0906
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.2597,
+            "rerank_score": 0.0304
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.0258
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2215,
+            "rerank_score": -0.0018
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1938,
+            "rerank_score": -0.0131
+          },
+          {
+            "rank": 13,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.1459,
+            "rerank_score": -0.0342
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.2419,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "条件式责任表达"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "chunk_id": "product_quality.md#25",
+            "document_id": null,
+            "document_version": null,
+            "source": "product_quality.md",
+            "score": 0.32,
+            "rerank_score": 0.2244,
+            "matched_query": "事件：某型号电器被投诉发热，企业尚未完成检测。\n声明草稿：型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。\n红队问题：['未验证型号问题就承诺召回']\n红队建议：['以检测结果为前提']",
+            "first_recall_query": "事件：某型号电器被投诉发热，企业尚未完成检测。\n声明草稿：型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。\n红队问题：['未验证型号问题就承诺召回']\n红队建议：['以检测结果为前提']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "chunk_id": "product_quality.md#29",
+            "document_id": null,
+            "document_version": null,
+            "source": "product_quality.md",
+            "score": 0.2701,
+            "rerank_score": 0.2157,
+            "matched_query": "事件：某型号电器被投诉发热，企业尚未完成检测。\n声明草稿：型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。\n红队问题：['未验证型号问题就承诺召回']\n红队建议：['以检测结果为前提']",
+            "first_recall_query": "事件：某型号电器被投诉发热，企业尚未完成检测。\n声明草稿：型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。\n红队问题：['未验证型号问题就承诺召回']\n红队建议：['以检测结果为前提']"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:dec5688b11671c9610f608cd6353f05fbeb2ad305b70492790bd5897737ba8fd",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "product_quality.md#25",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "product_quality.md#29",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定",
+        "rewritten_queries": [
+          "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定"
+        ],
+        "rewritten_query_count": 1,
+        "pipeline_query_calls": [
+          "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定"
+        ],
+        "top_k": 3,
+        "latency_ms": 2.225,
+        "candidate_refs_before_rerank": [
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-5:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "score": 0.3531,
+            "rerank_score": 0.2484
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "score": 0.2592,
+            "rerank_score": 0.2033
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.2888,
+            "rerank_score": 0.1657
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "chunk_id": "product_quality.md#29",
+            "document_id": null,
+            "document_version": null,
+            "source": "product_quality.md",
+            "score": 0.3531,
+            "rerank_score": 0.2484,
+            "matched_query": "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定",
+            "first_recall_query": "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "product_quality.md#section-5:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "product_quality.md",
+            "score": 0.2592,
+            "rerank_score": 0.2033,
+            "matched_query": "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定",
+            "first_recall_query": "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "chunk_id": "product_quality.md#25",
+            "document_id": null,
+            "document_version": null,
+            "source": "product_quality.md",
+            "score": 0.2888,
+            "rerank_score": 0.1657,
+            "matched_query": "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定",
+            "first_recall_query": "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "product_quality.md#29",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:3ed2cb9214c0620aabe01928e18fd67983582d80a986c8259339c771ea6f587e",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "product_quality.md#25",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [],
+        "shared_count": 0,
+        "broad_only": [
+          "事件：某型号电器被投诉发热，企业尚未完成检测。\n声明草稿：型号存在安全隐患时应评估召回、停售或维修措施，当前先核查该型号。\n红队问题：['未验证型号问题就承诺召回']\n红队建议：['以检测结果为前提']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "targeted_only": [
+          "型号存在安全隐患时应评估召回、停售或维修措施\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 3,
+      "targeted_rank": 1,
+      "p33_eligible_from_broad": false,
+      "rank_delta_broad_minus_targeted": 2,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 3,
+        "evidence_ref": "product_quality.md#section-5:chunk-0",
+        "score": 0.2701,
+        "rerank_score": 0.2157
+      },
+      "targeted_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "product_quality.md#section-5:chunk-0",
+        "score": 0.3531,
+        "rerank_score": 0.2484
+      }
+    },
+    {
+      "case_id": "service_order_reconciliation",
+      "label": "positive",
+      "material_kind": "response_guidance",
+      "claim": "服务恢复后应通知用户并核对订单及补偿安排",
+      "expected_evidence_refs": [
+        "service_outage.md#section-5:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']",
+        "rewritten_queries": [
+          "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']"
+        ],
+        "rewritten_query_count": 1,
+        "pipeline_query_calls": [
+          "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']"
+        ],
+        "top_k": 3,
+        "latency_ms": 2.436,
+        "candidate_refs_before_rerank": [
+          "service_outage.md#section-3:chunk-0",
+          "service_outage.md#section-4:chunk-0",
+          "service_outage.md#section-5:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "service_outage.md#section-5:chunk-0",
+            "score": 0.3427,
+            "rerank_score": 0.2499
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "service_outage.md#section-4:chunk-0",
+            "score": 0.2675,
+            "rerank_score": 0.2079
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "service_outage.md#section-3:chunk-0",
+            "score": 0.2671,
+            "rerank_score": 0.2038
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "service_outage.md#section-5:chunk-0",
+            "chunk_id": "service_outage.md#35",
+            "document_id": null,
+            "document_version": null,
+            "source": "service_outage.md",
+            "score": 0.3427,
+            "rerank_score": 0.2499,
+            "matched_query": "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']",
+            "first_recall_query": "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "service_outage.md#section-4:chunk-0",
+            "chunk_id": "service_outage.md#34",
+            "document_id": null,
+            "document_version": null,
+            "source": "service_outage.md",
+            "score": 0.2675,
+            "rerank_score": 0.2079,
+            "matched_query": "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']",
+            "first_recall_query": "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "service_outage.md#section-3:chunk-0",
+            "chunk_id": "service_outage.md#33",
+            "document_id": null,
+            "document_version": null,
+            "source": "service_outage.md",
+            "score": 0.2671,
+            "rerank_score": 0.2038,
+            "matched_query": "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']",
+            "first_recall_query": "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "service_outage.md#35",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "service_outage.md#34",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "service_outage.md#33",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "服务恢复后应通知用户并核对订单及补偿安排\n相关法律规定",
+        "rewritten_queries": [
+          "服务恢复后应通知用户并核对订单及补偿安排\n相关法律规定"
+        ],
+        "rewritten_query_count": 1,
+        "pipeline_query_calls": [
+          "服务恢复后应通知用户并核对订单及补偿安排\n相关法律规定"
+        ],
+        "top_k": 3,
+        "latency_ms": 2.246,
+        "candidate_refs_before_rerank": [
+          "product_quality.md#section-2:chunk-0",
+          "service_outage.md#section-4:chunk-0",
+          "service_outage.md#section-5:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "service_outage.md#section-5:chunk-0",
+            "score": 0.2891,
+            "rerank_score": 0.2542
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "service_outage.md#section-4:chunk-0",
+            "score": 0.2279,
+            "rerank_score": 0.2032
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.2401,
+            "rerank_score": 0.0052
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "service_outage.md#section-5:chunk-0",
+            "chunk_id": "service_outage.md#35",
+            "document_id": null,
+            "document_version": null,
+            "source": "service_outage.md",
+            "score": 0.2891,
+            "rerank_score": 0.2542,
+            "matched_query": "服务恢复后应通知用户并核对订单及补偿安排\n相关法律规定",
+            "first_recall_query": "服务恢复后应通知用户并核对订单及补偿安排\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "service_outage.md#section-4:chunk-0",
+            "chunk_id": "service_outage.md#34",
+            "document_id": null,
+            "document_version": null,
+            "source": "service_outage.md",
+            "score": 0.2279,
+            "rerank_score": 0.2032,
+            "matched_query": "服务恢复后应通知用户并核对订单及补偿安排\n相关法律规定",
+            "first_recall_query": "服务恢复后应通知用户并核对订单及补偿安排\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "service_outage.md#35",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "service_outage.md#34",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [],
+        "shared_count": 0,
+        "broad_only": [
+          "事件：平台支付故障后已有部分交易恢复。\n声明草稿：服务恢复后应通知用户并核对订单及补偿安排，受影响范围仍在统计。\n红队问题：['只说恢复没有说明用户权益']\n红队建议：['提供订单核对渠道']"
+        ],
+        "targeted_only": [
+          "服务恢复后应通知用户并核对订单及补偿安排\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 1,
+      "targeted_rank": 1,
+      "p33_eligible_from_broad": true,
+      "rank_delta_broad_minus_targeted": 0,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "service_outage.md#section-5:chunk-0",
+        "score": 0.3427,
+        "rerank_score": 0.2499
+      },
+      "targeted_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "service_outage.md#section-5:chunk-0",
+        "score": 0.2891,
+        "rerank_score": 0.2542
+      }
+    },
+    {
+      "case_id": "executive_full_context",
+      "label": "positive",
+      "material_kind": "response_guidance",
+      "claim": "高管言论争议应核实传播片段与完整上下文",
+      "expected_evidence_refs": [
+        "executive_misconduct.md#section-2:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：网络传播一段企业负责人的争议言论片段。\n声明草稿：高管言论争议应核实传播片段与完整上下文，不能提前定性。\n红队问题：['片段可能缺少上下文']\n红队建议：['核查原始完整材料']",
+        "rewritten_queries": [
+          "事件：网络传播一段企业负责人的争议言论片段。\n声明草稿：高管言论争议应核实传播片段与完整上下文，不能提前定性。\n红队问题：['片段可能缺少上下文']\n红队建议：['核查原始完整材料']",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "事件：网络传播一段企业负责人的争议言论片段。\n声明草稿：高管言论争议应核实传播片段与完整上下文，不能提前定性。\n红队问题：['片段可能缺少上下文']\n红队建议：['核查原始完整材料']",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.33,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "crisis_response.md#section-1:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-4:chunk-0",
+          "food_safety.md#section-1:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-4:chunk-0",
+          "service_outage.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.2444
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.3075,
+            "rerank_score": 0.1792
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "service_outage.md#section-3:chunk-0",
+            "score": 0.3333,
+            "rerank_score": 0.1644
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.3333,
+            "rerank_score": 0.16
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.2995,
+            "rerank_score": 0.1481
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "executive_misconduct.md#section-4:chunk-0",
+            "score": 0.2751,
+            "rerank_score": 0.1395
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.2477,
+            "rerank_score": 0.1276
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "score": 0.2501,
+            "rerank_score": 0.1266
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.12
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.1131
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.0982
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.096
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.5,
+            "rerank_score": 0.2444,
+            "matched_query": "持续同步进展",
+            "first_recall_query": "公众担忧回应"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "chunk_id": "executive_misconduct.md#12",
+            "document_id": null,
+            "document_version": null,
+            "source": "executive_misconduct.md",
+            "score": 0.3075,
+            "rerank_score": 0.1792,
+            "matched_query": "事件：网络传播一段企业负责人的争议言论片段。\n声明草稿：高管言论争议应核实传播片段与完整上下文，不能提前定性。\n红队问题：['片段可能缺少上下文']\n红队建议：['核查原始完整材料']",
+            "first_recall_query": "事件：网络传播一段企业负责人的争议言论片段。\n声明草稿：高管言论争议应核实传播片段与完整上下文，不能提前定性。\n红队问题：['片段可能缺少上下文']\n红队建议：['核查原始完整材料']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "service_outage.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "service_outage.md",
+            "score": 0.3333,
+            "rerank_score": 0.1644,
+            "matched_query": "持续同步进展",
+            "first_recall_query": "持续同步进展"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:6d002c716e01be1885bc1cb8aa6f129c199485e106bec58e325021934a2e2b8f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "executive_misconduct.md#12",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:eda4cab7cb800b92f89d5b4398c114911f3c11ffb541bc5bf4faedaca109d368",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "高管言论争议应核实传播片段与完整上下文\n相关法律规定",
+        "rewritten_queries": [
+          "高管言论争议应核实传播片段与完整上下文\n相关法律规定",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "高管言论争议应核实传播片段与完整上下文\n相关法律规定",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范"
+        ],
+        "top_k": 3,
+        "latency_ms": 10.517,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "crisis_response.md#section-1:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-4:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-4:chunk-0",
+          "service_outage.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.24
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.3158,
+            "rerank_score": 0.2268
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.22,
+            "rerank_score": 0.1808
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "service_outage.md#section-3:chunk-0",
+            "score": 0.3333,
+            "rerank_score": 0.16
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.3333,
+            "rerank_score": 0.16
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "executive_misconduct.md#section-4:chunk-0",
+            "score": 0.2751,
+            "rerank_score": 0.1456
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.2995,
+            "rerank_score": 0.1438
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.12
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.2266,
+            "rerank_score": 0.1144
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.1131
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.096
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.096
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.5,
+            "rerank_score": 0.24,
+            "matched_query": "持续同步进展",
+            "first_recall_query": "公众担忧回应"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "chunk_id": "executive_misconduct.md#12",
+            "document_id": null,
+            "document_version": null,
+            "source": "executive_misconduct.md",
+            "score": 0.3158,
+            "rerank_score": 0.2268,
+            "matched_query": "高管言论争议应核实传播片段与完整上下文\n相关法律规定",
+            "first_recall_query": "高管言论争议应核实传播片段与完整上下文\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "executive_misconduct.md",
+            "score": 0.22,
+            "rerank_score": 0.1808,
+            "matched_query": "高管言论争议应核实传播片段与完整上下文\n相关法律规定",
+            "first_recall_query": "高管言论争议应核实传播片段与完整上下文\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:6d002c716e01be1885bc1cb8aa6f129c199485e106bec58e325021934a2e2b8f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "executive_misconduct.md#12",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:502092402c1488aa80af633553ca94572885de2bbbb889d2509b955fe60752ab",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "公众担忧回应",
+          "初次回应规范",
+          "持续同步进展",
+          "消费者沟通"
+        ],
+        "shared_count": 4,
+        "broad_only": [
+          "事件：网络传播一段企业负责人的争议言论片段。\n声明草稿：高管言论争议应核实传播片段与完整上下文，不能提前定性。\n红队问题：['片段可能缺少上下文']\n红队建议：['核查原始完整材料']"
+        ],
+        "targeted_only": [
+          "高管言论争议应核实传播片段与完整上下文\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 2,
+      "targeted_rank": 2,
+      "p33_eligible_from_broad": true,
+      "rank_delta_broad_minus_targeted": 0,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 2,
+        "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+        "score": 0.3075,
+        "rerank_score": 0.1792
+      },
+      "targeted_target_full_rerank": {
+        "rank": 2,
+        "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+        "score": 0.3158,
+        "rerank_score": 0.2268
+      }
+    },
+    {
+      "case_id": "crisis_overpromise",
+      "label": "positive",
+      "material_kind": "response_guidance",
+      "claim": "危机回应应给出可执行的核查行动并避免过度承诺",
+      "expected_evidence_refs": [
+        "crisis_response.md#section-3:chunk-0"
+      ],
+      "broad": {
+        "original_query": "事件：品牌受到服务投诉，用户要求立即给出处理时间。\n声明草稿：危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。\n红队问题：['整改时间尚未确认']\n红队建议：['写明已开始的行动']",
+        "rewritten_queries": [
+          "事件：品牌受到服务投诉，用户要求立即给出处理时间。\n声明草稿：危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。\n红队问题：['整改时间尚未确认']\n红队建议：['写明已开始的行动']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "事件：品牌受到服务投诉，用户要求立即给出处理时间。\n声明草稿：危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。\n红队问题：['整改时间尚未确认']\n红队建议：['写明已开始的行动']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.823,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-1:chunk-0",
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "service_outage.md#section-1:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.3036,
+            "rerank_score": 0.2734
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.2705,
+            "rerank_score": 0.2557
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.2495
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.2457
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3063,
+            "rerank_score": 0.1527
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.1428
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "service_outage.md#section-1:chunk-0",
+            "score": 0.264,
+            "rerank_score": 0.1427
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.128
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2215,
+            "rerank_score": 0.1124
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1938,
+            "rerank_score": 0.101
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.181,
+            "rerank_score": 0.0926
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.1459,
+            "rerank_score": 0.0795
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "chunk_id": "crisis_response.md#3",
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.3036,
+            "rerank_score": 0.2734,
+            "matched_query": "事件：品牌受到服务投诉，用户要求立即给出处理时间。\n声明草稿：危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。\n红队问题：['整改时间尚未确认']\n红队建议：['写明已开始的行动']",
+            "first_recall_query": "事件：品牌受到服务投诉，用户要求立即给出处理时间。\n声明草稿：危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。\n红队问题：['整改时间尚未确认']\n红队建议：['写明已开始的行动']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "chunk_id": "crisis_response.md#1",
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.2705,
+            "rerank_score": 0.2557,
+            "matched_query": "事件：品牌受到服务投诉，用户要求立即给出处理时间。\n声明草稿：危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。\n红队问题：['整改时间尚未确认']\n红队建议：['写明已开始的行动']",
+            "first_recall_query": "事件：品牌受到服务投诉，用户要求立即给出处理时间。\n声明草稿：危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。\n红队问题：['整改时间尚未确认']\n红队建议：['写明已开始的行动']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.2495,
+            "matched_query": "避免提前定责",
+            "first_recall_query": "避免提前定责"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "crisis_response.md#3",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "crisis_response.md#1",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e6dd4a6106a1f47d897210ab7411825435b72b3f2b06d5e502fd7af9839ea53f",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "危机回应应给出可执行的核查行动并避免过度承诺\n相关法律规定",
+        "rewritten_queries": [
+          "危机回应应给出可执行的核查行动并避免过度承诺\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "危机回应应给出可执行的核查行动并避免过度承诺\n相关法律规定",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.684,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3561
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3561
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.3377,
+            "rerank_score": 0.3253
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3063,
+            "rerank_score": 0.2631
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.2582
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.2318,
+            "rerank_score": 0.2445
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.181,
+            "rerank_score": 0.208
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.1459,
+            "rerank_score": 0.1861
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2341,
+            "rerank_score": 0.1334
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1311
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.1938,
+            "rerank_score": 0.1041
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3561,
+            "matched_query": "避免提前定责",
+            "first_recall_query": "避免提前定责"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3561,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "条件式责任表达"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "chunk_id": "crisis_response.md#3",
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.3377,
+            "rerank_score": 0.3253,
+            "matched_query": "危机回应应给出可执行的核查行动并避免过度承诺\n相关法律规定",
+            "first_recall_query": "危机回应应给出可执行的核查行动并避免过度承诺\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e6dd4a6106a1f47d897210ab7411825435b72b3f2b06d5e502fd7af9839ea53f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:dec5688b11671c9610f608cd6353f05fbeb2ad305b70492790bd5897737ba8fd",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "crisis_response.md#3",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [
+          "依法依规处理",
+          "条件式责任表达",
+          "绝对化承诺风险",
+          "避免提前定责"
+        ],
+        "shared_count": 4,
+        "broad_only": [
+          "事件：品牌受到服务投诉，用户要求立即给出处理时间。\n声明草稿：危机回应应给出可执行的核查行动并避免过度承诺，进展将持续同步。\n红队问题：['整改时间尚未确认']\n红队建议：['写明已开始的行动']"
+        ],
+        "targeted_only": [
+          "危机回应应给出可执行的核查行动并避免过度承诺\n相关法律规定"
+        ]
+      },
+      "paired_outcome": "BOTH",
+      "broad_rank": 1,
+      "targeted_rank": 3,
+      "p33_eligible_from_broad": true,
+      "rank_delta_broad_minus_targeted": -2,
+      "candidate_set_equal": false,
+      "target_in_broad_candidates": true,
+      "target_in_targeted_candidates": true,
+      "targeted_first_recall_kind": "original_targeted_query",
+      "broad_target_full_rerank": {
+        "rank": 1,
+        "evidence_ref": "crisis_response.md#section-3:chunk-0",
+        "score": 0.3036,
+        "rerank_score": 0.2734
+      },
+      "targeted_target_full_rerank": {
+        "rank": 3,
+        "evidence_ref": "crisis_response.md#section-3:chunk-0",
+        "score": 0.3377,
+        "rerank_score": 0.3253
+      }
+    },
+    {
+      "case_id": "negative_environment_fine",
+      "label": "negative",
+      "material_kind": null,
+      "claim": "非法排放工业废水的具体罚款额度应按环保法规确定",
+      "expected_evidence_refs": [],
+      "broad": {
+        "original_query": "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']",
+        "rewritten_queries": [
+          "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']"
+        ],
+        "rewritten_query_count": 1,
+        "pipeline_query_calls": [
+          "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']"
+        ],
+        "top_k": 3,
+        "latency_ms": 2.716,
+        "candidate_refs_before_rerank": [
+          "executive_misconduct.md#section-2:chunk-0",
+          "food_safety.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "score": 0.2774,
+            "rerank_score": 0.1412
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.2509,
+            "rerank_score": 0.1244
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2404,
+            "rerank_score": 0.1194
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "food_safety.md#section-1:chunk-0",
+            "chunk_id": "food_safety.md#17",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.2774,
+            "rerank_score": 0.1412,
+            "matched_query": "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']",
+            "first_recall_query": "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": "legal_risk_rules.md#21",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.2509,
+            "rerank_score": 0.1244,
+            "matched_query": "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']",
+            "first_recall_query": "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "chunk_id": "executive_misconduct.md#12",
+            "document_id": null,
+            "document_version": null,
+            "source": "executive_misconduct.md",
+            "score": 0.2404,
+            "rerank_score": 0.1194,
+            "matched_query": "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']",
+            "first_recall_query": "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#17",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#21",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "executive_misconduct.md#12",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "非法排放工业废水的具体罚款额度应按环保法规确定\n相关法律规定",
+        "rewritten_queries": [
+          "非法排放工业废水的具体罚款额度应按环保法规确定\n相关法律规定"
+        ],
+        "rewritten_query_count": 1,
+        "pipeline_query_calls": [
+          "非法排放工业废水的具体罚款额度应按环保法规确定\n相关法律规定"
+        ],
+        "top_k": 3,
+        "latency_ms": 2.43,
+        "candidate_refs_before_rerank": [
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0",
+          "product_quality.md#section-2:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.2452,
+            "rerank_score": 0.2236
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.1908,
+            "rerank_score": 0.2023
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "product_quality.md#section-2:chunk-0",
+            "score": 0.195,
+            "rerank_score": 0.0936
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": "legal_risk_rules.md#21",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.2452,
+            "rerank_score": 0.2236,
+            "matched_query": "非法排放工业废水的具体罚款额度应按环保法规确定\n相关法律规定",
+            "first_recall_query": "非法排放工业废水的具体罚款额度应按环保法规确定\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": "legal_risk_rules.md#23",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.1908,
+            "rerank_score": 0.2023,
+            "matched_query": "非法排放工业废水的具体罚款额度应按环保法规确定\n相关法律规定",
+            "first_recall_query": "非法排放工业废水的具体罚款额度应按环保法规确定\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#21",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#23",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [],
+        "shared_count": 0,
+        "broad_only": [
+          "事件：企业被指向河道排放工业废水。\n声明草稿：我们正在核查排污指控。非法排放工业废水的具体罚款额度应按环保法规确定。\n红队问题：['罚款金额缺乏依据']\n红队建议：['不得引用未核实的法条']"
+        ],
+        "targeted_only": [
+          "非法排放工业废水的具体罚款额度应按环保法规确定\n相关法律规定"
+        ]
+      },
+      "negative_observation": {
+        "broad_candidate_rule_relations": 0,
+        "targeted_candidate_rule_relations": 0,
+        "broad_top_rerank_score": 0.1412,
+        "targeted_top_rerank_score": 0.2236,
+        "broad_top_source": "food_safety.md",
+        "targeted_top_source": "legal_risk_rules.md"
+      }
+    },
+    {
+      "case_id": "negative_securities_disclosure",
+      "label": "negative",
+      "material_kind": null,
+      "claim": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断",
+      "expected_evidence_refs": [],
+      "broad": {
+        "original_query": "事件：某上市公司被质疑内幕交易。\n声明草稿：上市公司内幕交易的具体信息披露时限应按证券监管规定判断，公司尚未完成核实。\n红队问题：['不能编造披露期限']\n红队建议：['核查真实法律依据']",
+        "rewritten_queries": [
+          "事件：某上市公司被质疑内幕交易。\n声明草稿：上市公司内幕交易的具体信息披露时限应按证券监管规定判断，公司尚未完成核实。\n红队问题：['不能编造披露期限']\n红队建议：['核查真实法律依据']",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "事件：某上市公司被质疑内幕交易。\n声明草稿：上市公司内幕交易的具体信息披露时限应按证券监管规定判断，公司尚未完成核实。\n红队问题：['不能编造披露期限']\n红队建议：['核查真实法律依据']",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范"
+        ],
+        "top_k": 3,
+        "latency_ms": 13.652,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-0:chunk-0",
+          "crisis_response.md#section-1:chunk-0",
+          "data_privacy.md#section-4:chunk-0",
+          "executive_misconduct.md#section-3:chunk-0",
+          "executive_misconduct.md#section-4:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "product_quality.md#section-1:chunk-0",
+          "product_quality.md#section-4:chunk-0",
+          "service_outage.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.2442
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2356,
+            "rerank_score": 0.2131
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.196
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "service_outage.md#section-3:chunk-0",
+            "score": 0.3333,
+            "rerank_score": 0.1663
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.3333,
+            "rerank_score": 0.16
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "score": 0.2995,
+            "rerank_score": 0.1479
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "executive_misconduct.md#section-4:chunk-0",
+            "score": 0.2751,
+            "rerank_score": 0.1341
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "data_privacy.md#section-4:chunk-0",
+            "score": 0.2495,
+            "rerank_score": 0.126
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-3:chunk-0",
+            "score": 0.2434,
+            "rerank_score": 0.121
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "crisis_response.md#section-0:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.12
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "product_quality.md#section-1:chunk-0",
+            "score": 0.2353,
+            "rerank_score": 0.1192
+          },
+          {
+            "rank": 12,
+            "evidence_ref": "product_quality.md#section-4:chunk-0",
+            "score": 0.2,
+            "rerank_score": 0.096
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "crisis_response.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "crisis_response.md",
+            "score": 0.5,
+            "rerank_score": 0.2442,
+            "matched_query": "持续同步进展",
+            "first_recall_query": "公众担忧回应"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "chunk_id": "food_safety.md#19",
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.2356,
+            "rerank_score": 0.2131,
+            "matched_query": "消费者沟通",
+            "first_recall_query": "消费者沟通"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "food_safety.md",
+            "score": 0.2,
+            "rerank_score": 0.196,
+            "matched_query": "消费者沟通",
+            "first_recall_query": "消费者沟通"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:6d002c716e01be1885bc1cb8aa6f129c199485e106bec58e325021934a2e2b8f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "food_safety.md#19",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:722916ffde12027bab8f937f2513a88a011ca2ce70442da59ee2beec17dc0ea8",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定",
+        "rewritten_queries": [
+          "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定"
+        ],
+        "rewritten_query_count": 1,
+        "pipeline_query_calls": [
+          "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定"
+        ],
+        "top_k": 3,
+        "latency_ms": 2.468,
+        "candidate_refs_before_rerank": [
+          "data_privacy.md#section-4:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.2109,
+            "rerank_score": 0.2153
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.2024,
+            "rerank_score": 0.2025
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "data_privacy.md#section-4:chunk-0",
+            "score": 0.2142,
+            "rerank_score": 0.1072
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": "legal_risk_rules.md#23",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.2109,
+            "rerank_score": 0.2153,
+            "matched_query": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定",
+            "first_recall_query": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": "legal_risk_rules.md#21",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.2024,
+            "rerank_score": 0.2025,
+            "matched_query": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定",
+            "first_recall_query": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "data_privacy.md#section-4:chunk-0",
+            "chunk_id": "data_privacy.md#8",
+            "document_id": null,
+            "document_version": null,
+            "source": "data_privacy.md",
+            "score": 0.2142,
+            "rerank_score": 0.1072,
+            "matched_query": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定",
+            "first_recall_query": "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#23",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#21",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "data_privacy.md#8",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [],
+        "shared_count": 0,
+        "broad_only": [
+          "事件：某上市公司被质疑内幕交易。\n声明草稿：上市公司内幕交易的具体信息披露时限应按证券监管规定判断，公司尚未完成核实。\n红队问题：['不能编造披露期限']\n红队建议：['核查真实法律依据']",
+          "公众担忧回应",
+          "消费者沟通",
+          "持续同步进展",
+          "初次回应规范"
+        ],
+        "targeted_only": [
+          "上市公司内幕交易的具体信息披露时限应按证券监管规定判断\n相关法律规定"
+        ]
+      },
+      "negative_observation": {
+        "broad_candidate_rule_relations": 0,
+        "targeted_candidate_rule_relations": 0,
+        "broad_top_rerank_score": 0.2442,
+        "targeted_top_rerank_score": 0.2153,
+        "broad_top_source": "crisis_response.md",
+        "targeted_top_source": "legal_risk_rules.md"
+      }
+    },
+    {
+      "case_id": "negative_copyright_license",
+      "label": "negative",
+      "material_kind": null,
+      "claim": "音乐版权许可费的法定计算方式需要版权领域规则",
+      "expected_evidence_refs": [],
+      "broad": {
+        "original_query": "事件：平台被指未经许可播放音乐。\n声明草稿：音乐版权许可费的法定计算方式需要版权领域规则，当前不得预判责任。\n红队问题：['版权许可事实不明']\n红队建议：['不要自行给出收费公式']",
+        "rewritten_queries": [
+          "事件：平台被指未经许可播放音乐。\n声明草稿：音乐版权许可费的法定计算方式需要版权领域规则，当前不得预判责任。\n红队问题：['版权许可事实不明']\n红队建议：['不要自行给出收费公式']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "rewritten_query_count": 5,
+        "pipeline_query_calls": [
+          "事件：平台被指未经许可播放音乐。\n声明草稿：音乐版权许可费的法定计算方式需要版权领域规则，当前不得预判责任。\n红队问题：['版权许可事实不明']\n红队建议：['不要自行给出收费公式']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "top_k": 3,
+        "latency_ms": 11.567,
+        "candidate_refs_before_rerank": [
+          "crisis_response.md#section-3:chunk-0",
+          "executive_misconduct.md#section-2:chunk-0",
+          "executive_misconduct.md#section-5:chunk-0",
+          "food_safety.md#section-2:chunk-0",
+          "food_safety.md#section-3:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0",
+          "legal_risk_rules.md#section-2:chunk-0",
+          "legal_risk_rules.md#section-3:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3468
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.5,
+            "rerank_score": 0.3447
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "score": 0.3063,
+            "rerank_score": 0.2517
+          },
+          {
+            "rank": 4,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.2857,
+            "rerank_score": 0.2418
+          },
+          {
+            "rank": 5,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.2015,
+            "rerank_score": 0.2035
+          },
+          {
+            "rank": 6,
+            "evidence_ref": "legal_risk_rules.md#section-2:chunk-0",
+            "score": 0.181,
+            "rerank_score": 0.1916
+          },
+          {
+            "rank": 7,
+            "evidence_ref": "food_safety.md#section-2:chunk-0",
+            "score": 0.25,
+            "rerank_score": 0.1221
+          },
+          {
+            "rank": 8,
+            "evidence_ref": "executive_misconduct.md#section-2:chunk-0",
+            "score": 0.2215,
+            "rerank_score": 0.1084
+          },
+          {
+            "rank": 9,
+            "evidence_ref": "executive_misconduct.md#section-5:chunk-0",
+            "score": 0.2029,
+            "rerank_score": 0.0995
+          },
+          {
+            "rank": 10,
+            "evidence_ref": "food_safety.md#section-3:chunk-0",
+            "score": 0.2007,
+            "rerank_score": 0.0963
+          },
+          {
+            "rank": 11,
+            "evidence_ref": "crisis_response.md#section-3:chunk-0",
+            "score": 0.1727,
+            "rerank_score": 0.0871
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3468,
+            "matched_query": "避免提前定责",
+            "first_recall_query": "事件：平台被指未经许可播放音乐。\n声明草稿：音乐版权许可费的法定计算方式需要版权领域规则，当前不得预判责任。\n红队问题：['版权许可事实不明']\n红队建议：['不要自行给出收费公式']"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": null,
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.5,
+            "rerank_score": 0.3447,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "条件式责任表达"
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "legal_risk_rules.md#section-3:chunk-0",
+            "chunk_id": "legal_risk_rules.md#23",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.3063,
+            "rerank_score": 0.2517,
+            "matched_query": "条件式责任表达",
+            "first_recall_query": "条件式责任表达"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:e6dd4a6106a1f47d897210ab7411825435b72b3f2b06d5e502fd7af9839ea53f",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "content:dec5688b11671c9610f608cd6353f05fbeb2ad305b70492790bd5897737ba8fd",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#23",
+              "relation": "uncertain",
+              "reason": "semantic_relation_unclear"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "uncertain",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "STOP_UNRESOLVED",
+          "action_reason": "semantic_relation_unclear"
+        },
+        "fallback_used": false
+      },
+      "targeted": {
+        "original_query": "音乐版权许可费的法定计算方式需要版权领域规则\n相关法律规定",
+        "rewritten_queries": [
+          "音乐版权许可费的法定计算方式需要版权领域规则\n相关法律规定"
+        ],
+        "rewritten_query_count": 1,
+        "pipeline_query_calls": [
+          "音乐版权许可费的法定计算方式需要版权领域规则\n相关法律规定"
+        ],
+        "top_k": 3,
+        "latency_ms": 2.317,
+        "candidate_refs_before_rerank": [
+          "data_privacy.md#section-5:chunk-0",
+          "legal_risk_rules.md#section-0:chunk-0",
+          "legal_risk_rules.md#section-1:chunk-0"
+        ],
+        "full_rerank_diagnostic": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "score": 0.1956,
+            "rerank_score": 0.2169
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "score": 0.2017,
+            "rerank_score": 0.2094
+          },
+          {
+            "rank": 3,
+            "evidence_ref": "data_privacy.md#section-5:chunk-0",
+            "score": 0.1796,
+            "rerank_score": 0.0862
+          }
+        ],
+        "results": [
+          {
+            "rank": 1,
+            "evidence_ref": "legal_risk_rules.md#section-0:chunk-0",
+            "chunk_id": "legal_risk_rules.md#20",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.1956,
+            "rerank_score": 0.2169,
+            "matched_query": "音乐版权许可费的法定计算方式需要版权领域规则\n相关法律规定",
+            "first_recall_query": "音乐版权许可费的法定计算方式需要版权领域规则\n相关法律规定"
+          },
+          {
+            "rank": 2,
+            "evidence_ref": "legal_risk_rules.md#section-1:chunk-0",
+            "chunk_id": "legal_risk_rules.md#21",
+            "document_id": null,
+            "document_version": null,
+            "source": "legal_risk_rules.md",
+            "score": 0.2017,
+            "rerank_score": 0.2094,
+            "matched_query": "音乐版权许可费的法定计算方式需要版权领域规则\n相关法律规定",
+            "first_recall_query": "音乐版权许可费的法定计算方式需要版权领域规则\n相关法律规定"
+          }
+        ],
+        "relation": {
+          "legal_claim_relations": [
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#20",
+              "relation": "no_rule_match"
+            },
+            {
+              "claim_index": 0,
+              "evidence_ref": "legal_risk_rules.md#21",
+              "relation": "no_rule_match"
+            }
+          ],
+          "relation_status": "ok"
+        },
+        "legal_rule_status": "no_candidate",
+        "p32_recommendation": {
+          "claim_index": 0,
+          "recommended_action": "TARGETED_LEGAL_SEARCH",
+          "action_reason": "targeted_legal_search_may_improve_coverage"
+        },
+        "fallback_used": false
+      },
+      "rewrite_overlap": {
+        "shared": [],
+        "shared_count": 0,
+        "broad_only": [
+          "事件：平台被指未经许可播放音乐。\n声明草稿：音乐版权许可费的法定计算方式需要版权领域规则，当前不得预判责任。\n红队问题：['版权许可事实不明']\n红队建议：['不要自行给出收费公式']",
+          "避免提前定责",
+          "条件式责任表达",
+          "依法依规处理",
+          "绝对化承诺风险"
+        ],
+        "targeted_only": [
+          "音乐版权许可费的法定计算方式需要版权领域规则\n相关法律规定"
+        ]
+      },
+      "negative_observation": {
+        "broad_candidate_rule_relations": 0,
+        "targeted_candidate_rule_relations": 0,
+        "broad_top_rerank_score": 0.3468,
+        "targeted_top_rerank_score": 0.2169,
+        "broad_top_source": "legal_risk_rules.md",
+        "targeted_top_source": "legal_risk_rules.md"
+      }
+    }
+  ],
+  "limitations": [
+    "Local hash embedding is not BGE; no live traffic or LLM is evaluated.",
+    "KB contains response guidance as well as rule-like material; target Hit@K is not legal accuracy.",
+    "matched_query is the retained highest-scoring query variant, not necessarily first recall.",
+    "All-case paired outcomes include cases where P32 would not permit P33 execution.",
+    "Latency is descriptive for this local process only; no token cost is inferred."
+  ]
+}
