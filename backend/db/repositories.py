@@ -1,8 +1,13 @@
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Protocol
+from uuid import uuid4
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.core.state import AgentState, validate_state_status
@@ -14,6 +19,30 @@ from backend.db.models import (
     CrisisSession,
 )
 from backend.db.session import get_session_factory
+
+
+@dataclass(frozen=True)
+class ExecutionLease:
+    session_id: str
+    owner: str
+    fence: int
+    expires_at: datetime
+
+
+class StaleExecutionLease(RuntimeError):
+    """The worker no longer owns the checkpoint it is trying to write."""
+
+
+_CURRENT_LEASE: ContextVar[ExecutionLease | None] = ContextVar("runtime_execution_lease", default=None)
+
+
+@contextmanager
+def use_execution_lease(lease: ExecutionLease):
+    token = _CURRENT_LEASE.set(lease)
+    try:
+        yield
+    finally:
+        _CURRENT_LEASE.reset(token)
 
 
 class CheckpointRepository(Protocol):
@@ -38,12 +67,18 @@ class JSONCheckpointRepository:
         self.checkpoint_path = Path(checkpoint_path)
 
     def save_checkpoint(self, state: AgentState) -> dict:
+        if _CURRENT_LEASE.get() is not None:
+            raise NotImplementedError("A DB execution lease cannot write to a JSON checkpoint.")
         validate_state_status(state.status)
         data = self._read_checkpoint_data()
         state_data = state.to_dict()
         data[state.session_id] = state_data
         self._write_checkpoint_data(data)
         return state_data
+
+    def claim_execution(self, session_id: str, kind: str, *, lease_seconds: int = 3600,
+                        now: datetime | None = None) -> ExecutionLease | None:
+        raise NotImplementedError("Execution leases require the DB-backed checkpoint repository.")
 
     def load_checkpoint(self, session_id: str) -> AgentState | None:
         state_data = self._read_checkpoint_data().get(session_id)
@@ -94,6 +129,38 @@ class JSONCheckpointRepository:
 class SQLAlchemyCheckpointRepository:
     def __init__(self, session_factory: sessionmaker | None = None):
         self.session_factory = session_factory or get_session_factory()
+
+    def claim_execution(self, session_id: str, kind: str, *, lease_seconds: int = 3600,
+                        now: datetime | None = None) -> ExecutionLease | None:
+        if kind not in {"dynamic", "resume"} or lease_seconds <= 0:
+            raise ValueError("A valid execution kind and positive lease duration are required.")
+        owner = str(uuid4())
+        with self.session_factory() as db:
+            now = now or db.execute(select(func.now())).scalar_one()
+            if now.tzinfo is None:
+                now = now.replace(tzinfo=timezone.utc)
+            expiry = now + timedelta(seconds=lease_seconds)
+            statement = (
+                update(AgentCheckpoint)
+                .where(
+                    AgentCheckpoint.session_id == session_id,
+                    AgentCheckpoint.execution_kind == kind,
+                    AgentCheckpoint.status.in_(("QUEUED", "RUNNING")),
+                    or_(AgentCheckpoint.execution_owner.is_(None), AgentCheckpoint.lease_expires_at <= now),
+                )
+                .values(
+                    execution_owner=owner,
+                    lease_expires_at=expiry,
+                    execution_fence=AgentCheckpoint.execution_fence + 1,
+                )
+            )
+            if db.execute(statement.execution_options(synchronize_session=False)).rowcount != 1:
+                return None
+            fence = db.execute(
+                select(AgentCheckpoint.execution_fence).where(AgentCheckpoint.session_id == session_id)
+            ).scalar_one()
+            db.commit()
+        return ExecutionLease(session_id, owner, fence, expiry)
 
     def save_checkpoint(self, state: AgentState) -> dict:
         validate_state_status(state.status)
@@ -189,20 +256,43 @@ class SQLAlchemyCheckpointRepository:
 
     def _upsert_checkpoint(self, db: Session, state_data: dict) -> None:
         session_id = state_data["session_id"]
+        lease = _CURRENT_LEASE.get()
+        if lease is not None and lease.session_id != session_id:
+            raise StaleExecutionLease("Execution lease belongs to another session.")
         row = db.get(AgentCheckpoint, session_id)
+        values = {
+            "plan_id": state_data.get("plan_id", ""),
+            "event": state_data.get("event", ""),
+            "status": state_data.get("status", ""),
+            "results": state_data.get("results", {}),
+            "trace": state_data.get("trace", []),
+            "metadata_json": state_data.get("metadata", {}),
+            "approval": state_data.get("approval", {}),
+            "failed_agents": state_data.get("failed_agents", []),
+            "current_agent": state_data.get("current_agent"),
+            "state_payload": state_data,
+            "execution_kind": _execution_kind(state_data),
+        }
         if row is None:
+            if lease is not None:
+                raise StaleExecutionLease("Claimed checkpoint no longer exists.")
             row = AgentCheckpoint(session_id=session_id)
             db.add(row)
-        row.plan_id = state_data.get("plan_id", "")
-        row.event = state_data.get("event", "")
-        row.status = state_data.get("status", "")
-        row.results = state_data.get("results", {})
-        row.trace = state_data.get("trace", [])
-        row.metadata_json = state_data.get("metadata", {})
-        row.approval = state_data.get("approval", {})
-        row.failed_agents = state_data.get("failed_agents", [])
-        row.current_agent = state_data.get("current_agent")
-        row.state_payload = state_data
+            for key, value in values.items():
+                setattr(row, key, value)
+            return
+        condition = [AgentCheckpoint.session_id == session_id]
+        if lease is None:
+            condition.append(AgentCheckpoint.execution_owner.is_(None))
+        else:
+            condition.extend((AgentCheckpoint.execution_owner == lease.owner,
+                              AgentCheckpoint.execution_fence == lease.fence,
+                              AgentCheckpoint.lease_expires_at > func.now()))
+            if state_data.get("status") in {"WAITING_HUMAN", "COMPLETED", "FAILED", "REJECTED"}:
+                values.update(execution_owner=None, lease_expires_at=None)
+        statement = update(AgentCheckpoint).where(*condition).values(**values)
+        if db.execute(statement.execution_options(synchronize_session=False)).rowcount != 1:
+            raise StaleExecutionLease("Checkpoint write rejected: execution ownership changed.")
 
     def _replace_traces(self, db: Session, session_id: str, trace: list) -> None:
         db.execute(delete(AgentTrace).where(AgentTrace.session_id == session_id))
@@ -285,3 +375,14 @@ def _extract_created_time(state_data: dict) -> str:
         if isinstance(item, dict) and item.get("start_time"):
             return str(item["start_time"])
     return ""
+
+
+def _execution_kind(state_data: dict) -> str:
+    metadata = state_data.get("metadata") or {}
+    fact = metadata.get("human_fact") or {}
+    approval = state_data.get("approval") or {}
+    if isinstance(fact, dict) and isinstance(fact.get("response"), dict):
+        return "resume"
+    if approval.get("decision") == "approved":
+        return "resume"
+    return "dynamic"
