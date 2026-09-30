@@ -17,6 +17,7 @@ def _request(method: str, url: str, json: dict | None = None):
 
 
 def _patch_checkpoint(monkeypatch):
+    monkeypatch.setenv("CHECKPOINT_STORAGE", "json")
     store = {}
 
     def save(state):

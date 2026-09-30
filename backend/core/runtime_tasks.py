@@ -11,6 +11,8 @@ from backend.core.policy import evaluate_human_policy
 from backend.core.resume import resume_agent_loop
 from backend.core.runtime_evaluator import evaluate_runtime_state
 from backend.core.state import COMPLETED, FAILED, QUEUED, RUNNING, WAITING_HUMAN, AgentState
+from backend.db.repositories import SQLAlchemyCheckpointRepository, StaleExecutionLease, use_execution_lease
+from backend.db.session import is_database_checkpoint_enabled
 
 
 _EXECUTOR = ThreadPoolExecutor(max_workers=int(os.getenv("RUNTIME_WORKERS", "2")))
@@ -137,6 +139,16 @@ def get_task_status(session_id: str) -> str | None:
 
 
 def run_dynamic_session_task(session_id: str) -> dict:
+    lease = _claim_db_execution(session_id, "dynamic")
+    if is_database_checkpoint_enabled():
+        if lease is None:
+            return {"session_id": session_id, "status": "skipped", "reason": "execution_not_claimed"}
+        with use_execution_lease(lease):
+            return _run_claimed_dynamic_session(session_id)
+    return _run_claimed_dynamic_session(session_id)
+
+
+def _run_claimed_dynamic_session(session_id: str) -> dict:
     state = load_checkpoint(session_id)
     if state is None:
         return {
@@ -180,9 +192,14 @@ def run_dynamic_session_task(session_id: str) -> dict:
             "evaluation": evaluation,
             "policy": policy,
         }
+    except StaleExecutionLease:
+        return {"session_id": session_id, "status": "stale", "reason": "execution_lease_lost"}
     except Exception as exc:  # pragma: no cover - exercised through integration tests.
         _mark_runtime_failed(state, exc)
-        save_checkpoint(state)
+        try:
+            save_checkpoint(state)
+        except StaleExecutionLease:
+            return {"session_id": session_id, "status": "stale", "reason": "execution_lease_lost"}
         return {
             "session_id": state.session_id,
             "status": "failed",
@@ -192,6 +209,16 @@ def run_dynamic_session_task(session_id: str) -> dict:
 
 
 def run_resume_session_task(session_id: str) -> dict:
+    lease = _claim_db_execution(session_id, "resume")
+    if is_database_checkpoint_enabled():
+        if lease is None:
+            return {"session_id": session_id, "status": "skipped", "reason": "execution_not_claimed"}
+        with use_execution_lease(lease):
+            return _run_claimed_resume_session(session_id)
+    return _run_claimed_resume_session(session_id)
+
+
+def _run_claimed_resume_session(session_id: str) -> dict:
     try:
         state = load_checkpoint(session_id)
         fact = (state.metadata.get(FACT_KEY) if state is not None else None)
@@ -200,11 +227,16 @@ def run_resume_session_task(session_id: str) -> dict:
 
             return submit_human_fact_response(session_id, fact["response"])
         return resume_agent_loop(session_id)
+    except StaleExecutionLease:
+        return {"session_id": session_id, "status": "stale", "reason": "execution_lease_lost"}
     except Exception as exc:  # pragma: no cover - defensive worker guard.
         state = load_checkpoint(session_id)
         if state is not None:
             _mark_runtime_failed(state, exc)
-            save_checkpoint(state)
+            try:
+                save_checkpoint(state)
+            except StaleExecutionLease:
+                return {"session_id": session_id, "status": "stale", "reason": "execution_lease_lost"}
         return {
             "session_id": session_id,
             "status": "failed",
@@ -281,6 +313,13 @@ def _mark_runtime_failed(state: AgentState, exc: Exception) -> None:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _claim_db_execution(session_id: str, kind: str):
+    if not is_database_checkpoint_enabled():
+        return None
+    seconds = max(1, int(os.getenv("RUNTIME_EXECUTION_LEASE_SECONDS", "3600")))
+    return SQLAlchemyCheckpointRepository().claim_execution(session_id, kind, lease_seconds=seconds)
 
 
 def _enqueue_rq_task(func_path: str, session_id: str, job_prefix: str):

@@ -27,6 +27,7 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setenv("AUTH_ENABLED", "false")
     monkeypatch.setenv("AGENT_MODE", "mock")
     monkeypatch.setenv("RUNTIME_MODE", "sync")
+    monkeypatch.setenv("CHECKPOINT_STORAGE", "json")
     monkeypatch.setattr(checkpoint, "CHECKPOINT_PATH", tmp_path / "checkpoints.json")
     calls = {name: 0 for name in ("sentiment", "writer", "redteam", "legal", "writer_v2", "decision")}
     revision = {"statement": "公司已启动专项核查，目前相关事实仍在进一步确认。"}
