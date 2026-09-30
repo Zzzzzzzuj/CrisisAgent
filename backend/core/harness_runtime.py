@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from backend.harness.spec import harness_trace_reference
+from backend.harness.prompt_policy import get_writer_v2_policy
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,7 @@ class HarnessRuntimeContext:
         retrieval = self.snapshot.get("retrieval_policy", {})
         review = self.snapshot.get("review_policy", {})
         tools = self.snapshot.get("skills_tools", {})
+        writer_policy = get_writer_v2_policy(self.snapshot)
         return {
             "harness": deepcopy(self.reference),
             "harness_policy": {
@@ -35,6 +37,10 @@ class HarnessRuntimeContext:
                 },
                 "review_triggers": deepcopy(review.get("triggers", {})),
                 "execution_budget": deepcopy(tools.get("execution_budget", {})),
+                "writer_v2_prompt_policy": {
+                    "policy_id": writer_policy["policy_id"],
+                    "require_case_fact_for_concrete_commitment": writer_policy["require_case_fact_for_concrete_commitment"],
+                },
             },
         }
 

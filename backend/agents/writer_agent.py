@@ -5,6 +5,7 @@ from backend.llm.client import record_llm_fallback
 from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
 from backend.memory.retriever import retrieve_memories
+from backend.harness.prompt_policy import writer_v2_policy_overlay
 
 
 logger = get_logger(__name__)
@@ -411,6 +412,8 @@ def _build_writer_v2_prompt(payload: dict) -> str:
 - 优先执行 legal_review.revision_advice 和 legal_review.integrated_revision_tasks。
 - 不使用“一定、绝不、保证”等绝对化承诺。
 - 输出中文。
+
+{writer_v2_policy_overlay(payload.get("harness_spec"))}
 
 只输出 JSON，不要输出 markdown，不要输出额外解释。JSON schema：
 {{

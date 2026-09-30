@@ -94,6 +94,9 @@ def validate_harness_spec(spec: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("HarnessSpec dependencies must cover the registered Agents.")
     if metadata.get("status") not in {"draft", "active", "disabled", "archived", "DRAFT", "EVALUATED", "APPROVED", "REJECTED", "ACTIVE", "ROLLED_BACK"}:
         raise ValueError("Unsupported HarnessSpec status.")
+    from backend.harness.prompt_policy import validate_writer_v2_policy
+
+    validate_writer_v2_policy(spec)
     return deepcopy(spec)
 
 

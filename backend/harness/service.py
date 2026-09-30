@@ -7,6 +7,7 @@ from typing import Any
 from backend.harness.spec import build_default_harness_spec, new_harness_id, snapshot_with_metadata, validate_harness_spec
 from backend.harness.store import get_harness_repository
 from backend.harness.policy_guardrails import analyze_policy_diff, validate_policy_diff
+from backend.harness.prompt_policy import POLICY_PATH, ensure_writer_v2_policy, validate_writer_v2_policy
 
 
 def list_harness_versions() -> list[dict[str, Any]]:
@@ -109,6 +110,7 @@ ALLOWED_CANDIDATE_FIELDS = {
     "review_policy.triggers.evidence_conflict",
     "review_policy.triggers.tool_timeout",
     "review_policy.triggers.review_scope_mismatch",
+    POLICY_PATH,
 }
 
 
@@ -127,6 +129,8 @@ def update_candidate_harness(harness_id: str, version: str, changes: dict[str, A
             if str(metadata.get("status", "")).upper() not in {"DRAFT", "REJECTED"}:
                 raise ValueError("Only DRAFT or REJECTED candidates can be edited.")
             updated = deepcopy(spec)
+            if POLICY_PATH in changes:
+                ensure_writer_v2_policy(updated)
             for path, value in changes.items():
                 _set_path(updated, path, value)
             validate_candidate_mutations(updated)
@@ -144,6 +148,7 @@ def update_candidate_harness(harness_id: str, version: str, changes: dict[str, A
 
 
 def validate_candidate_mutations(spec: dict[str, Any]) -> None:
+    validate_writer_v2_policy(spec)
     retrieval = spec.get("retrieval_policy", {})
     for key in ("min_score", "min_rerank_score", "max_context_pollution_rate"):
         if key in retrieval and (not isinstance(retrieval[key], (int, float)) or isinstance(retrieval[key], bool) or retrieval[key] < 0):

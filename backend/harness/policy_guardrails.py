@@ -28,6 +28,7 @@ def analyze_policy_diff(baseline: dict[str, Any], candidate: dict[str, Any]) -> 
         "skills_tools.timeout_ms", "skills_tools.max_retries",
         "skills_tools.execution_budget.max_steps", "skills_tools.execution_budget.max_retries",
         "skills_tools.execution_budget.max_runtime_ms", "skills_tools.execution_budget.max_same_call",
+        "prompts.policies.writer_v2.unsupported_commitment_policy.require_case_fact_for_concrete_commitment",
     ]
     changes = []
     for path in paths:
@@ -83,6 +84,8 @@ def evaluate_policy_safety_gate(comparison: dict[str, Any]) -> dict[str, Any]:
 
 
 def _classify(path: str, old: Any, new: Any) -> tuple[str, str]:
+    if path.endswith("require_case_fact_for_concrete_commitment"):
+        return ("safe", "Requires independent case-fact support for concrete commitments.") if new is True else ("safety_weakening", "Allows concrete commitments without independently verified case facts.")
     if path.endswith("evidence_gate_human_review"):
         return ("safety_weakening", "Evidence Gate no longer sends low-confidence evidence to review.") if new is False else ("safe", "Evidence Gate review remains enabled or is tightened.")
     if path.startswith("review_policy.triggers."):
