@@ -84,10 +84,9 @@ class LLMClient:
         }
 
         logger.info(
-            "Starting LLM chat call provider=%s model=%s url=%s",
+            "Starting LLM chat call provider=%s model=%s",
             self.config.provider,
             self.config.model,
-            url,
         )
 
         last_error: RuntimeError | None = None
@@ -225,11 +224,6 @@ def _build_chat_completions_url(base_url: str) -> str:
     return f"{normalized}/chat/completions"
 
 
-def _response_body_preview(response: httpx.Response, limit: int = 1000) -> str:
-    text = response.text or ""
-    return text[:limit]
-
-
 def _mock_chat_response(messages) -> str:
     user_content = ""
     for message in reversed(messages or []):
@@ -311,20 +305,15 @@ def _build_runtime_error(exc: Exception, model: str) -> RuntimeError:
         logger.error("LLM chat call timed out")
         return RuntimeError("LLM chat request timed out.")
     if isinstance(exc, httpx.HTTPStatusError):
-        response_body = _response_body_preview(exc.response)
         logger.error(
-            "LLM chat call failed status=%s url=%s model=%s response_body=%s",
+            "LLM chat call failed status=%s model=%s",
             exc.response.status_code,
-            str(exc.request.url),
             model,
-            response_body,
         )
         return RuntimeError(
             "LLM chat request failed "
             f"status={exc.response.status_code} "
-            f"url={exc.request.url} "
-            f"model={model} "
-            f"response_body={response_body}"
+            f"model={model}"
         )
     logger.error("LLM chat call failed with network/client error: %s", exc.__class__.__name__)
     return RuntimeError(f"LLM chat request failed: {exc.__class__.__name__}.")

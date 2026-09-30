@@ -16,10 +16,9 @@ def run(payload: dict) -> dict:
         config = get_config()
     except Exception as exc:
         logger.warning(
-            "%s fallback to mock mode due to config failure: %s | %s",
+            "%s fallback to mock mode due to config failure: %s",
             AGENT_NAME,
             exc.__class__.__name__,
-            str(exc),
         )
         record_llm_fallback(AGENT_NAME, exc)
         return _run_mock(payload)
@@ -29,10 +28,9 @@ def run(payload: dict) -> dict:
             return _run_llm(payload)
         except Exception as exc:
             logger.warning(
-                "%s fallback to mock mode due to llm failure: %s | %s",
+                "%s fallback to mock mode due to llm failure: %s",
                 AGENT_NAME,
                 exc.__class__.__name__,
-                str(exc),
             )
             record_llm_fallback(AGENT_NAME, exc)
 
@@ -77,7 +75,7 @@ def _run_llm(payload: dict) -> dict:
     validate_required_fields(parsed, REQUIRED_FIELDS)
 
     validated = _validate_output(parsed)
-    logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
+    logger.info("%s parsed llm result fields=%s", AGENT_NAME, len(validated))
     normalized_output = _normalize_output(
         {
             "final_statement": validated["final_statement"],
@@ -91,7 +89,7 @@ def _run_llm(payload: dict) -> dict:
             "decision_summary": validated["reason"],
         }
     )
-    logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
+    logger.info("%s normalized output final_statement_chars=%s", AGENT_NAME, len(normalized_output["final_statement"]))
     return normalized_output
 
 

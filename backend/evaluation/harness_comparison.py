@@ -36,7 +36,16 @@ def compare_harnesses(baseline: dict[str, Any], candidate: dict[str, Any], cases
     return result
 
 
-def compare_harness_ids(baseline_id: str, baseline_version: str, candidate_id: str, candidate_version: str, mode: str = "golden", replay_case_ids: list[str] | None = None) -> dict[str, Any]:
+def compare_harness_ids(
+    baseline_id: str,
+    baseline_version: str,
+    candidate_id: str,
+    candidate_version: str,
+    mode: str = "golden",
+    replay_case_ids: list[str] | None = None,
+    source_session_id: str | None = None,
+    confirm_real_provider: bool = False,
+) -> dict[str, Any]:
     baseline = get_effective_harness_spec(baseline_id, baseline_version)
     candidate = get_effective_harness_spec(candidate_id, candidate_version)
     if mode == "main_workflow_replay":
@@ -46,6 +55,19 @@ def compare_harness_ids(baseline_id: str, baseline_version: str, candidate_id: s
             wanted = {str(item) for item in replay_case_ids}
             cases = [case for case in cases if str(case.get("case_id", "")) in wanted]
         return compare_harness_replay(baseline, candidate, cases)
+    if mode == "writer_v2_trigger_replay":
+        if not source_session_id:
+            raise ValueError("writer_v2_trigger_replay requires source_session_id.")
+        from backend.evaluation.writer_v2_trigger_replay import compare_writer_v2_trigger
+
+        result = compare_writer_v2_trigger(
+            source_session_id,
+            baseline,
+            candidate,
+            confirm_real_provider=confirm_real_provider,
+        )
+        result["policy_diff"] = analyze_policy_diff(baseline, candidate)
+        return result
     if mode != "golden":
         raise ValueError("mode must be 'golden' or 'main_workflow_replay'.")
     return compare_harnesses(
@@ -54,6 +76,25 @@ def compare_harness_ids(baseline_id: str, baseline_version: str, candidate_id: s
 
 
 def evaluate_comparison_gate(comparison: dict[str, Any]) -> dict[str, Any]:
+    if comparison.get("mode") == "writer_v2_trigger_replay":
+        gates = {
+            "trigger_replay_passed": comparison.get("trigger_replay", {}).get("status") == "PASS",
+            "frozen_regression_passed": comparison.get("frozen_regression", {}).get("status") == "PASS",
+            "safety_regression_passed": comparison.get("safety_regression", {}).get("status") == "PASS",
+            "engineering_regression_passed": comparison.get("engineering_regression", {}).get("status") == "PASS",
+        }
+        return {
+            "passed": all(gates.values()),
+            "checks": gates,
+            "failure_reasons": [key for key, passed in gates.items() if not passed],
+            "gate_statuses": {
+                "trigger_replay": comparison.get("trigger_replay", {}).get("status", "UNKNOWN"),
+                "frozen_regression": comparison.get("frozen_regression", {}).get("status", "UNKNOWN"),
+                "safety_regression": comparison.get("safety_regression", {}).get("status", "UNKNOWN"),
+                "engineering_regression": comparison.get("engineering_regression", {}).get("status", "UNKNOWN"),
+            },
+            "automatic_enable": False,
+        }
     baseline = comparison.get("baseline", {})
     candidate = comparison.get("candidate", {})
     bm = baseline.get("metrics", {})

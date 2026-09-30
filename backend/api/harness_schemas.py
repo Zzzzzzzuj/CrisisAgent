@@ -42,6 +42,8 @@ class HarnessEvaluateRequest(BaseModel):
     baseline_version: str = Field(..., min_length=1)
     mode: str = "golden"
     replay_case_ids: list[str] | None = None
+    source_session_id: str | None = None
+    confirm_real_provider: bool = False
     mode: str = "golden"
     model_config = ConfigDict(extra="forbid")
 

@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from backend.core.state import AgentState
 
 
@@ -62,6 +64,8 @@ def _build_writer_v2_input(state: AgentState) -> dict:
         "legal_review": state.get_result("legal") or {},
     }
     fact = state.metadata.get("human_fact") or {}
+    if isinstance(state.metadata.get("harness_spec"), dict):
+        payload["harness_spec"] = deepcopy(state.metadata["harness_spec"])
     response = fact.get("response") or {}
     if response.get("response_type") == "FACT_UNAVAILABLE":
         payload["human_fact_revision"] = {

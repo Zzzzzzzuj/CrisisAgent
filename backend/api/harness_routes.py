@@ -95,7 +95,16 @@ def patch_candidate(harness_id: str, version: str, payload: HarnessCandidatePatc
 def evaluate_candidate(harness_id: str, version: str, payload: HarnessEvaluateRequest, user: dict = Depends(get_workspace_user)) -> dict:
     authorize(user, {"admin", "operator"}, "harness.evaluate", "harness", harness_id)
     try:
-        comparison = compare_harness_ids(payload.baseline_harness_id, payload.baseline_version, harness_id, version, payload.mode, payload.replay_case_ids)
+        comparison = compare_harness_ids(
+            payload.baseline_harness_id,
+            payload.baseline_version,
+            harness_id,
+            version,
+            payload.mode,
+            payload.replay_case_ids,
+            payload.source_session_id,
+            payload.confirm_real_provider,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     comparison["gate_result"] = evaluate_comparison_gate(comparison)
