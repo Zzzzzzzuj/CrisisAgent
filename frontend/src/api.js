@@ -29,8 +29,12 @@ export function runSafeTool(payload) {
   return api.post("/api/tools/run", payload).then((response) => response.data);
 }
 
-export function runDynamicTask(event) {
-  return api.post("/api/dynamic/run", { event }).then((response) => response.data);
+export function runDynamicTask(event, clientRequestId) {
+  return api.post("/api/dynamic/run", {
+    event,
+    execution_mode: "async",
+    client_request_id: clientRequestId,
+  }).then((response) => response.data);
 }
 
 export function listDynamicSessions() {
@@ -55,6 +59,10 @@ export function approveDynamicSession(sessionId, payload) {
 
 export function rejectDynamicSession(sessionId, payload) {
   return api.post(`/api/dynamic/${sessionId}/reject`, payload).then((response) => response.data);
+}
+
+export function respondDynamicFact(sessionId, payload) {
+  return api.post(`/api/dynamic/${sessionId}/fact-response`, payload).then((response) => response.data);
 }
 
 export function listSources() {

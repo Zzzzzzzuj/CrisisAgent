@@ -18,6 +18,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  error: {
+    type: String,
+    default: "",
+  },
 });
 
 const emit = defineEmits(["approve", "reject"]);
@@ -49,20 +53,20 @@ function submit(decision) {
 </script>
 
 <template>
-  <article class="page-card review-card compact-review-card" :class="{ pending: isWaitingHuman }">
+  <article class="action-panel review-action-panel" :class="{ pending: isWaitingHuman }">
     <div class="page-header compact-page-header">
       <div>
-        <p class="eyebrow">Human Review</p>
-        <h3>企业审核流程</h3>
+        <p class="eyebrow">需要你处理</p>
+        <h3>{{ isWaitingHuman ? "请审核 AI 响应结果" : "人工审核记录" }}</h3>
       </div>
       <span class="status-pill">{{ reviewStatus }}</span>
     </div>
 
     <div class="review-note compact-review-note">
-      <p><strong>审核原因：</strong>{{ approval.reason || "当前案例无需人工审核或已完成审核。" }}</p>
+      <p><strong>处理原因：</strong>{{ approval.reason || "当前案例无需人工审核或已完成审核。" }}</p>
       <p v-if="approval.reviewer"><strong>审核人：</strong>{{ approval.reviewer }}</p>
       <p v-if="approval.comment"><strong>审核意见：</strong>{{ approval.comment }}</p>
-      <p v-if="approval.decision"><strong>审核结果：</strong>{{ approval.decision }}</p>
+      <p v-if="approval.decision"><strong>审核结果：</strong>{{ approval.decision === "approved" ? "已批准" : approval.decision === "rejected" ? "已拒绝" : approval.decision }}</p>
     </div>
 
     <details class="review-statement compact-review-statement">
@@ -70,11 +74,15 @@ function submit(decision) {
       <p>{{ finalStatement || "暂无可审核声明。" }}</p>
     </details>
 
-    <div v-if="isWaitingHuman" class="review-form product-review-form compact-review-form">
+    <div v-if="isWaitingHuman" class="review-form compact-review-form">
       <input v-model="reviewer" placeholder="审核人" />
       <textarea v-model="comment" rows="2" placeholder="请输入审核意见，例如：同意发布，建议同步客服 FAQ。" />
-      <button class="primary-button" :disabled="loading" @click="submit('approve')">通过发布</button>
-      <button class="danger-button" :disabled="loading" @click="submit('reject')">驳回声明</button>
+      <p v-if="error" class="action-error" role="alert">{{ error }}</p>
+      <div class="action-panel-footer review-actions">
+        <button class="quiet-button" :disabled="loading" @click="submit('reject')">{{ loading ? "正在提交..." : "拒绝" }}</button>
+        <button class="primary-button" :disabled="loading" @click="submit('approve')">{{ loading ? "正在提交..." : "批准结果" }}</button>
+      </div>
     </div>
+    <p v-else-if="error" class="action-error" role="alert">{{ error }}</p>
   </article>
 </template>

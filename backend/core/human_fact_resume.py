@@ -50,6 +50,33 @@ def submit_human_fact_response(session_id: str, response: dict) -> dict:
         return _continue_saved_response(state)
 
 
+def record_human_fact_response_for_async(session_id: str, response: dict) -> dict:
+    """Persist a human response before scheduling the continuation worker."""
+    with _RESPONSE_LOCK:
+        state = load_checkpoint(session_id)
+        if state is None:
+            raise LookupError("Dynamic session not found.")
+        fact = state.metadata.get(FACT_KEY)
+        if state.metadata.get("human_wait_type") != FACT_INPUT or not isinstance(fact, dict):
+            raise ValueError("Session is not waiting for a human fact response.")
+
+        normalized = _normalize_response(response)
+        if fact.get("response") is None:
+            record_response(state, normalized)
+            save_checkpoint(state)
+        elif not _same_response(fact.get("response"), normalized):
+            raise ValueError("A different response was already recorded for this request.")
+        elif fact.get("phase") not in {PHASE_RESPONSE_RECORDED, PHASE_CONTINUING}:
+            raise ValueError("Human fact continuation is no longer resumable.")
+
+        return {
+            "session_id": session_id,
+            "status": "queued",
+            "state_status": state.status,
+            "response_recorded": True,
+        }
+
+
 def _continue_saved_response(state) -> dict:
     fact = state.metadata[FACT_KEY]
     request = fact["request"]

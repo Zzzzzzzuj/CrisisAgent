@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import { runDynamicTask } from "../api";
@@ -8,15 +8,57 @@ const router = useRouter();
 const event = ref("");
 const loading = ref(false);
 const error = ref("");
+const REQUEST_STORAGE_KEY = "crisisagent.pending-create-request";
+let memoryRequest = null;
+
+async function fingerprint(value) {
+  const bytes = new TextEncoder().encode(value.trim());
+  if (globalThis.crypto?.subtle) {
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(digest)].map((part) => part.toString(16).padStart(2, "0")).join("");
+  }
+  return Array.from(bytes).reduce((hash, byte) => ((hash * 31 + byte) >>> 0), 2166136261).toString(16);
+}
+
+async function getClientRequestId(value) {
+  const contentFingerprint = await fingerprint(value);
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(REQUEST_STORAGE_KEY) || "null");
+    if (saved?.fingerprint === contentFingerprint && saved?.id) return saved.id;
+  } catch {
+    if (memoryRequest?.fingerprint === contentFingerprint) return memoryRequest.id;
+  }
+  const id = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  memoryRequest = { id, fingerprint: contentFingerprint };
+  try {
+    sessionStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify(memoryRequest));
+  } catch {
+    // Keep retry protection for this page lifetime if browser storage is unavailable.
+  }
+  return id;
+}
+
+watch(event, () => {
+  error.value = "";
+});
 
 async function submitCase() {
   error.value = "";
   loading.value = true;
   try {
-    const result = await runDynamicTask(event.value);
+    const clientRequestId = await getClientRequestId(event.value);
+    const result = await runDynamicTask(event.value, clientRequestId);
+    try {
+      sessionStorage.removeItem(REQUEST_STORAGE_KEY);
+    } catch {
+      // The successful response already provides the durable session ID.
+    }
+    memoryRequest = null;
     router.push(`/cases/${result.session_id}`);
   } catch (err) {
-    error.value = err.response?.data?.detail || err.message || "创建危机案例失败";
+    error.value = err.code === "ECONNABORTED"
+      ? "暂时没有收到创建确认。任务可能仍在受理中；再次点击会复用本次请求标识，不会重复启动同一任务。"
+      : err.response?.data?.detail || err.message || "创建请求未成功，请稍后重试。";
   } finally {
     loading.value = false;
   }
