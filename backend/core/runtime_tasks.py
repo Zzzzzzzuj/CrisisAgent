@@ -1,8 +1,9 @@
 import os
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timezone
+from threading import Lock
 
-from backend.core.checkpoint import load_checkpoint, save_checkpoint
+from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import execute_dynamic_state, initialize_dynamic_state
 from backend.core.human import request_review
 from backend.core.human_fact_runtime import FACT_KEY, FINAL_REVIEW
@@ -15,6 +16,7 @@ from backend.core.state import COMPLETED, FAILED, QUEUED, RUNNING, WAITING_HUMAN
 _EXECUTOR = ThreadPoolExecutor(max_workers=int(os.getenv("RUNTIME_WORKERS", "2")))
 _TASKS: dict[str, Future] = {}
 _RQ_JOBS: dict[str, object] = {}
+_CREATE_IDEMPOTENCY_LOCK = Lock()
 
 
 def get_runtime_mode() -> str:
@@ -60,6 +62,28 @@ def create_queued_dynamic_session(
             "username": created_by.get("username", ""),
             "role": created_by.get("role", ""),
         }
+    save_checkpoint(state)
+    return state
+
+
+def find_idempotent_dynamic_session(request_id: str, payload_hash: str, scope: str) -> AgentState | None:
+    for item in list_checkpoints():
+        state = load_checkpoint(str(item.get("session_id", "")))
+        if state is None or state.metadata.get("create_request_id") != request_id:
+            continue
+        if state.metadata.get("create_request_scope") != scope:
+            continue
+        if state.metadata.get("create_request_payload_hash") != payload_hash:
+            raise ValueError("This creation request ID was already used with different event content.")
+        return state
+    return None
+
+
+def mark_dynamic_session_failed(session_id: str, exc: Exception) -> AgentState | None:
+    state = load_checkpoint(session_id)
+    if state is None:
+        return None
+    _mark_runtime_failed(state, exc)
     save_checkpoint(state)
     return state
 
@@ -163,12 +187,18 @@ def run_dynamic_session_task(session_id: str) -> dict:
             "session_id": state.session_id,
             "status": "failed",
             "state_status": state.status,
-            "error": str(exc),
+            "error": "后台处理失败，请稍后重试或联系管理员。",
         }
 
 
 def run_resume_session_task(session_id: str) -> dict:
     try:
+        state = load_checkpoint(session_id)
+        fact = (state.metadata.get(FACT_KEY) if state is not None else None)
+        if isinstance(fact, dict) and isinstance(fact.get("response"), dict):
+            from backend.core.human_fact_resume import submit_human_fact_response
+
+            return submit_human_fact_response(session_id, fact["response"])
         return resume_agent_loop(session_id)
     except Exception as exc:  # pragma: no cover - defensive worker guard.
         state = load_checkpoint(session_id)
@@ -178,7 +208,7 @@ def run_resume_session_task(session_id: str) -> dict:
         return {
             "session_id": session_id,
             "status": "failed",
-            "error": str(exc),
+            "error": "后台处理失败，请稍后重试或联系管理员。",
         }
 
 
@@ -240,10 +270,13 @@ def _mark_runtime_failed(state: AgentState, exc: Exception) -> None:
             "end_time": timestamp,
             "status": "failed",
             "output": {},
-            "error": str(exc),
+            "error": "后台处理失败，请稍后重试或联系管理员。",
+            "error_type": exc.__class__.__name__,
         }
     )
-    state.mark_failed("runtime_worker", str(exc))
+    summary = "后台处理失败，请稍后重试或联系管理员。"
+    state.metadata["runtime_failure"] = {"summary": summary, "error_type": exc.__class__.__name__}
+    state.mark_failed("runtime_worker", summary)
 
 
 def _now_iso() -> str:

@@ -1,4 +1,5 @@
 import os
+from hashlib import sha256
 from datetime import datetime
 from typing import Any
 
@@ -42,8 +43,11 @@ from backend.core.resume import resume_agent_loop
 from backend.core.human_fact_resume import submit_human_fact_response
 from backend.core.human_fact_runtime import FACT_INPUT, FACT_KEY, FINAL_REVIEW
 from backend.core.runtime_tasks import (
+    _CREATE_IDEMPOTENCY_LOCK,
     create_queued_dynamic_session,
+    find_idempotent_dynamic_session,
     is_async_runtime_enabled,
+    mark_dynamic_session_failed,
     submit_dynamic_session,
     submit_resume_session,
 )
@@ -174,28 +178,45 @@ def run_dynamic(request: dict, current_user: dict | None = Depends(get_current_u
     if not event:
         raise HTTPException(status_code=422, detail="Field 'event' is required.")
 
-    if is_async_runtime_enabled():
-        state = create_queued_dynamic_session(
-            event,
-            created_by=current_user,
-            metadata={"harness_id": request.get("harness_id"), "harness_version": request.get("harness_version")},
-        )
-        submit_dynamic_session(state.session_id)
-        reasoning = state.metadata.get("reasoning_mode", {})
-        return {
-            "session_id": state.session_id,
-            "plan_id": state.plan_id,
-            "event": state.event,
-            "status": "queued",
-            "state_status": state.status,
-            "approval": dict(state.approval),
-            "execution_trace": [],
-            "results": {},
-            "failed_agents": [],
-            "selected_reasoning_mode": reasoning.get("selected_reasoning_mode"),
-            "reasoning_mode_reason": reasoning.get("reasoning_mode_reason", []),
-            "recommended_execution_policy": reasoning.get("recommended_execution_policy", {}),
-        }
+    client_request_id = request.get("client_request_id")
+    if client_request_id is not None and (
+        not isinstance(client_request_id, str) or not client_request_id.strip() or len(client_request_id) > 128
+    ):
+        raise HTTPException(status_code=422, detail="client_request_id must be a non-empty string of at most 128 characters.")
+
+    if is_async_runtime_enabled() or request.get("execution_mode") == "async":
+        payload_hash = sha256(event.encode("utf-8")).hexdigest()
+        scope = str(current_user.get("id")) if current_user else "anonymous"
+        with _CREATE_IDEMPOTENCY_LOCK:
+            try:
+                state = (
+                    find_idempotent_dynamic_session(client_request_id, payload_hash, scope)
+                    if client_request_id
+                    else None
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+            if state is not None:
+                return _async_create_response(state, reused=True)
+
+            metadata = {
+                "harness_id": request.get("harness_id"),
+                "harness_version": request.get("harness_version"),
+            }
+            if client_request_id:
+                metadata.update({
+                    "create_request_id": client_request_id,
+                    "create_request_scope": scope,
+                    "create_request_payload_hash": payload_hash,
+                })
+            state = create_queued_dynamic_session(event, created_by=current_user, metadata=metadata)
+            try:
+                submit_dynamic_session(state.session_id)
+            except Exception as exc:
+                mark_dynamic_session_failed(state.session_id, exc)
+                state = load_checkpoint(state.session_id) or state
+        return _async_create_response(state)
 
     harness_args = {
         key: request[key]
@@ -255,11 +276,46 @@ def get_dynamic_sessions(current_user: dict | None = Depends(get_current_user)) 
     sessions = list_checkpoints()
     if not is_auth_enabled() or current_user is None or current_user.get("role") in {"admin", "legal_reviewer"}:
         return sessions
-    return [
-        session
-        for session in sessions
-        if (session.get("created_by") or {}).get("id") == current_user.get("id")
-    ]
+    visible = []
+    for session in sessions:
+        created_by = session.get("created_by") or {}
+        if not created_by:
+            state = load_checkpoint(str(session.get("session_id", "")))
+            created_by = (state.metadata.get("created_by") or {}) if state else {}
+        if created_by.get("id") == current_user.get("id"):
+            visible.append(session)
+    return visible
+
+
+def _async_create_response(state: AgentState, reused: bool = False) -> dict:
+    status_by_state = {
+        "QUEUED": "queued",
+        "RUNNING": "running",
+        "WAITING_HUMAN": "waiting_human",
+        "COMPLETED": "completed",
+        "FAILED": "failed",
+        "REJECTED": "rejected",
+    }
+    response = {
+        "session_id": state.session_id,
+        "plan_id": state.plan_id,
+        "event": state.event,
+        "status": status_by_state.get(state.status, state.status.lower()),
+        "state_status": state.status,
+        "approval": dict(state.approval),
+        "execution_trace": list(state.trace),
+        "results": state.get_all_results(),
+        "failed_agents": list(state.failed_agents),
+        "reused": reused,
+    }
+    fact = state.metadata.get(FACT_KEY)
+    if state.status == WAITING_HUMAN and isinstance(fact, dict):
+        response["human_fact_request"] = fact.get("request")
+    return response
+
+
+def _uses_async_runtime(state: AgentState) -> bool:
+    return is_async_runtime_enabled() or state.metadata.get("runtime_mode") == "async"
 
 
 @app.get("/api/dynamic/{session_id}/metrics")
@@ -309,6 +365,16 @@ def respond_to_dynamic_fact(
     try:
         if state.metadata.get("human_wait_type") != FACT_INPUT:
             raise ValueError("Session is not waiting for a human fact response.")
+        if _uses_async_runtime(state):
+            from backend.core.human_fact_resume import record_human_fact_response_for_async
+
+            result = record_human_fact_response_for_async(session_id, request)
+            try:
+                submit_resume_session(session_id)
+            except Exception as exc:
+                mark_dynamic_session_failed(session_id, exc)
+                return {"session_id": session_id, "status": "failed", "state_status": "FAILED"}
+            return result
         return submit_human_fact_response(session_id, request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -352,8 +418,12 @@ def approve_dynamic_session(
                 "evaluation": state.metadata.get("evaluation"), "policy": state.metadata.get("policy")}
 
     save_checkpoint(state)
-    if is_async_runtime_enabled():
-        submit_resume_session(session_id)
+    if _uses_async_runtime(state):
+        try:
+            submit_resume_session(session_id)
+        except Exception as exc:
+            mark_dynamic_session_failed(session_id, exc)
+            return {"session_id": session_id, "status": "failed", "state_status": "FAILED"}
         return {
             "session_id": session_id,
             "status": "queued",
@@ -400,6 +470,25 @@ def reject_dynamic_session(
                 "evaluation": state.metadata.get("evaluation"), "policy": state.metadata.get("policy")}
 
     save_checkpoint(state)
+    if state.status == "REJECTED" and _uses_async_runtime(state):
+        return {
+            "session_id": session_id,
+            "status": "rejected",
+            "state_status": state.status,
+            "approval": dict(state.approval),
+        }
+    if _uses_async_runtime(state):
+        try:
+            submit_resume_session(session_id)
+        except Exception as exc:
+            mark_dynamic_session_failed(session_id, exc)
+            return {"session_id": session_id, "status": "failed", "state_status": "FAILED"}
+        return {
+            "session_id": session_id,
+            "status": "queued",
+            "state_status": state.status,
+            "approval": dict(state.approval),
+        }
     return resume_agent_loop(session_id)
 
 

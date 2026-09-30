@@ -161,12 +161,38 @@ def test_frozen_slice_hash_and_order_are_fixed():
     assert [case["case_id"] for case in cases] == list(runner.DEFAULT_CASE_IDS)
 
 
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n", b"\r"])
+def test_frozen_identity_is_stable_across_newline_formats(tmp_path, newline):
+    source = runner.FROZEN_CASE_PATH.read_bytes()
+    lf_bytes = source.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    variant = newline.join(lf_bytes.split(b"\n"))
+    path = tmp_path / "frozen-cases.json"
+    path.write_bytes(variant)
+
+    cases, digest = runner.load_frozen_cases(path)
+
+    assert digest == runner.EXPECTED_FROZEN_SHA256
+    assert [case["case_id"] for case in cases] == list(runner.DEFAULT_CASE_IDS)
+
+
 def test_frozen_hash_mismatch_fails_closed(tmp_path, monkeypatch):
     path = tmp_path / "modified.json"
     path.write_text('{"cases": []}\n', encoding="utf-8")
     monkeypatch.setattr(runner, "FROZEN_CASE_PATH", path)
     with pytest.raises(RuntimeError, match="SHA-256 mismatch"):
         runner.load_frozen_cases()
+
+
+def test_frozen_identity_rejects_real_json_content_change(tmp_path):
+    source = runner.FROZEN_CASE_PATH.read_bytes()
+    normalized = source.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    modified = normalized.replace(b"privacy-03", b"privacy-04", 1)
+    assert modified != normalized
+    path = tmp_path / "content-modified.json"
+    path.write_bytes(modified)
+
+    with pytest.raises(RuntimeError, match="SHA-256 mismatch"):
+        runner.load_frozen_cases(path)
 
 
 def test_fake_five_case_run_uses_dynamic_api_and_persists_each_case(tmp_path):

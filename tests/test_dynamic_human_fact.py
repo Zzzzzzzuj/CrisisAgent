@@ -121,6 +121,38 @@ def test_pause_after_legal_and_resume_unavailable_without_replaying(runtime):
     assert duplicate.status_code == 400
 
 
+def test_async_fact_response_is_persisted_then_resumed_by_worker(runtime, monkeypatch):
+    from backend.core.runtime_tasks import run_resume_session_task
+
+    calls, _ = runtime
+    started = _start()
+    session_id = started["session_id"]
+    saved = checkpoint.load_checkpoint(session_id)
+    saved.metadata["runtime_mode"] = "async"
+    checkpoint.save_checkpoint(saved)
+    queued = []
+    monkeypatch.setenv("RUNTIME_MODE", "sync")
+    monkeypatch.setattr("backend.main.submit_resume_session", lambda value: queued.append(value))
+
+    response = _request(
+        "POST",
+        f"/api/dynamic/{session_id}/fact-response",
+        {"request_id": started["human_fact_request"]["request_id"], "response_type": "FACT_UNAVAILABLE"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "queued"
+    assert queued == [session_id]
+    recorded = checkpoint.load_checkpoint(session_id)
+    assert recorded.status == "RUNNING"
+    assert recorded.metadata["human_fact"]["phase"] == PHASE_RESPONSE_RECORDED
+    assert calls["writer_v2"] == 0
+
+    result = run_resume_session_task(session_id)
+    assert result["state_status"] == "WAITING_HUMAN"
+    assert calls["writer_v2"] == 1
+    assert calls["decision"] == 1
+
+
 def test_data_privacy_event_gap_enters_existing_fact_loop(runtime):
     calls, revision = runtime
     revision["expected_claim"] = "数据是否真实泄露、涉及多少用户以及泄露原因"

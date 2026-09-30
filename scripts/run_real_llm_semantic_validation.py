@@ -74,7 +74,7 @@ class _CapabilityScopedClient:
 def load_frozen_cases(path: Path | None = None) -> tuple[list[dict[str, Any]], str]:
     path = path or FROZEN_CASE_PATH
     raw = path.read_bytes()
-    actual_hash = hashlib.sha256(raw).hexdigest()
+    actual_hash = _frozen_identity_sha256(raw)
     if actual_hash != EXPECTED_FROZEN_SHA256:
         raise RuntimeError(
             f"Frozen case SHA-256 mismatch: expected {EXPECTED_FROZEN_SHA256}, got {actual_hash}; stopped."
@@ -85,6 +85,12 @@ def load_frozen_cases(path: Path | None = None) -> tuple[list[dict[str, Any]], s
     if missing:
         raise RuntimeError(f"Frozen case slice is incomplete: {', '.join(missing)}")
     return [by_id[case_id] for case_id in DEFAULT_CASE_IDS], actual_hash
+
+
+def _frozen_identity_sha256(raw: bytes) -> str:
+    """Hash frozen text independent of platform newline conversion only."""
+    normalized = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(normalized).hexdigest()
 
 
 def _fake_environment(temp_root: Path) -> dict[str, str]:
