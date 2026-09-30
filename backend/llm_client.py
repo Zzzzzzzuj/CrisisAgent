@@ -41,7 +41,7 @@ def call_llm(prompt: str) -> str:
         ],
     }
 
-    logger.info("Starting LLM call with model=%s url=%s", config.llm_model, url)
+    logger.info("Starting LLM call with model=%s", config.llm_model)
 
     try:
         with httpx.Client(timeout=config.llm_timeout_seconds) as client:

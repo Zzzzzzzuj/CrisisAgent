@@ -18,10 +18,9 @@ def run(payload: dict) -> dict:
             return _run_llm(payload)
         except Exception as exc:
             logger.warning(
-                "%s fallback to mock mode due to llm failure: %s | %s",
+                "%s fallback to mock mode due to llm failure: %s",
                 AGENT_NAME,
                 exc.__class__.__name__,
-                str(exc),
             )
             record_llm_fallback(AGENT_NAME, exc)
 
@@ -63,7 +62,7 @@ def _run_llm(payload: dict) -> dict:
     validate_required_fields(parsed, REQUIRED_FIELDS)
 
     validated = _validate_output(parsed)
-    logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
+    logger.info("%s parsed llm result fields=%s", AGENT_NAME, len(validated))
 
     mapped_output = {
         "issues": validated["issues"],
@@ -71,7 +70,7 @@ def _run_llm(payload: dict) -> dict:
         "suggestions": validated["suggestions"],
     }
     normalized_output = _normalize_output(mapped_output)
-    logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
+    logger.info("%s normalized output issues=%s", AGENT_NAME, len(normalized_output["issues"]))
     return normalized_output
 
 

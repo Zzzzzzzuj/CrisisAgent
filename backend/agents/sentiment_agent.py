@@ -43,10 +43,9 @@ def run(event: str) -> dict:
             return _run_llm(event)
         except Exception as exc:
             logger.warning(
-                "%s fallback to mock mode due to llm failure: %s | %s",
+                "%s fallback to mock mode due to llm failure: %s",
                 AGENT_NAME,
                 exc.__class__.__name__,
-                str(exc),
             )
             record_llm_fallback(AGENT_NAME, exc)
             return _run_mock(event)
@@ -110,7 +109,7 @@ def _run_llm(event: str) -> dict:
     validate_required_fields(parsed, REQUIRED_FIELDS)
 
     validated = _validate_llm_output(parsed)
-    logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
+    logger.info("%s parsed llm result fields=%s", AGENT_NAME, len(validated))
     mapped_output = {
         "risk_level": validated["risk_level"],
         "public_emotion": _normalize_public_emotion(validated["public_emotion"]),
@@ -119,8 +118,7 @@ def _run_llm(event: str) -> dict:
         "analysis_summary": validated["analysis_summary"],
     }
     normalized_output = _normalize_output(mapped_output)
-    logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
-    logger.debug("%s llm output: %s", AGENT_NAME, normalized_output)
+    logger.info("%s normalized output fields=%s", AGENT_NAME, len(normalized_output))
     return normalized_output
 
 
@@ -189,10 +187,9 @@ def _run_sentiment_tool(event: str) -> dict:
     except Exception as exc:
         duration_ms = (perf_counter() - start_time) * 1000
         logger.warning(
-            "%s sentiment_analysis tool failed, continuing without tool result: %s | %s",
+            "%s sentiment_analysis tool failed, continuing without tool result: %s",
             AGENT_NAME,
             exc.__class__.__name__,
-            str(exc),
         )
         _set_tool_info(
             name="sentiment_analysis",

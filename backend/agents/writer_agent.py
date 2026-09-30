@@ -36,10 +36,9 @@ def run(payload: dict) -> dict:
             return _run_llm(payload)
         except Exception as exc:
             logger.warning(
-                "%s fallback to mock mode due to llm failure: %s | %s",
+                "%s fallback to mock mode due to llm failure: %s",
                 AGENT_NAME,
                 exc.__class__.__name__,
-                str(exc),
             )
             record_llm_fallback(AGENT_NAME, exc)
             return _run_mock(payload)
@@ -132,7 +131,7 @@ def _run_llm(payload: dict) -> dict:
     validate_required_fields(parsed, FIRST_DRAFT_REQUIRED_FIELDS)
 
     validated = _validate_first_draft_output(parsed)
-    logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
+    logger.info("%s parsed llm result fields=%s", AGENT_NAME, len(validated))
 
     mapped_output = {
         "statement": validated["statement"],
@@ -141,7 +140,7 @@ def _run_llm(payload: dict) -> dict:
         "notes": validated["notes"],
     }
     normalized_output = _normalize_first_draft_output(mapped_output)
-    logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
+    logger.info("%s normalized output statement_chars=%s", AGENT_NAME, len(normalized_output["statement"]))
     return normalized_output
 
 
@@ -236,10 +235,9 @@ def _retrieve_memory_context(payload: dict) -> str:
         retrieval_result = retrieve_memories(query, top_k=3)
     except Exception as exc:
         logger.warning(
-            "%s memory retrieval failed: %s | %s",
+            "%s memory retrieval failed: %s",
             AGENT_NAME,
             exc.__class__.__name__,
-            str(exc),
         )
         _set_memory_info(enabled=True, hit=False, memories=[])
         return ""
@@ -287,10 +285,9 @@ def generate_second_draft(payload: dict) -> dict:
         config = get_config()
     except Exception as exc:
         logger.warning(
-            "%s writer_v2 fallback to mock mode due to config failure: %s | %s",
+            "%s writer_v2 fallback to mock mode due to config failure: %s",
             AGENT_NAME,
             exc.__class__.__name__,
-            str(exc),
         )
         record_llm_fallback(f"{AGENT_NAME} writer_v2", exc)
         return _generate_second_draft_mock(payload)
@@ -300,10 +297,9 @@ def generate_second_draft(payload: dict) -> dict:
             return _generate_second_draft_llm(payload)
         except Exception as exc:
             logger.warning(
-                "%s writer_v2 fallback to mock mode due to llm failure: %s | %s",
+                "%s writer_v2 fallback to mock mode due to llm failure: %s",
                 AGENT_NAME,
                 exc.__class__.__name__,
-                str(exc),
             )
             record_llm_fallback(f"{AGENT_NAME} writer_v2", exc)
 
@@ -317,7 +313,7 @@ def _generate_second_draft_llm(payload: dict) -> dict:
     validate_required_fields(parsed, SECOND_DRAFT_REQUIRED_FIELDS)
 
     validated = _validate_second_draft_output(parsed)
-    logger.info("%s writer_v2 parsed llm result: %s", AGENT_NAME, validated)
+    logger.info("%s writer_v2 parsed llm result fields=%s", AGENT_NAME, len(validated))
     normalized_output = _normalize_second_draft_output(
         {
             "statement": validated["statement"],
@@ -328,7 +324,7 @@ def _generate_second_draft_llm(payload: dict) -> dict:
         },
         payload,
     )
-    logger.info("%s writer_v2 normalized output: %s", AGENT_NAME, normalized_output)
+    logger.info("%s writer_v2 normalized output statement_chars=%s", AGENT_NAME, len(normalized_output["statement"]))
     return normalized_output
 
 

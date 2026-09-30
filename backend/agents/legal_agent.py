@@ -86,10 +86,9 @@ def run(payload: dict) -> dict:
                                     enable_action_loop=dynamic_runtime, action_context=payload)
         except Exception as exc:
             logger.warning(
-                "%s fallback to mock mode due to llm failure: %s | %s",
+                "%s fallback to mock mode due to llm failure: %s",
                 AGENT_NAME,
                 exc.__class__.__name__,
-                str(exc),
             )
             llm_trace = record_llm_fallback(AGENT_NAME, exc)
             return _attach_metadata(_run_mock(payload), llm_trace=llm_trace,
@@ -239,7 +238,7 @@ def _run_llm(payload: dict, claim_extraction: dict | None = None) -> dict:
     validate_required_fields(parsed, REQUIRED_FIELDS)
 
     validated = _validate_output(parsed)
-    logger.info("%s parsed llm result: %s", AGENT_NAME, validated)
+    logger.info("%s parsed llm result fields=%s", AGENT_NAME, len(validated))
 
     mapped_output = {
         "legal_risks": validated["legal_risks"],
@@ -254,7 +253,7 @@ def _run_llm(payload: dict, claim_extraction: dict | None = None) -> dict:
         ),
     }
     normalized_output = _normalize_output(mapped_output)
-    logger.info("%s normalized output: %s", AGENT_NAME, normalized_output)
+    logger.info("%s normalized output legal_risks=%s", AGENT_NAME, len(normalized_output["legal_risks"]))
     return normalized_output
 
 
@@ -355,17 +354,16 @@ def _retrieve_legal_context(payload: dict) -> str:
             retrieval_status="skipped_by_gate",
             evidence_quality=_not_applicable_evidence_quality("retrieval_skipped"),
         )
-        logger.info("%s RAG skipped by retrieval need gate: %s", AGENT_NAME, gate)
+        logger.info("%s RAG skipped by retrieval need gate", AGENT_NAME)
         return ""
 
     try:
         retrieval_result = retrieve(query, top_k=3)
     except Exception as exc:
         logger.warning(
-            "%s RAG retrieval failed: %s | %s",
+            "%s RAG retrieval failed: %s",
             AGENT_NAME,
             exc.__class__.__name__,
-            str(exc),
         )
         evidence_quality = evaluate_rag_evidence_quality(
             evidence_chunks=[],
@@ -442,7 +440,7 @@ def _retrieve_legal_context(payload: dict) -> str:
         retrieval_status="executed_with_hits" if source_names else "executed_no_hit",
         evidence_quality=evidence_quality,
     )
-    logger.info("%s RAG retrieved %s sources: %s", AGENT_NAME, len(sources), sources)
+    logger.info("%s RAG retrieved source_count=%s", AGENT_NAME, len(sources))
     return retrieval_result.get("context", "")
 
 

@@ -45,9 +45,8 @@ class RagPipelineRetriever(BaseRetriever):
             )
         except Exception as exc:
             logger.warning(
-                "RAG pipeline fallback to keyword retrieval: %s | %s",
+                "RAG pipeline fallback to keyword retrieval: %s",
                 exc.__class__.__name__,
-                str(exc),
             )
             fallback_result = self.fallback_retriever.retrieve(query, top_k=top_k)
             return _with_pipeline_metadata(
