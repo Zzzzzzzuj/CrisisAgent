@@ -156,6 +156,54 @@ def test_missing_usage_is_null_not_estimated(tmp_path):
                      "total_tokens": None, "usage_available": False}
 
 
+def test_action_proposal_telemetry_is_persisted_without_business_text(tmp_path):
+    run = RealLLMEvalRun(tmp_path, _metadata())
+    result = _result({"case_id": "case-1"})
+    result["loop"]["decision_telemetry"] = [{
+        "round": 0,
+        "previous_observation_type": None,
+        "eligible_action_count": 2,
+        "eligible_actions": [
+            {"action": "REQUEST_HUMAN_FACT", "target_claim_index": 0},
+            {"action": "REQUEST_HUMAN_FACT", "target_claim_index": 1},
+        ],
+        "eligible_target_claim_indices": [0, 1],
+        "deterministic_baseline_action": "REQUEST_HUMAN_FACT",
+        "deterministic_baseline_target_claim_index": 0,
+        "proposal_called": True,
+        "proposal_status": "VALID",
+        "proposal_action": "REQUEST_HUMAN_FACT",
+        "proposal_reason_code": "CASE_FACT_GAP",
+        "proposal_target_claim_index": 1,
+        "validator_called": True,
+        "validator_allowed": True,
+        "validator_reason_code": "eligible_action",
+        "fallback_used": False,
+        "fallback_reason_code": None,
+        "executed_action": "REQUEST_HUMAN_FACT",
+        "executed_target_claim_index": 1,
+        "result_observation_type": "case_fact_unresolved",
+        "result_observation_status": "human_fact_required",
+        "remaining_rounds": 3,
+        "remaining_tool_calls": 2,
+        "event": "PRIVATE_EVENT_TEXT",
+        "claim": "PRIVATE_CLAIM_TEXT",
+        "prompt": "PRIVATE_PROMPT_TEXT",
+    }]
+    run.run_cases([{"case_id": "case-1"}], lambda _case: result)
+    saved = read_case_records(run.jsonl_path)[0]["loop"]["decision_telemetry"][0]
+    assert saved["eligible_action_count"] == 2
+    assert saved["eligible_target_claim_indices"] == [0, 1]
+    assert saved["deterministic_baseline_target_claim_index"] == 0
+    assert saved["proposal_status"] == "VALID"
+    assert saved["validator_called"] is True
+    assert saved["validator_allowed"] is True
+    assert saved["executed_target_claim_index"] == 1
+    persisted = run.jsonl_path.read_text(encoding="utf-8")
+    for text in ("PRIVATE_EVENT_TEXT", "PRIVATE_CLAIM_TEXT", "PRIVATE_PROMPT_TEXT"):
+        assert text not in persisted
+
+
 def test_runtime_cleanup_and_stdout_truncation_do_not_affect_reports(tmp_path, capsys):
     runtime = tmp_path / "runtime"
     runtime.mkdir()

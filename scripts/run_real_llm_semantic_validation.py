@@ -408,11 +408,42 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
     selected_actions: list[str] = []
     observations: list[str] = []
     next_actions: list[str] = []
+    decision_telemetry: list[dict[str, Any]] = []
     for item in loop_actions:
         row = _read_map(item)
         selected_actions.append(row.get("selected_action") or row.get("executed_action") or "")
         observations.append(row.get("observation_type") or "")
         next_actions.append(row.get("next_action") or row.get("next_recommended_action") or "")
+        if "eligible_action_count" in row or "proposal_status" in row:
+            decision_telemetry.append({
+                "round": row.get("round", row.get("round_index")),
+                "previous_observation_type": row.get("previous_observation_type"),
+                "eligible_action_count": row.get("eligible_action_count"),
+                "eligible_actions": row.get("eligible_actions", []),
+                "eligible_target_claim_indices": row.get("eligible_target_claim_indices", []),
+                "deterministic_baseline_action": row.get("deterministic_baseline_action"),
+                "deterministic_baseline_target_claim_index": row.get(
+                    "deterministic_baseline_target_claim_index"),
+                "proposal_called": row.get("proposal_called"),
+                "proposal_status": row.get("proposal_status"),
+                "proposal_action": row.get("proposal_action"),
+                "proposal_reason_code": row.get("proposal_reason_code"),
+                "proposal_target_claim_index": row.get("proposal_target_claim_index"),
+                "validator_called": row.get("validator_called"),
+                "validator_allowed": row.get("validator_allowed"),
+                "validator_reason_code": row.get("validator_reason_code"),
+                "fallback_used": row.get("proposal_fallback_used", False),
+                "fallback_reason_code": row.get("fallback_reason_code"),
+                "executed_action": row.get("executed_action", row.get("selected_action")),
+                "executed_target_claim_index": row.get("executed_target_claim_index",
+                                                          row.get("claim_index")),
+                "result_observation_type": row.get("result_observation_type",
+                                                     row.get("observation_type")),
+                "result_observation_status": row.get("result_observation_status",
+                                                       row.get("status", row.get("stop_reason"))),
+                "remaining_rounds": (row.get("remaining_budget") or {}).get("rounds"),
+                "remaining_tool_calls": (row.get("remaining_budget") or {}).get("tool_calls"),
+            })
     for item in trace:
         row = _read_map(item)
         if row.get("agent") == "human_fact":
@@ -512,6 +543,7 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
             "next_actions": next_actions,
             "stop_reason": loop.get("stop_reason") if isinstance(loop.get("stop_reason"), str) else None,
             "duplicate_action_count": duplicates,
+            "decision_telemetry": decision_telemetry,
         },
         "reliability": {
             "llm_call_count": llm_call_count, "timeout_count": timeout_count,
