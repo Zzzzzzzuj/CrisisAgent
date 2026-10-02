@@ -25,7 +25,7 @@ CASE_FIELDS: dict[str, tuple[str, ...]] = {
     "legal": ("rag_triggered", "targeted_retrieval_triggered", "retrieval_count",
               "source_conflict_detected"),
     "loop": ("round_count", "actions", "observation_types", "next_actions",
-             "stop_reason", "duplicate_action_count"),
+             "stop_reason", "duplicate_action_count", "decision_telemetry"),
     "reliability": ("llm_call_count", "timeout_count", "parse_failure_count",
                     "schema_failure_count", "fallback_count", "fallback_agents",
                     "provider_error_count"),
@@ -78,6 +78,8 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
         item = source.get(key)
         if key.endswith("_count"):
             result[key] = item if isinstance(item, (int, float)) else None
+        elif key == "decision_telemetry":
+            result[key] = _safe_decision_telemetry(source.get(key))
         elif key in {"claim_indices", "actions", "observation_types", "next_actions", "fallback_agents"}:
             if key == "claim_indices" and isinstance(item, list):
                 result[key] = [entry for entry in item if isinstance(entry, int)][:100]
@@ -102,6 +104,47 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
         if result["usage_available"] is not True:
             result["prompt_tokens"] = result["completion_tokens"] = result["total_tokens"] = None
     return result
+
+
+def _safe_decision_telemetry(value: Any) -> list[dict[str, Any]]:
+    """Allowlist action-decision facts without persisting business text."""
+    if not isinstance(value, list):
+        return []
+    rows = []
+    for item in value[:100]:
+        if not isinstance(item, Mapping):
+            continue
+        safe: dict[str, Any] = {}
+        for key in ("round", "eligible_action_count", "proposal_target_claim_index",
+                    "deterministic_baseline_target_claim_index",
+                    "executed_target_claim_index", "remaining_rounds", "remaining_tool_calls"):
+            safe[key] = _safe_index(item.get(key)) if "claim_index" in key else (
+                item.get(key) if type(item.get(key)) is int and 0 <= item.get(key) <= 100000 else None
+            )
+        for key in ("previous_observation_type", "deterministic_baseline_action",
+                    "proposal_status", "proposal_action", "proposal_reason_code",
+                    "validator_reason_code", "fallback_reason_code",
+                    "executed_action", "result_observation_type",
+                    "result_observation_status"):
+            value_item = item.get(key)
+            safe[key] = value_item[:80] if _is_label(value_item, 80) else None
+        for key in ("proposal_called", "validator_called", "validator_allowed",
+                    "fallback_used", "proposal_fallback_used", "previous_observation_changed_state"):
+            safe[key] = item.get(key) if type(item.get(key)) is bool else None
+        eligible = []
+        for option in item.get("eligible_actions", []) if isinstance(item.get("eligible_actions"), list) else []:
+            if not isinstance(option, Mapping) or not _is_label(option.get("action"), 80):
+                continue
+            eligible.append({"action": option["action"],
+                             "target_claim_index": _safe_index(option.get("target_claim_index"))})
+        safe["eligible_actions"] = eligible[:100]
+        targets = item.get("eligible_target_claim_indices")
+        safe["eligible_target_claim_indices"] = (
+            [_safe_index(target) for target in targets[:100] if _safe_index(target) is not None]
+            if isinstance(targets, list) else []
+        )
+        rows.append(safe)
+    return rows
 
 
 def _safe_index(value: Any) -> int | None:

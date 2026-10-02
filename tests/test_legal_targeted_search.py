@@ -233,6 +233,159 @@ def test_loop_respects_round_and_tool_budgets_and_existing_evidence():
     assert no_call["actions"][-1]["selected_action"] == "STOP_RESOLVED"
 
 
+def _human_observation(response_type="FACT_UNAVAILABLE"):
+    return {"observation_type": "fact_provided" if response_type == "FACT_PROVIDED" else "fact_unavailable",
+            "request_id": "request-1", "claim_index": 0, "response_type": response_type,
+            "source": "human_provided" if response_type == "FACT_PROVIDED" else "human_response",
+            "verification_status": "human_asserted" if response_type == "FACT_PROVIDED" else "unresolved",
+            "availability": response_type == "FACT_PROVIDED",
+            "whether_new_information": response_type == "FACT_PROVIDED", "consumed": True}
+
+
+def test_human_observation_resumes_same_loop_and_retrieval_changes_next_action():
+    claims = [{"claim": CLAIM, "requires_legal_rule": True, "requires_case_fact": True}]
+    extraction, coverage, relation, _, rag = inputs(claims=claims)
+    first = run_legal_action_loop(extraction, coverage, relation, rag,
+                                  retrieve_call=lambda *_a, **_kw: pytest.fail("must pause first"))
+    assert first["cursor"]["round_count"] == 1
+    assert first["cursor"]["remaining_rounds"] == 2
+    calls = []
+    resumed = run_legal_action_loop(
+        extraction, first["claim_coverage"], first["claim_evidence_relation"], rag,
+        retrieve_call=lambda query, top_k: calls.append(query) or {"chunks": [RULE], "sources": []},
+        cursor=first["cursor"], human_observation=_human_observation(),
+    )
+    assert len(calls) == 1
+    assert resumed["rounds"] == 3
+    assert resumed["tool_calls_used"] == 1
+    assert resumed["remaining_budget"]["tool_calls"] == 1
+    assert resumed["actions"][2]["selected_action"] == "RETRIEVE_LEGAL_EVIDENCE"
+    assert resumed["actions"][2]["previous_observation"]["request_id"] == "request-1"
+    assert resumed["actions"][-2]["selected_action"] == "USE_EXISTING_EVIDENCE"
+    assert resumed["actions"][-1]["selected_action"] == "STOP_UNRESOLVED"
+    assert resumed["claim_coverage"]["claim_coverage"][0]["legal_rule_status"] == "candidate_found"
+    assert resumed["claim_coverage"]["claim_coverage"][0]["case_fact_status"] == "unresolved"
+    assert resumed["stop_reason"] == "fact_unavailable_requires_safe_revision"
+
+
+def test_human_response_is_consumed_once_and_unavailable_does_not_repeat_request():
+    claim = {"claim": "本批次情况尚未确认", "requires_legal_rule": False, "requires_case_fact": True}
+    extraction, coverage, relation, _, rag = inputs(claims=[claim])
+    first = run_legal_action_loop(extraction, coverage, relation, rag,
+                                  retrieve_call=lambda *_a, **_kw: pytest.fail("no legal search"))
+    second = run_legal_action_loop(extraction, coverage, relation, rag,
+                                   retrieve_call=lambda *_a, **_kw: pytest.fail("no legal search"),
+                                   cursor=first["cursor"], human_observation=_human_observation())
+    assert second["rounds"] == 2
+    assert second["stop_reason"] == "no_information_gain"
+    assert sum(row["selected_action"] == "REQUEST_HUMAN_FACT" for row in second["actions"]) == 1
+    repeat = run_legal_action_loop(extraction, coverage, relation, rag,
+                                   retrieve_call=lambda *_a, **_kw: pytest.fail("duplicate action"),
+                                   cursor=second["cursor"], human_observation=_human_observation())
+    assert repeat["stop_reason"] == "human_fact_already_consumed"
+    assert repeat["actions"] == second["actions"]
+
+
+def test_human_assertion_remains_unverified_and_second_fact_fails_closed():
+    claims = [
+        {"claim": "第一项事实", "requires_legal_rule": False, "requires_case_fact": True},
+        {"claim": "第二项事实", "requires_legal_rule": False, "requires_case_fact": True},
+    ]
+    extraction, coverage, relation, _, rag = inputs(claims=claims)
+    first = run_legal_action_loop(extraction, coverage, relation, rag,
+                                  retrieve_call=lambda *_a, **_kw: pytest.fail("no legal search"))
+    resumed = run_legal_action_loop(extraction, coverage, relation, rag,
+                                    retrieve_call=lambda *_a, **_kw: pytest.fail("no legal search"),
+                                    cursor=first["cursor"], human_observation=_human_observation("FACT_PROVIDED"))
+    assert resumed["stop_reason"] == "second_human_fact_not_supported"
+    assert resumed["cursor"]["consumed_request_ids"] == ["request-1"]
+    assert resumed["claim_coverage"]["claim_coverage"][0]["case_fact_status"] == "unresolved"
+    assert all(row["selected_action"] != "STOP_RESOLVED" for row in resumed["actions"])
+
+
+@pytest.mark.parametrize("policy,reason", [
+    ({"max_rounds": 1}, "round_budget_exhausted"),
+    ({"max_tool_calls": 0}, "tool_budget_exhausted"),
+])
+def test_human_resume_keeps_original_budget(policy, reason):
+    claims = [{"claim": CLAIM, "requires_legal_rule": True, "requires_case_fact": True}]
+    extraction, coverage, relation, _, rag = inputs(claims=claims)
+    first = run_legal_action_loop(extraction, coverage, relation, rag,
+                                  retrieve_call=lambda *_a, **_kw: pytest.fail("pause first"), policy=policy)
+    resumed = run_legal_action_loop(extraction, coverage, relation, rag,
+                                    retrieve_call=lambda *_a, **_kw: pytest.fail("budget exhausted"),
+                                    policy=policy, cursor=first["cursor"],
+                                    human_observation=_human_observation())
+    assert resumed["stop_reason"] == reason
+    assert resumed["tool_calls_used"] == 0
+
+
+def test_retrieval_no_hit_after_human_observation_stops_without_repeat():
+    claims = [{"claim": CLAIM, "requires_legal_rule": True, "requires_case_fact": True}]
+    extraction, coverage, relation, _, rag = inputs(claims=claims)
+    first = run_legal_action_loop(extraction, coverage, relation, rag,
+                                  retrieve_call=lambda *_a, **_kw: pytest.fail("pause first"))
+    calls = []
+    resumed = run_legal_action_loop(
+        extraction, coverage, relation, rag,
+        retrieve_call=lambda query, top_k: calls.append(query) or {"chunks": [], "sources": []},
+        cursor=first["cursor"], human_observation=_human_observation(),
+    )
+    assert len(calls) == 1
+    assert resumed["stop_reason"] == "unresolved_after_observation"
+    assert resumed["actions"][2]["observation_type"] == "retrieval_no_hit"
+    assert sum(row["selected_action"] == "RETRIEVE_LEGAL_EVIDENCE" for row in resumed["actions"]) == 1
+
+
+def test_retrieval_without_coverage_gain_does_not_repeat_after_human():
+    claims = [{"claim": CLAIM, "requires_legal_rule": True, "requires_case_fact": True}]
+    extraction, coverage, relation, _, rag = inputs(claims=claims)
+    first = run_legal_action_loop(extraction, coverage, relation, rag,
+                                  retrieve_call=lambda *_a, **_kw: pytest.fail("pause first"))
+    calls = []
+    resumed = run_legal_action_loop(
+        extraction, coverage, relation, rag,
+        retrieve_call=lambda query, top_k: calls.append(query) or {"chunks": [GUIDANCE], "sources": []},
+        cursor=first["cursor"], human_observation=_human_observation(),
+    )
+    assert len(calls) == 1
+    assert resumed["stop_reason"] == "unresolved_after_observation"
+    assert resumed["actions"][-1]["after_legal_rule_status"] == "no_candidate"
+
+
+def test_last_tool_call_can_still_lead_to_non_tool_stop_after_human():
+    claims = [{"claim": CLAIM, "requires_legal_rule": True, "requires_case_fact": True}]
+    extraction, coverage, relation, _, rag = inputs(claims=claims)
+    policy = {"max_tool_calls": 1}
+    first = run_legal_action_loop(extraction, coverage, relation, rag,
+                                  retrieve_call=lambda *_a, **_kw: pytest.fail("pause first"), policy=policy)
+    resumed = run_legal_action_loop(
+        extraction, coverage, relation, rag,
+        retrieve_call=lambda *_a, **_kw: {"chunks": [RULE], "sources": []},
+        cursor=first["cursor"], human_observation=_human_observation(), policy=policy,
+    )
+    assert resumed["tool_calls_used"] == 1
+    assert resumed["remaining_budget"]["tool_calls"] == 0
+    assert resumed["actions"][-1]["selected_action"] == "STOP_UNRESOLVED"
+    assert resumed["stop_reason"] == "fact_unavailable_requires_safe_revision"
+
+
+def test_nonzero_tool_usage_in_saved_cursor_is_not_reset():
+    claims = [{"claim": CLAIM, "requires_legal_rule": True, "requires_case_fact": True}]
+    extraction, coverage, relation, _, rag = inputs(claims=claims)
+    first = run_legal_action_loop(extraction, coverage, relation, rag,
+                                  retrieve_call=lambda *_a, **_kw: pytest.fail("pause first"))
+    saved_cursor = deepcopy(first["cursor"])
+    saved_cursor["tool_calls_used"] = 1
+    saved_cursor["remaining_tool_calls"] = 1
+    resumed = run_legal_action_loop(extraction, coverage, relation, rag,
+                                    retrieve_call=lambda *_a, **_kw: {"chunks": [RULE], "sources": []},
+                                    cursor=saved_cursor, human_observation=_human_observation())
+    assert resumed["tool_calls_used"] == 2
+    assert resumed["remaining_budget"]["tool_calls"] == 0
+    assert resumed["stop_reason"] == "fact_unavailable_requires_safe_revision"
+
+
 def test_p31a_relation_is_required_for_coverage_change():
     relation_calls = []
 

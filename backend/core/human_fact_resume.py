@@ -3,6 +3,8 @@
 from copy import deepcopy
 from threading import Lock
 
+from backend.agents.legal_claim_relation import build_legal_claim_relations
+from backend.agents.legal_targeted_search import run_legal_action_loop
 from backend.core.checkpoint import load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import _build_runtime_registry, build_dynamic_result
 from backend.core.executor import execute
@@ -21,6 +23,7 @@ from backend.core.human_fact_runtime import (
 from backend.core.policy import evaluate_human_policy
 from backend.core.runtime_evaluator import evaluate_runtime_state
 from backend.core.state import COMPLETED, FAILED, REJECTED, RUNNING, WAITING_HUMAN
+from backend.rag.retriever import retrieve
 
 
 # This prevents duplicate continuations within one API process. The JSON checkpoint
@@ -84,9 +87,16 @@ def _continue_saved_response(state) -> dict:
     fact["phase"] = PHASE_CONTINUING
     save_checkpoint(state)
 
+    if not fact.get("legal_resume_completed"):
+        try:
+            stop_reason = _resume_legal_loop(state)
+        except Exception:
+            return _finish_for_review(state, "legal_loop_resume_error")
+        if stop_reason not in {"no_information_gain", "fact_unavailable_requires_safe_revision",
+                               "human_asserted_fact_requires_review"}:
+            return _finish_for_review(state, stop_reason)
+
     if response["response_type"] == "FACT_PROVIDED":
-        _update_legal_loop(state, "FINAL_REVIEW", "STOP_UNRESOLVED",
-                           "human_asserted_fact_requires_review")
         _record_action_once(state, 1, "STOP", "human_asserted_fact_requires_review",
                             {"case_fact_status": "unresolved", "verification_status": "human_asserted"})
         return _finish_for_review(state, "human_asserted_fact_requires_review")
@@ -96,8 +106,6 @@ def _continue_saved_response(state) -> dict:
         return _finish_for_review(state, "resume_cursor_invalid")
 
     remaining = fact["remaining_plan"]
-    _update_legal_loop(state, PHASE_CONTINUING, "STOP_UNRESOLVED",
-                       "fact_unavailable_no_repeat_request")
     writer_result = state.get_result("writer_v2")
     if writer_result is None:
         if fact.get("revision_attempted"):
@@ -230,3 +238,75 @@ def _update_legal_loop(state, phase: str, next_action: str, stop_reason: str) ->
     loop["phase"] = phase
     loop["next_action"] = next_action
     loop["stop_reason"] = stop_reason
+
+
+def _resume_legal_loop(state) -> str:
+    fact = state.metadata[FACT_KEY]
+    request = fact["request"]
+    loop = state.metadata.get("legal_action_loop")
+    extraction = state.metadata.get("legal_claim_extraction")
+    if not isinstance(loop, dict) or not isinstance(loop.get("cursor"), dict) or not isinstance(extraction, dict):
+        return "legal_loop_cursor_invalid"
+    response = fact["response"]
+    observation = fact["observation"]
+    human_observation = {
+        "observation_type": "fact_provided" if response["response_type"] == "FACT_PROVIDED" else "fact_unavailable",
+        "request_id": request["request_id"],
+        "claim_index": request["claim_index"],
+        "response_type": response["response_type"],
+        "source": observation.get("source", "human_response"),
+        "verification_status": observation.get("verification_status", "unresolved"),
+        "availability": response["response_type"] == "FACT_PROVIDED",
+        "whether_new_information": response["response_type"] == "FACT_PROVIDED",
+        "claim_state_changed": False,
+        "consumed": True,
+    }
+    spec = state.metadata.get("harness_spec") or {}
+    policy = (spec.get("retrieval_policy") or {}).get("legal_action_loop") or {}
+    from backend.agents import legal_agent
+
+    old_action_count = len(loop.get("actions", []))
+    result = run_legal_action_loop(
+        extraction, loop.get("claim_coverage", {}), loop.get("claim_evidence_relation", {}),
+        loop["cursor"].get("rag_info", {}), retrieve_call=retrieve,
+        relation_call=build_legal_claim_relations, llm_call=legal_agent.call_llm,
+        mode=loop["cursor"].get("mode", "mock"), event=state.event,
+        risk_level=str((state.get_result("sentiment") or {}).get("risk_level", "unknown")),
+        policy=policy, cursor=loop["cursor"], human_observation=human_observation,
+    )
+    if result["stop_reason"] == "human_fact_required":
+        result["stop_reason"] = "second_human_fact_not_supported"
+    result["phase"] = "STOPPED"
+    result["last_observation"] = deepcopy(loop.get("last_observation"))
+    result["next_action"] = "STOP_UNRESOLVED"
+    state.metadata["legal_action_loop"] = result
+    state.metadata["legal_claim_coverage"] = deepcopy(result.get("claim_coverage", {}))
+    state.metadata["legal_claim_relation"] = deepcopy(result.get("claim_evidence_relation", {}))
+    state.metadata["legal_claim_action_recommendation"] = deepcopy(result.get("claim_action_recommendation", {}))
+    new_actions = result.get("actions", [])[old_action_count:]
+    for index, action in enumerate(new_actions):
+        before = action.get("before_legal_rule_status")
+        after = action.get("after_legal_rule_status")
+        state.add_trace({"agent": "legal", "status": "success", "phase": "resume",
+                         "round": action.get("round_index"), "action": action.get("selected_action"),
+                         "action_reason": action.get("stop_reason"),
+                         "previous_observation_type": action.get("previous_observation_type"),
+                         "previous_observation_changed_state": action.get("previous_observation_changed_state"),
+                         "eligible_action_count": action.get("eligible_action_count"),
+                         "proposal_action": action.get("proposal_action"),
+                         "proposal_reason_code": action.get("proposal_reason_code"),
+                         "proposal_target_claim_index": action.get("proposal_target_claim_index"),
+                         "validator_allowed": action.get("validator_allowed"),
+                         "validator_reason_code": action.get("validator_reason_code"),
+                         "proposal_fallback_used": action.get("proposal_fallback_used"),
+                         "observation_type": action.get("observation_type"),
+                         "claim_state_changed": before is not None and after is not None and before != after,
+                         "whether_new_information": action.get("whether_new_information"),
+                         "next_action": (new_actions[index + 1].get("selected_action")
+                                         if index + 1 < len(new_actions) else None),
+                         "claim_index": action.get("claim_index"),
+                         "tool_calls_used": action.get("tool_calls_used"),
+                         "remaining_budget": action.get("remaining_budget")})
+    fact["legal_resume_completed"] = True
+    save_checkpoint(state)
+    return result["stop_reason"]
