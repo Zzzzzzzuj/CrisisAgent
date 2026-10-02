@@ -208,6 +208,92 @@ def test_data_privacy_fact_provided_stays_human_asserted(runtime):
     assert calls["writer_v2"] == 0
 
 
+def test_fact_response_reenters_legal_loop_before_writer_v2(runtime, monkeypatch):
+    calls, _ = runtime
+    order = []
+    registry = dynamic_runtime._build_runtime_registry()
+    original_writer_v2 = registry["writer_v2"]
+
+    def legal(payload):
+        calls["legal"] += 1
+        claim = {"claim": DRAFT.rstrip("。"), "requires_legal_rule": True,
+                 "requires_case_fact": True}
+        extraction = {"legal_claims": [claim], "claim_extraction_status": "ok"}
+        relation = {"legal_claim_relations": [
+            {"claim_index": 0, "evidence_ref": "guidance", "relation": "no_rule_match"}],
+            "relation_status": "ok"}
+        coverage = build_claim_coverage(extraction["legal_claims"], relation)
+        rag = {"query": "original broad query", "retrieval_status": "executed_with_hits",
+               "retrieval_executed": True, "fallback_used": False}
+        loop = run_legal_action_loop(extraction, coverage, relation, rag,
+                                     retrieve_call=lambda *_a, **_kw: pytest.fail("pause before retrieval"))
+        return {"review_summary": "待核查", "_metadata": {
+            "claim_extraction": extraction, "claim_coverage": loop["claim_coverage"],
+            "claim_evidence_relation": loop["claim_evidence_relation"],
+            "claim_action_recommendation": loop["claim_action_recommendation"],
+            "legal_action_loop": loop}}
+
+    def writer_v2(payload):
+        order.append("writer_v2")
+        return original_writer_v2(payload)
+
+    def fake_retrieve(query, top_k):
+        order.append("retrieve")
+        return {"chunks": [{"chunk_id": "rule", "source": "food-law",
+                            "text": "食品生产经营者不得使用超过保质期的食品原料。"}], "sources": []}
+
+    registry["legal"] = legal
+    registry["writer_v2"] = writer_v2
+    monkeypatch.setattr(dynamic_runtime, "_build_runtime_registry", lambda: registry)
+    monkeypatch.setattr(human_fact_resume, "_build_runtime_registry", lambda: registry)
+    monkeypatch.setattr(human_fact_resume, "retrieve", fake_retrieve)
+    started = _start()
+    assert calls["legal"] == 1
+    response = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": started["human_fact_request"]["request_id"],
+        "response_type": "FACT_UNAVAILABLE",
+    })
+    assert response.status_code == 200, response.text
+    state = checkpoint.load_checkpoint(started["session_id"])
+    assert order == ["retrieve", "writer_v2"]
+    assert calls["legal"] == 1
+    assert state.metadata["legal_action_loop"]["rounds"] == 3
+    assert state.metadata["legal_action_loop"]["tool_calls_used"] == 1
+    assert state.metadata["legal_action_loop"]["claim_coverage"]["claim_coverage"][0]["case_fact_status"] == "unresolved"
+    assert state.metadata["human_fact"]["legal_resume_completed"] is True
+    assert state.metadata["human_wait_type"] == "FINAL_REVIEW"
+    assert any(item.get("agent") == "legal" and item.get("phase") == "resume"
+               and item.get("action") == "RETRIEVE_LEGAL_EVIDENCE" for item in state.trace)
+    resume_trace = [item for item in state.trace if item.get("phase") == "resume"]
+    assert resume_trace[0]["action"] == "HUMAN_FACT_RESPONSE"
+    assert resume_trace[0]["claim_state_changed"] is False
+    assert resume_trace[0]["next_action"] == "RETRIEVE_LEGAL_EVIDENCE"
+    assert resume_trace[1]["claim_state_changed"] is True
+    assert DRAFT.rstrip("。") not in str([item for item in state.trace if item.get("phase") == "resume"])
+    duplicate = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": started["human_fact_request"]["request_id"],
+        "response_type": "FACT_UNAVAILABLE",
+    })
+    assert duplicate.status_code == 400
+    assert order == ["retrieve", "writer_v2"]
+
+
+def test_legal_resume_error_fails_closed_without_writer_v2(runtime, monkeypatch):
+    calls, _ = runtime
+    started = _start()
+    monkeypatch.setattr(human_fact_resume, "run_legal_action_loop",
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("offline failure")))
+    response = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": started["human_fact_request"]["request_id"],
+        "response_type": "FACT_UNAVAILABLE",
+    })
+    assert response.status_code == 200, response.text
+    state = checkpoint.load_checkpoint(started["session_id"])
+    assert state.status == "WAITING_HUMAN"
+    assert state.metadata["human_wait_type"] == "FINAL_REVIEW"
+    assert calls["writer_v2"] == 0
+
+
 def test_revision_with_paraphrased_assertion_stops_once(runtime):
     calls, revision = runtime
     revision["statement"] = "经核实，本批次没有使用过期原料。"
