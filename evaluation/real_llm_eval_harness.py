@@ -33,6 +33,21 @@ CASE_FIELDS: dict[str, tuple[str, ...]] = {
     "usage": ("prompt_tokens", "completion_tokens", "total_tokens", "usage_available"),
     "diagnosis": ("claims", "event_fact_gap_candidates", "human_fact_dependency",
                   "writer_introduction_status"),
+    "claim_extraction": ("claim_extraction_called", "provider_status", "parse_status",
+                         "schema_status", "validation_status", "raw_item_count",
+                         "accepted_item_count", "dropped_item_count", "fallback_used",
+                         "failure_stage", "reason_code"),
+}
+
+_EXTRACTION_PROVIDER_STATUSES = {"NOT_CALLED", "SUCCESS", "ERROR", "TIMEOUT", "UNKNOWN"}
+_EXTRACTION_PARSE_STATUSES = {"NOT_ATTEMPTED", "SUCCESS", "ERROR"}
+_EXTRACTION_SCHEMA_STATUSES = {"NOT_ATTEMPTED", "SUCCESS", "ERROR"}
+_EXTRACTION_VALIDATION_STATUSES = {"NOT_ATTEMPTED", "SUCCESS", "ERROR"}
+_EXTRACTION_FAILURE_STAGES = {"NONE", "PROVIDER", "PARSE", "SCHEMA", "VALIDATION", "FALLBACK", "UNKNOWN"}
+_EXTRACTION_REASON_CODES = {
+    "NONE", "EMPTY_INPUT", "EMPTY_MODEL_CLAIMS", "NO_ACCEPTED_CLAIMS",
+    "PROVIDER_ERROR", "PROVIDER_TIMEOUT", "JSON_PARSE_ERROR",
+    "SCHEMA_VALIDATION_ERROR", "CLAIM_VALIDATION_ERROR", "FALLBACK_ERROR", "UNKNOWN",
 }
 
 _CLAIM_ORIGINS = {"EVENT", "WRITER", "MIXED", "EVENT_FACT_GAP", "UNKNOWN"}
@@ -49,7 +64,7 @@ METADATA_FIELDS = (
     "frozen_file", "frozen_sha256", "selected_case_ids", "AGENT_MODE",
     "OFFLINE_EVAL", "provider", "model", "external_provider_allowed",
     "other_external_network_allowed", "git_branch", "git_commit",
-    "working_tree_dirty", "evaluation_started_at",
+    "working_tree_dirty", "evaluation_started_at", "claim_extraction_telemetry_version",
 )
 
 
@@ -73,6 +88,8 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
     source = value if isinstance(value, Mapping) else {}
     if name == "diagnosis":
         return _safe_diagnosis(source)
+    if name == "claim_extraction":
+        return _safe_claim_extraction_telemetry(source)
     result: dict[str, Any] = {}
     for key in allowed:
         item = source.get(key)
@@ -104,6 +121,27 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
         if result["usage_available"] is not True:
             result["prompt_tokens"] = result["completion_tokens"] = result["total_tokens"] = None
     return result
+
+
+def _safe_claim_extraction_telemetry(source: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "claim_extraction_called": (source.get("claim_extraction_called")
+                                    if type(source.get("claim_extraction_called")) is bool else None),
+        "provider_status": _safe_enum(source.get("provider_status"), _EXTRACTION_PROVIDER_STATUSES),
+        "parse_status": _safe_enum(source.get("parse_status"), _EXTRACTION_PARSE_STATUSES),
+        "schema_status": _safe_enum(source.get("schema_status"), _EXTRACTION_SCHEMA_STATUSES),
+        "validation_status": _safe_enum(source.get("validation_status"), _EXTRACTION_VALIDATION_STATUSES),
+        "raw_item_count": _safe_count(source.get("raw_item_count")),
+        "accepted_item_count": _safe_count(source.get("accepted_item_count")),
+        "dropped_item_count": _safe_count(source.get("dropped_item_count")),
+        "fallback_used": source.get("fallback_used") if type(source.get("fallback_used")) is bool else None,
+        "failure_stage": _safe_enum(source.get("failure_stage"), _EXTRACTION_FAILURE_STAGES),
+        "reason_code": _safe_enum(source.get("reason_code"), _EXTRACTION_REASON_CODES),
+    }
+
+
+def _safe_count(value: Any) -> int | None:
+    return value if type(value) is int and 0 <= value <= 100000 else None
 
 
 def _safe_decision_telemetry(value: Any) -> list[dict[str, Any]]:
@@ -237,6 +275,8 @@ def _safe_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
     for key in ("external_provider_allowed", "other_external_network_allowed", "working_tree_dirty"):
         if not isinstance(safe.get(key), bool):
             safe[key] = None
+    if safe.get("claim_extraction_telemetry_version") != "v1":
+        safe["claim_extraction_telemetry_version"] = None
     return safe
 
 
@@ -270,6 +310,7 @@ def collect_run_metadata(
         "provider": provider, "model": model,
         "external_provider_allowed": external_provider_allowed,
         "other_external_network_allowed": other_external_network_allowed,
+        "claim_extraction_telemetry_version": "v1",
         "git_branch": git_value("branch", "--show-current"),
         "git_commit": git_value("rev-parse", "HEAD"),
         "working_tree_dirty": bool(dirty), "evaluation_started_at": utc_now(),
@@ -406,6 +447,15 @@ def rebuild_summary(jsonl_path: Path) -> dict[str, Any]:
     reliability_names = CASE_FIELDS["reliability"]
     reliability_values = {name: [] for name in reliability_names if name.endswith("_count")}
     fallbacks: CounterLike = {}
+    extraction_status_counts: dict[str, CounterLike] = {
+        key: {} for key in ("provider_status", "parse_status", "schema_status",
+                            "validation_status", "failure_stage", "reason_code")
+    }
+    extraction_fallback_cases = 0
+    extraction_cases = 0
+    extraction_item_totals = {key: [] for key in (
+        "raw_item_count", "accepted_item_count", "dropped_item_count",
+    )}
     for record in records:
         for key in reliability_values:
             value = (record.get("reliability") or {}).get(key)
@@ -414,6 +464,19 @@ def rebuild_summary(jsonl_path: Path) -> dict[str, Any]:
         for agent in ((record.get("reliability") or {}).get("fallback_agents") or []):
             if isinstance(agent, str):
                 fallbacks[agent] = fallbacks.get(agent, 0) + 1
+        extraction = record.get("claim_extraction") or {}
+        if extraction.get("claim_extraction_called") is True:
+            extraction_cases += 1
+        if extraction.get("fallback_used") is True:
+            extraction_fallback_cases += 1
+        for key, counts in extraction_status_counts.items():
+            value = extraction.get(key)
+            if isinstance(value, str):
+                counts[value] = counts.get(value, 0) + 1
+        for key, values in extraction_item_totals.items():
+            value = extraction.get(key)
+            if type(value) is int:
+                values.append(value)
     return {
         "total_cases": len(records),
         "success_cases": sum(item.get("status") == "SUCCESS" for item in records),
@@ -425,6 +488,14 @@ def rebuild_summary(jsonl_path: Path) -> dict[str, Any]:
         "reliability_totals": {key: sum(values) if values else None
                                 for key, values in reliability_values.items()},
         "fallback_agent_counts": fallbacks,
+        "claim_extraction_telemetry": {
+            "cases_observed": extraction_cases,
+            "fallback_cases": extraction_fallback_cases,
+            "status_counts": {key: dict(sorted(counts.items()))
+                              for key, counts in extraction_status_counts.items()},
+            "item_count_totals": {key: sum(values) if values else None
+                                  for key, values in extraction_item_totals.items()},
+        },
     }
 
 

@@ -311,6 +311,78 @@ def test_synthetic_claim_dependency_is_persisted_without_source_text(tmp_path):
                               "trace_safety_passed": True}
 
 
+def test_claim_extraction_telemetry_is_safely_persisted_and_summarized(tmp_path):
+    from evaluation.real_llm_eval_harness import RealLLMEvalRun, rebuild_summary
+
+    telemetry = {
+        "claim_extraction_called": True,
+        "provider_status": "SUCCESS",
+        "parse_status": "ERROR",
+        "schema_status": "NOT_ATTEMPTED",
+        "validation_status": "NOT_ATTEMPTED",
+        "raw_item_count": None,
+        "accepted_item_count": 0,
+        "dropped_item_count": None,
+        "fallback_used": True,
+        "failure_stage": "PARSE",
+        "reason_code": "JSON_PARSE_ERROR",
+        "prompt": "PRIVATE_PROMPT_BODY",
+        "claim": "PRIVATE_CLAIM_BODY",
+        "provider_raw_response": "PRIVATE_RESPONSE_BODY",
+    }
+    final = {
+        "status": "COMPLETED",
+        "metadata": {"legal_claim_extraction": {
+            "legal_claims": [], "claim_extraction_telemetry": telemetry,
+        }},
+        "results": {},
+        "trace": [],
+    }
+    record = runner._extract_case_result({"case_id": "safe-case"}, {}, final, {}, 1.0)
+    run = RealLLMEvalRun(tmp_path, {"claim_extraction_telemetry_version": "v1"})
+    run.append_case(record)
+    saved = read_case_records(run.jsonl_path)[0]
+    assert saved["claim_extraction"] == {
+        "claim_extraction_called": True,
+        "provider_status": "SUCCESS",
+        "parse_status": "ERROR",
+        "schema_status": "NOT_ATTEMPTED",
+        "validation_status": "NOT_ATTEMPTED",
+        "raw_item_count": None,
+        "accepted_item_count": 0,
+        "dropped_item_count": None,
+        "fallback_used": True,
+        "failure_stage": "PARSE",
+        "reason_code": "JSON_PARSE_ERROR",
+    }
+    summary = rebuild_summary(run.jsonl_path)
+    assert summary["claim_extraction_telemetry"] == {
+        "cases_observed": 1,
+        "fallback_cases": 1,
+        "status_counts": {
+            "provider_status": {"SUCCESS": 1},
+            "parse_status": {"ERROR": 1},
+            "schema_status": {"NOT_ATTEMPTED": 1},
+            "validation_status": {"NOT_ATTEMPTED": 1},
+            "failure_stage": {"PARSE": 1},
+            "reason_code": {"JSON_PARSE_ERROR": 1},
+        },
+        "item_count_totals": {"raw_item_count": None, "accepted_item_count": 0,
+                               "dropped_item_count": None},
+    }
+    persisted = run.jsonl_path.read_text(encoding="utf-8")
+    for private_value in ("PRIVATE_PROMPT_BODY", "PRIVATE_CLAIM_BODY", "PRIVATE_RESPONSE_BODY"):
+        assert private_value not in persisted
+
+
+def test_claim_extraction_telemetry_version_is_in_run_metadata(tmp_path):
+    from evaluation.real_llm_eval_harness import RealLLMEvalRun
+
+    run = RealLLMEvalRun(tmp_path, {"claim_extraction_telemetry_version": "v1"})
+    metadata = json.loads(run.metadata_path.read_text(encoding="utf-8"))
+    assert metadata["claim_extraction_telemetry_version"] == "v1"
+
+
 def _fact_input_result():
     draft = "关于该事项的具体事实仍在核查中，我们将根据核查结果及时说明。"
     claim = "目前不存在违法行为"

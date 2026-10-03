@@ -390,6 +390,7 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
     extraction = (_read_map(metadata.get("legal_claim_extraction"))
                   or _read_map(initial.get("legal_claim_extraction"))
                   or _read_map(legal_meta.get("claim_extraction")))
+    extraction_telemetry = _read_map(extraction.get("claim_extraction_telemetry"))
     claims = extraction.get("legal_claims") if isinstance(extraction.get("legal_claims"), list) else []
     case_fact_indices = [index for index, claim in enumerate(claims)
                          if _read_map(claim).get("requires_case_fact") is True]
@@ -521,6 +522,7 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
             "requires_case_fact_count": len(case_fact_indices),
             "requires_legal_rule_count": sum(_read_map(item).get("requires_legal_rule") is True for item in claims),
         },
+        "claim_extraction": extraction_telemetry,
         "diagnosis": _diagnosis_view(claims, coverage_rows, recommendations, request),
         "human_fact": {
             "requested": bool(request), "request_count": 1 if request else 0,
