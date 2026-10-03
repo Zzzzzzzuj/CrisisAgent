@@ -18,6 +18,10 @@ def _extract(draft: str) -> list[dict]:
     return result["legal_claims"]
 
 
+def _business_result(result: dict) -> dict:
+    return {key: value for key, value in result.items() if key != "claim_extraction_telemetry"}
+
+
 def test_mock_mixed_claim_needs_both_kinds_of_evidence():
     assert _extract("目前不存在违法行为") == [{
         "claim": "目前不存在违法行为",
@@ -55,9 +59,11 @@ def test_multiple_claims_and_duplicates():
 
 
 def test_empty_draft_does_not_call_llm():
-    assert legal_claim_extractor.extract_claims("  ", "llm", lambda _: 1 / 0) == {
+    result = legal_claim_extractor.extract_claims("  ", "llm", lambda _: 1 / 0)
+    assert _business_result(result) == {
         "legal_claims": [], "claim_extraction_status": "ok"
     }
+    assert result["claim_extraction_telemetry"]["provider_status"] == "NOT_CALLED"
 
 
 def test_high_risk_event_gap_is_added_as_case_fact_without_domain_keywords():
@@ -128,7 +134,144 @@ def test_llm_parses_valid_claims_and_deduplicates():
     result = legal_claim_extractor.extract_claims(
         draft, "llm", lambda prompt: json.dumps({"claims": [item, item]}, ensure_ascii=False)
     )
-    assert result == {"legal_claims": [item], "claim_extraction_status": "ok"}
+    assert _business_result(result) == {"legal_claims": [item], "claim_extraction_status": "ok"}
+    assert result["claim_extraction_telemetry"] == {
+        "claim_extraction_called": True,
+        "provider_status": "SUCCESS",
+        "parse_status": "SUCCESS",
+        "schema_status": "SUCCESS",
+        "validation_status": "SUCCESS",
+        "raw_item_count": 2,
+        "accepted_item_count": 1,
+        "dropped_item_count": 1,
+        "fallback_used": False,
+        "failure_stage": "NONE",
+        "reason_code": "NONE",
+    }
+
+
+def test_llm_empty_claims_is_observed_without_fallback():
+    result = legal_claim_extractor.extract_claims(
+        "普通表达，没有需要核验的承诺。", "llm",
+        lambda _: json.dumps({"claims": []}, ensure_ascii=False),
+    )
+    telemetry = result["claim_extraction_telemetry"]
+    assert result["legal_claims"] == []
+    assert result["claim_extraction_status"] == "ok"
+    assert telemetry["provider_status"] == "SUCCESS"
+    assert telemetry["parse_status"] == telemetry["schema_status"] == "SUCCESS"
+    assert telemetry["raw_item_count"] == telemetry["accepted_item_count"] == 0
+    assert telemetry["fallback_used"] is False
+    assert telemetry["failure_stage"] == "NONE"
+    assert telemetry["reason_code"] == "EMPTY_MODEL_CLAIMS"
+
+
+def test_llm_parse_failure_telemetry_preserves_fallback_and_business_result():
+    draft = "目前不存在违法行为"
+    result = legal_claim_extractor.extract_claims(draft, "llm", lambda _: "PRIVATE_RAW_RESPONSE not json")
+    telemetry = result["claim_extraction_telemetry"]
+    assert _business_result(result)["claim_extraction_status"] == "fallback"
+    assert len(result["legal_claims"]) == 1
+    assert telemetry["provider_status"] == "SUCCESS"
+    assert telemetry["parse_status"] == "ERROR"
+    assert telemetry["schema_status"] == "NOT_ATTEMPTED"
+    assert telemetry["fallback_used"] is True
+    assert telemetry["failure_stage"] == "PARSE"
+    assert telemetry["reason_code"] == "JSON_PARSE_ERROR"
+    assert telemetry["accepted_item_count"] == 1
+    assert telemetry["dropped_item_count"] is None
+    assert "PRIVATE_RAW_RESPONSE" not in json.dumps(telemetry)
+
+
+def test_llm_schema_failure_telemetry_identifies_schema_stage():
+    result = legal_claim_extractor.extract_claims(
+        "经调查，本批次没有使用过期原料", "llm",
+        lambda _: '{"claims":[{"claim":"经调查，本批次没有使用过期原料","requires_case_fact":true}]}',
+    )
+    telemetry = result["claim_extraction_telemetry"]
+    assert telemetry["provider_status"] == "SUCCESS"
+    assert telemetry["parse_status"] == "SUCCESS"
+    assert telemetry["schema_status"] == "ERROR"
+    assert telemetry["validation_status"] == "NOT_ATTEMPTED"
+    assert telemetry["fallback_used"] is True
+    assert telemetry["failure_stage"] == "SCHEMA"
+    assert telemetry["reason_code"] == "SCHEMA_VALIDATION_ERROR"
+
+
+def test_llm_claim_validation_failure_telemetry_identifies_validation_stage():
+    result = legal_claim_extractor.extract_claims(
+        "目前不存在违法行为", "llm",
+        lambda _: json.dumps({"claims": [{"claim": "不相关的私有文本", "requires_legal_rule": True,
+                                           "requires_case_fact": False}]}, ensure_ascii=False),
+    )
+    telemetry = result["claim_extraction_telemetry"]
+    assert telemetry["schema_status"] == "SUCCESS"
+    assert telemetry["validation_status"] == "ERROR"
+    assert telemetry["fallback_used"] is True
+    assert telemetry["failure_stage"] == "VALIDATION"
+    assert telemetry["reason_code"] == "CLAIM_VALIDATION_ERROR"
+    assert "不相关的私有文本" not in json.dumps(telemetry, ensure_ascii=False)
+
+
+def test_llm_provider_failure_and_timeout_are_distinguished():
+    def provider_error(_):
+        raise RuntimeError("PRIVATE_PROVIDER_BODY")
+
+    def provider_timeout(_):
+        raise TimeoutError("PRIVATE_TIMEOUT_BODY")
+
+    def llm_client_wrapped_timeout(_):
+        raise RuntimeError("LLM chat request timed out.")
+
+    error_result = legal_claim_extractor.extract_claims("目前不存在违法行为", "llm", provider_error)
+    timeout_result = legal_claim_extractor.extract_claims("目前不存在违法行为", "llm", provider_timeout)
+    wrapped_timeout_result = legal_claim_extractor.extract_claims(
+        "目前不存在违法行为", "llm", llm_client_wrapped_timeout
+    )
+    error_telemetry = error_result["claim_extraction_telemetry"]
+    timeout_telemetry = timeout_result["claim_extraction_telemetry"]
+    wrapped_timeout_telemetry = wrapped_timeout_result["claim_extraction_telemetry"]
+    assert (error_telemetry["provider_status"], error_telemetry["failure_stage"],
+            error_telemetry["reason_code"], error_telemetry["fallback_used"]) == (
+                "ERROR", "PROVIDER", "PROVIDER_ERROR", True)
+    assert (timeout_telemetry["provider_status"], timeout_telemetry["failure_stage"],
+            timeout_telemetry["reason_code"], timeout_telemetry["fallback_used"]) == (
+                "TIMEOUT", "PROVIDER", "PROVIDER_TIMEOUT", True)
+    assert (wrapped_timeout_telemetry["provider_status"], wrapped_timeout_telemetry["failure_stage"],
+            wrapped_timeout_telemetry["reason_code"]) == (
+                "TIMEOUT", "PROVIDER", "PROVIDER_TIMEOUT")
+    for telemetry in (error_telemetry, timeout_telemetry, wrapped_timeout_telemetry):
+        assert telemetry["parse_status"] == telemetry["schema_status"] == "NOT_ATTEMPTED"
+        assert telemetry["raw_item_count"] is None
+        assert telemetry["dropped_item_count"] is None
+        assert "PRIVATE_" not in json.dumps(telemetry)
+
+
+def test_claim_extraction_telemetry_has_no_business_or_provider_content():
+    private_event = "PRIVATE_EVENT_BODY 尚未确认影响范围以及发生原因"
+    private_draft = "PRIVATE_DRAFT_BODY 目前不存在违法行为"
+    private_response = "PRIVATE_PROVIDER_RESPONSE_BODY"
+    private_key = "sk-PRIVATE-KEY"
+
+    result = legal_claim_extractor.extract_claims(
+        private_draft, "llm", lambda _: private_response,
+        event=private_event, risk_level="high",
+    )
+    telemetry = result["claim_extraction_telemetry"]
+    serialized = json.dumps(telemetry, ensure_ascii=False)
+    for private_value in (private_event, private_draft, private_response, private_key,
+                          "Prompt", "Authorization", "PRIVATE_PROVIDER"):
+        assert private_value not in serialized
+
+
+def test_claim_extraction_telemetry_does_not_change_claim_output():
+    draft = "目前不存在违法行为"
+    expected = {"legal_claims": [{"claim": draft, "requires_legal_rule": True,
+                                  "requires_case_fact": True}], "claim_extraction_status": "ok"}
+    result = legal_claim_extractor.extract_claims(
+        draft, "llm", lambda _: json.dumps({"claims": [expected["legal_claims"][0]]}, ensure_ascii=False)
+    )
+    assert _business_result(result) == expected
 
 
 def test_llm_invalid_json_falls_back_to_deterministic_rules():
@@ -154,7 +297,7 @@ def test_llm_cannot_turn_promise_into_claim():
         lambda _: json.dumps({"claims": [{"claim": draft, "requires_legal_rule": True,
                                            "requires_case_fact": True}]}, ensure_ascii=False),
     )
-    assert result == {"legal_claims": [], "claim_extraction_status": "fallback"}
+    assert _business_result(result) == {"legal_claims": [], "claim_extraction_status": "fallback"}
 
 
 def test_extraction_failure_does_not_break_legal_review(monkeypatch):
@@ -234,3 +377,4 @@ def test_dynamic_executor_state_and_trace_record_claim_extraction(monkeypatch):
         "requires_case_fact": True,
     }
     assert result["execution_trace"][0]["rag"]["claim_extraction_status"] == "ok"
+    assert result["execution_trace"][0]["rag"]["claim_extraction_telemetry"]["provider_status"] == "NOT_CALLED"

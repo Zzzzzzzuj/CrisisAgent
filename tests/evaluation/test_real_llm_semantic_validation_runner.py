@@ -228,9 +228,46 @@ def test_targeted_fake_case_preserves_frozen_identity_and_only_runs_selected_cas
     assert metadata["frozen_sha256"] == runner.EXPECTED_FROZEN_SHA256
 
 
-def test_targeted_case_outside_fixed_slice_is_rejected_before_run(tmp_path):
-    with pytest.raises(ValueError, match="fixed frozen evaluation slice"):
-        runner.run_validation(mode="fake", output_dir=tmp_path, case_id="outage-03")
+def test_explicit_food_01_fake_run_selects_single_frozen_case(tmp_path):
+    cases, digest = runner.load_frozen_cases(case_id="food-01")
+    summary, jsonl_path, attempts = runner.run_validation(
+        mode="fake", output_dir=tmp_path, case_id="food-01",
+    )
+
+    assert [case["case_id"] for case in cases] == ["food-01"]
+    assert digest == runner.EXPECTED_FROZEN_SHA256
+    assert cases[0]["human_response"]["response_type"] == "FACT_UNAVAILABLE"
+    assert summary["total_cases"] == 1
+    assert [row["case_id"] for row in read_case_records(jsonl_path)] == ["food-01"]
+    assert attempts == []
+
+
+def test_explicit_default_slice_case_selects_only_that_case():
+    cases, digest = runner.load_frozen_cases(case_id="privacy-03")
+
+    assert [case["case_id"] for case in cases] == ["privacy-03"]
+    assert digest == runner.EXPECTED_FROZEN_SHA256
+
+
+def test_unknown_explicit_case_is_rejected_before_run(tmp_path):
+    with pytest.raises(ValueError, match="Unknown frozen case id"):
+        runner.run_validation(mode="fake", output_dir=tmp_path, case_id="does-not-exist")
+    assert not list(tmp_path.iterdir())
+
+
+def test_cli_rejects_unknown_case_without_creating_run_artifacts(tmp_path):
+    completed = subprocess.run(
+        [sys.executable, str(RUNNER_SCRIPT), "--mode", "fake", "--case-id", "does-not-exist",
+         "--output-dir", str(tmp_path)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+
+    assert completed.returncode == 2
+    assert "Unknown frozen case id" in completed.stderr
     assert not list(tmp_path.iterdir())
 
 
@@ -311,6 +348,78 @@ def test_synthetic_claim_dependency_is_persisted_without_source_text(tmp_path):
                               "trace_safety_passed": True}
 
 
+def test_claim_extraction_telemetry_is_safely_persisted_and_summarized(tmp_path):
+    from evaluation.real_llm_eval_harness import RealLLMEvalRun, rebuild_summary
+
+    telemetry = {
+        "claim_extraction_called": True,
+        "provider_status": "SUCCESS",
+        "parse_status": "ERROR",
+        "schema_status": "NOT_ATTEMPTED",
+        "validation_status": "NOT_ATTEMPTED",
+        "raw_item_count": None,
+        "accepted_item_count": 0,
+        "dropped_item_count": None,
+        "fallback_used": True,
+        "failure_stage": "PARSE",
+        "reason_code": "JSON_PARSE_ERROR",
+        "prompt": "PRIVATE_PROMPT_BODY",
+        "claim": "PRIVATE_CLAIM_BODY",
+        "provider_raw_response": "PRIVATE_RESPONSE_BODY",
+    }
+    final = {
+        "status": "COMPLETED",
+        "metadata": {"legal_claim_extraction": {
+            "legal_claims": [], "claim_extraction_telemetry": telemetry,
+        }},
+        "results": {},
+        "trace": [],
+    }
+    record = runner._extract_case_result({"case_id": "safe-case"}, {}, final, {}, 1.0)
+    run = RealLLMEvalRun(tmp_path, {"claim_extraction_telemetry_version": "v1"})
+    run.append_case(record)
+    saved = read_case_records(run.jsonl_path)[0]
+    assert saved["claim_extraction"] == {
+        "claim_extraction_called": True,
+        "provider_status": "SUCCESS",
+        "parse_status": "ERROR",
+        "schema_status": "NOT_ATTEMPTED",
+        "validation_status": "NOT_ATTEMPTED",
+        "raw_item_count": None,
+        "accepted_item_count": 0,
+        "dropped_item_count": None,
+        "fallback_used": True,
+        "failure_stage": "PARSE",
+        "reason_code": "JSON_PARSE_ERROR",
+    }
+    summary = rebuild_summary(run.jsonl_path)
+    assert summary["claim_extraction_telemetry"] == {
+        "cases_observed": 1,
+        "fallback_cases": 1,
+        "status_counts": {
+            "provider_status": {"SUCCESS": 1},
+            "parse_status": {"ERROR": 1},
+            "schema_status": {"NOT_ATTEMPTED": 1},
+            "validation_status": {"NOT_ATTEMPTED": 1},
+            "failure_stage": {"PARSE": 1},
+            "reason_code": {"JSON_PARSE_ERROR": 1},
+        },
+        "item_count_totals": {"raw_item_count": None, "accepted_item_count": 0,
+                               "dropped_item_count": None},
+    }
+    persisted = run.jsonl_path.read_text(encoding="utf-8")
+    for private_value in ("PRIVATE_PROMPT_BODY", "PRIVATE_CLAIM_BODY", "PRIVATE_RESPONSE_BODY"):
+        assert private_value not in persisted
+
+
+def test_claim_extraction_telemetry_version_is_in_run_metadata(tmp_path):
+    from evaluation.real_llm_eval_harness import RealLLMEvalRun
+
+    run = RealLLMEvalRun(tmp_path, {"claim_extraction_telemetry_version": "v1"})
+    metadata = json.loads(run.metadata_path.read_text(encoding="utf-8"))
+    assert metadata["claim_extraction_telemetry_version"] == "v1"
+
+
 def _fact_input_result():
     draft = "关于该事项的具体事实仍在核查中，我们将根据核查结果及时说明。"
     claim = "目前不存在违法行为"
@@ -369,6 +478,167 @@ def test_human_fact_frozen_response_uses_fact_response_api(tmp_path, monkeypatch
     persisted = path.read_text(encoding="utf-8")
     assert fixture["human_response"]["fact_text"] not in persisted
     assert fixture["event"] not in persisted
+
+
+class _JSONResponse:
+    def __init__(self, value, status_code=200):
+        self._value = value
+        self.status_code = status_code
+
+    def json(self):
+        return self._value
+
+
+class _FactSequenceClient:
+    def __init__(self, snapshots):
+        self.snapshots = list(snapshots)
+        self.get_index = 0
+        self.fact_payloads = []
+        self.approval_calls = 0
+
+    def post(self, path, json=None, headers=None):
+        if path == "/api/dynamic/run":
+            first_request = ((self.snapshots[0].get("metadata") or {}).get("human_fact") or {}).get("request")
+            payload = {"session_id": "session-1"}
+            if first_request:
+                payload["human_fact_request"] = first_request
+            return _JSONResponse(payload)
+        if path.endswith("/fact-response"):
+            self.fact_payloads.append(dict(json or {}))
+            return _JSONResponse({"status": "queued"})
+        if path.endswith("/approve"):
+            self.approval_calls += 1
+        return _JSONResponse({}, 400)
+
+    def get(self, _path):
+        index = min(self.get_index, len(self.snapshots) - 1)
+        self.get_index += 1
+        return _JSONResponse(self.snapshots[index])
+
+
+def _fact_snapshot(request_id, claim_index, *, wait_type="FACT_INPUT", progress=None):
+    progress = progress or [{"claim_index": claim_index, "status": "ATTEMPTED_UNRESOLVED"}]
+    return {
+        "status": "WAITING_HUMAN",
+        "metadata": {
+            "human_wait_type": wait_type,
+            "human_fact": {"request": {"request_id": request_id, "claim_index": claim_index}},
+            "legal_action_loop": {
+                "round_count": claim_index + 1,
+                "claim_progress": progress,
+                "cursor": {
+                    "round_count": claim_index + 1,
+                    "remaining_rounds": max(0, 3 - claim_index),
+                    "current_claim_index": claim_index,
+                    "claim_progress": progress,
+                    "previous_observation": {"observation_type": "fact_unavailable"},
+                    "actions": [],
+                },
+            },
+        },
+        "results": {}, "trace": [],
+    }
+
+
+def _final_review_snapshot():
+    return {
+        "status": "WAITING_HUMAN",
+        "metadata": {"human_wait_type": "FINAL_REVIEW", "legal_action_loop": {
+            "round_count": 3, "claim_progress": [
+                {"claim_index": 0, "status": "ATTEMPTED_UNRESOLVED"},
+                {"claim_index": 1, "status": "ATTEMPTED_UNRESOLVED"},
+            ], "cursor": {"round_count": 3, "remaining_rounds": 0, "actions": []},
+        }},
+        "results": {}, "trace": [],
+    }
+
+
+def _unavailable_case():
+    return {"case_id": "food-01", "event": "fixture", "expected_fact_gap": True,
+            "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}}
+
+
+def test_explicit_repeat_handles_two_fact_inputs_then_stops_at_final_review():
+    client = _FactSequenceClient([
+        _fact_snapshot("request-1", 0),
+        _fact_snapshot("request-2", 1, progress=[
+            {"claim_index": 0, "status": "ATTEMPTED_UNRESOLVED"},
+            {"claim_index": 1, "status": "ATTEMPTED_UNRESOLVED"},
+        ]),
+        _final_review_snapshot(),
+    ])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+        max_fact_responses=3,
+    )
+    assert len(client.fact_payloads) == 2
+    assert all(row["response_type"] == "FACT_UNAVAILABLE" for row in client.fact_payloads)
+    assert client.approval_calls == 0
+    assert result["human_fact"]["response_count"] == 2
+    assert result["human_fact"]["runner_stop_reason"] == "final_review"
+    assert [row["claim_index"] for row in result["human_fact"]["human_fact_sequence"]] == [0, 1]
+
+
+def test_final_review_is_never_auto_approved():
+    client = _FactSequenceClient([_final_review_snapshot()])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+    )
+    assert client.fact_payloads == []
+    assert client.approval_calls == 0
+    assert result["human_fact"]["runner_stop_reason"] == "final_review"
+
+
+def test_repeat_strategy_has_independent_response_budget():
+    client = _FactSequenceClient([
+        _fact_snapshot("request-1", 0), _fact_snapshot("request-2", 1),
+        _fact_snapshot("request-3", 2),
+    ])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+        max_fact_responses=2,
+    )
+    assert len(client.fact_payloads) == 2
+    assert result["human_fact"]["runner_stop_reason"] == "fact_response_budget_exhausted"
+
+
+def test_repeat_strategy_blocks_duplicate_fact_request():
+    client = _FactSequenceClient([
+        _fact_snapshot("request-1", 0), _fact_snapshot("request-1", 0),
+    ])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+    )
+    assert len(client.fact_payloads) == 1
+    assert result["human_fact"]["runner_stop_reason"] == "duplicate_fact_request"
+
+
+def test_repeat_strategy_rejects_fact_provided_before_execution(tmp_path, monkeypatch):
+    fixture = {"case_id": "provided", "event": "fixture", "human_response": {
+        "response_type": "FACT_PROVIDED", "fact_text": "specific fact",
+    }}
+    monkeypatch.setattr(runner, "load_frozen_cases",
+                        lambda: ([fixture], runner.EXPECTED_FROZEN_SHA256))
+    with pytest.raises(ValueError, match="empty FACT_UNAVAILABLE"):
+        runner.run_validation(
+            mode="fake", output_dir=tmp_path,
+            human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+        )
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_default_strategy_keeps_single_response_semantics():
+    client = _FactSequenceClient([
+        _fact_snapshot("request-1", 0), _fact_snapshot("request-2", 1),
+    ])
+    result = runner._case_executor(client, _unavailable_case())
+    assert len(client.fact_payloads) == 1
+    assert result["human_fact"]["response_count"] == 1
+    assert result["human_fact"]["runner_stop_reason"] == "single_response_complete"
 
 
 def test_case_three_error_keeps_prior_results_and_default_stops(tmp_path, monkeypatch):

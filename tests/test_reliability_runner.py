@@ -1,8 +1,47 @@
 import argparse
 import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from scripts import run_reliability_test as runner
+
+
+def test_import_does_not_override_existing_process_environment():
+    project_root = Path(__file__).resolve().parents[1]
+    code = "\n".join((
+        "import os",
+        "import dotenv",
+        "os.environ['AGENT_MODE'] = 'mock'",
+        "os.environ['OFFLINE_EVAL'] = '1'",
+        "def fake_load_dotenv(*args, **kwargs):",
+        "    if kwargs.get('override') is True:",
+        "        os.environ['AGENT_MODE'] = 'llm'",
+        "    return True",
+        "dotenv.load_dotenv = fake_load_dotenv",
+        "import scripts.run_reliability_test",
+        "assert os.environ['AGENT_MODE'] == 'mock'",
+        "assert os.environ['OFFLINE_EVAL'] == '1'",
+    ))
+    environment = {
+        "PATH": os.environ.get("PATH", ""),
+        "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+        "PYTHONPATH": str(project_root),
+        "PYTHONIOENCODING": "utf-8",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=project_root,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, "runner import changed the caller's environment"
 
 
 def _success_run(index: int, event: str, mode: str, request_timeout: int) -> dict:

@@ -20,6 +20,14 @@ _FACT_GAP_MARKERS = ("尚未确认", "尚未证实", "尚未查明", "尚不清�
 _MATERIAL_UNKNOWN_MARKERS = ("是否", "多少", "原因", "范围", "哪些", "影响", "何时", "何处", "为何", "哪一")
 
 
+class _ClaimSchemaError(ValueError):
+    pass
+
+
+class _ClaimValidationError(ValueError):
+    pass
+
+
 def extract_claims(
     draft: str,
     mode: str,
@@ -30,39 +38,142 @@ def extract_claims(
 ) -> dict:
     draft = str(draft or "")
     event = str(event or "")
+    telemetry = _new_telemetry()
     if not draft.strip() and not event.strip():
-        return {"legal_claims": [], "claim_extraction_status": "ok"}
+        telemetry.update(accepted_item_count=0, reason_code="EMPTY_INPUT")
+        return _result([], "ok", mode, event, risk_level, telemetry)
 
     if mode == "llm":
+        telemetry["provider_status"] = "UNKNOWN"
         try:
             if llm_call is None:
-                raise ValueError("Claim extraction requires the Legal Agent LLM caller.")
-            raw = llm_call(_build_prompt(draft, event, risk_level))
-            parsed = parse_json_response(raw)
-            validate_required_fields(parsed, ("claims",))
-            claims = _validate_claims(parsed["claims"], draft, event)
+                telemetry["provider_status"] = "ERROR"
+                raise _ExtractionStageError("PROVIDER", "PROVIDER_ERROR", "ValueError")
+            try:
+                raw = llm_call(_build_prompt(draft, event, risk_level))
+                telemetry["provider_status"] = "SUCCESS"
+            except Exception as exc:
+                stage_error = _provider_stage_error(exc)
+                telemetry["provider_status"] = "TIMEOUT" if stage_error.reason_code == "PROVIDER_TIMEOUT" else "ERROR"
+                raise stage_error from exc
+
+            try:
+                parsed = parse_json_response(raw)
+                telemetry["parse_status"] = "SUCCESS"
+            except Exception as exc:
+                telemetry.update(failure_stage="PARSE", reason_code="JSON_PARSE_ERROR")
+                telemetry["parse_status"] = "ERROR"
+                raise _ExtractionStageError("PARSE", "JSON_PARSE_ERROR", exc.__class__.__name__) from exc
+
+            try:
+                validate_required_fields(parsed, ("claims",))
+                if not isinstance(parsed["claims"], list):
+                    raise _ClaimSchemaError("claims must be a list.")
+                telemetry["schema_status"] = "SUCCESS"
+                telemetry["raw_item_count"] = len(parsed["claims"])
+                claims = _validate_claims(parsed["claims"], draft, event)
+                telemetry["validation_status"] = "SUCCESS"
+                telemetry["dropped_item_count"] = telemetry["raw_item_count"] - len(claims)
+            except _ClaimSchemaError as exc:
+                telemetry.update(schema_status="ERROR", failure_stage="SCHEMA",
+                                 reason_code="SCHEMA_VALIDATION_ERROR", dropped_item_count=None)
+                raise _ExtractionStageError("SCHEMA", "SCHEMA_VALIDATION_ERROR", exc.__class__.__name__) from exc
+            except _ClaimValidationError as exc:
+                telemetry.update(validation_status="ERROR", failure_stage="VALIDATION",
+                                 reason_code="CLAIM_VALIDATION_ERROR", dropped_item_count=None)
+                raise _ExtractionStageError("VALIDATION", "CLAIM_VALIDATION_ERROR", exc.__class__.__name__) from exc
+            except Exception as exc:
+                # Required-field errors and unexpected validator errors fail the whole batch.
+                telemetry.update(schema_status="ERROR", failure_stage="SCHEMA",
+                                 validation_status="NOT_ATTEMPTED",
+                                 reason_code="SCHEMA_VALIDATION_ERROR", dropped_item_count=None)
+                raise _ExtractionStageError("SCHEMA", "SCHEMA_VALIDATION_ERROR", exc.__class__.__name__) from exc
+
             deterministic_claims = _combine_claims(draft, event, risk_level)
             if not claims and deterministic_claims:
-                raise ValueError("Claim extraction omitted recognizable claims.")
+                telemetry.update(validation_status="ERROR", failure_stage="VALIDATION",
+                                 reason_code="EMPTY_MODEL_CLAIMS",
+                                 dropped_item_count=None)
+                raise _ExtractionStageError("VALIDATION", "EMPTY_MODEL_CLAIMS")
             claims = _merge_claims(
                 claims,
                 [item for item in deterministic_claims if item.get("claim_origin") == "event_fact_gap"],
             )
-            return _result(claims, "ok", mode, event, risk_level)
+            telemetry["accepted_item_count"] = len(claims)
+            if claims:
+                telemetry["reason_code"] = "NONE"
+            else:
+                telemetry.update(failure_stage="NONE", reason_code="EMPTY_MODEL_CLAIMS")
+            return _result(claims, "ok", mode, event, risk_level, telemetry)
+        except _ExtractionStageError as exc:
+            if exc.stage == "PROVIDER":
+                telemetry["validation_status"] = "NOT_ATTEMPTED"
+            telemetry.update(failure_stage=exc.stage, reason_code=exc.reason_code,
+                             fallback_used=True)
+            logger.warning("Legal claim extraction fallback: %s", exc.error_type)
+            status = "fallback"
         except Exception as exc:
+            telemetry.update(failure_stage="FALLBACK", reason_code="UNKNOWN", fallback_used=True)
             logger.warning("Legal claim extraction fallback: %s", exc.__class__.__name__)
             status = "fallback"
     else:
         status = "ok"
 
     try:
-        return _result(_combine_claims(draft, event, risk_level), status, mode, event, risk_level)
+        claims = _combine_claims(draft, event, risk_level)
+        telemetry["accepted_item_count"] = len(claims)
+        if telemetry["fallback_used"]:
+            telemetry["dropped_item_count"] = None
+        if telemetry["failure_stage"] == "NONE":
+            telemetry["reason_code"] = "NO_ACCEPTED_CLAIMS" if not claims else "NONE"
+        return _result(claims, status, mode, event, risk_level, telemetry)
     except Exception as exc:
         logger.warning("Legal claim extraction failed: %s", exc.__class__.__name__)
-        result = {"legal_claims": [], "claim_extraction_status": "failed"}
+        telemetry.update(failure_stage=(telemetry["failure_stage"] if telemetry["failure_stage"] != "NONE"
+                                        else "FALLBACK"),
+                         fallback_used=telemetry["fallback_used"] or mode == "llm",
+                         reason_code=(telemetry["reason_code"] if telemetry["reason_code"] != "NONE"
+                                      else "FALLBACK_ERROR"))
+        result = {"legal_claims": [], "claim_extraction_status": "failed",
+                  "claim_extraction_telemetry": telemetry}
         if event:
             result["event_fact_gap_detection"] = {"status": "failed", "candidate_count": 0}
         return result
+
+
+def _new_telemetry() -> dict:
+    return {
+        "claim_extraction_called": True,
+        "provider_status": "NOT_CALLED",
+        "parse_status": "NOT_ATTEMPTED",
+        "schema_status": "NOT_ATTEMPTED",
+        "validation_status": "NOT_ATTEMPTED",
+        "raw_item_count": None,
+        "accepted_item_count": None,
+        "dropped_item_count": None,
+        "fallback_used": False,
+        "failure_stage": "NONE",
+        "reason_code": "NONE",
+    }
+
+
+class _ExtractionStageError(RuntimeError):
+    def __init__(self, stage: str, reason_code: str, error_type: str = "ValueError"):
+        super().__init__(reason_code)
+        self.stage = stage
+        self.reason_code = reason_code
+        self.error_type = error_type
+
+
+def _provider_stage_error(exc: Exception) -> _ExtractionStageError:
+    timeout_names = {"TimeoutError", "TimeoutException", "ConnectTimeout", "ReadTimeout",
+                     "WriteTimeout", "PoolTimeout"}
+    # LLMClient wraps transport timeouts in a RuntimeError with this stable wording.
+    message = str(exc).casefold()
+    is_timeout = (isinstance(exc, TimeoutError) or exc.__class__.__name__ in timeout_names
+                  or "timed out" in message or "timeout" in message)
+    reason_code = "PROVIDER_TIMEOUT" if is_timeout else "PROVIDER_ERROR"
+    return _ExtractionStageError("PROVIDER", reason_code, exc.__class__.__name__)
 
 
 def _build_prompt(draft: str, event: str = "", risk_level: str | None = None) -> str:
@@ -83,21 +194,24 @@ def _build_prompt(draft: str, event: str = "", risk_level: str | None = None) ->
 
 def _validate_claims(value, draft: str, event: str = "") -> list[dict]:
     if not isinstance(value, list):
-        raise ValueError("claims must be a list.")
+        raise _ClaimSchemaError("claims must be a list.")
     claims = []
     seen = set()
     normalized_draft = _normalize(draft)
     normalized_event = _normalize(event)
     for item in value:
         if not isinstance(item, dict):
-            raise ValueError("Each claim must be an object.")
-        validate_required_fields(item, ("claim", "requires_legal_rule", "requires_case_fact"))
+            raise _ClaimSchemaError("Each claim must be an object.")
+        try:
+            validate_required_fields(item, ("claim", "requires_legal_rule", "requires_case_fact"))
+        except Exception as exc:
+            raise _ClaimSchemaError("Claim fields are incomplete.") from exc
         claim = item["claim"]
         legal = item["requires_legal_rule"]
         case_fact = item["requires_case_fact"]
         origin = item.get("claim_origin", "writer_draft")
         if not isinstance(claim, str) or not claim.strip() or type(legal) is not bool or type(case_fact) is not bool:
-            raise ValueError("Claim text and evidence requirements are invalid.")
+            raise _ClaimSchemaError("Claim text and evidence requirements are invalid.")
         normalized_claim = _normalize(claim)
         if origin == "event_fact_gap":
             source_matches = bool(normalized_event and normalized_claim in normalized_event)
@@ -110,7 +224,7 @@ def _validate_claims(value, draft: str, event: str = "") -> list[dict]:
             valid_origin = False
         if (not (legal or case_fact) or _is_promise_only(claim) or not source_matches
                 or not valid_origin):
-            raise ValueError("A claim must be verifiable and copied from its declared source.")
+            raise _ClaimValidationError("A claim must be verifiable and copied from its declared source.")
         key = (origin, normalized_claim)
         if key not in seen:
             normalized = {"claim": claim.strip(), "requires_legal_rule": legal,
@@ -122,8 +236,10 @@ def _validate_claims(value, draft: str, event: str = "") -> list[dict]:
     return claims
 
 
-def _result(claims: list[dict], status: str, mode: str, event: str, risk_level: str | None) -> dict:
-    result = {"legal_claims": claims, "claim_extraction_status": status}
+def _result(claims: list[dict], status: str, mode: str, event: str, risk_level: str | None,
+            telemetry: dict | None = None) -> dict:
+    result = {"legal_claims": claims, "claim_extraction_status": status,
+              "claim_extraction_telemetry": telemetry or _new_telemetry()}
     if event:
         candidates = [item for item in claims if item.get("claim_origin") == "event_fact_gap"]
         result["event_fact_gap_detection"] = {

@@ -88,7 +88,7 @@ def compute_eligible_actions(
         if index < 0 or index >= len(claims):
             continue
         action = row.get("recommended_action")
-        if action == REQUEST_HUMAN_FACT_VERIFICATION and not requested:
+        if action == REQUEST_HUMAN_FACT_VERIFICATION and index not in requested:
             options.append(_option(REQUEST_HUMAN_FACT, index, "CASE_FACT_GAP"))
         elif (action == TARGETED_LEGAL_SEARCH and remaining_tool_calls > 0
               and attempted.get(index, 0) < max_same_action_per_gap):
@@ -139,7 +139,7 @@ def validate_action_proposal(
         return _validation(False, "tool_budget_exhausted", safety_violation=True)
 
     requested = set(requested_fact_gaps or [])
-    if action == REQUEST_HUMAN_FACT and (requested or consumed_request_ids):
+    if action == REQUEST_HUMAN_FACT and index in requested:
         return _validation(False, "human_fact_already_consumed", safety_violation=True)
     if (action == RETRIEVE_LEGAL_EVIDENCE
             and (attempted_actions or {}).get(index, 0) >= max_same_action_per_gap):

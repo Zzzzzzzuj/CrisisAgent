@@ -20,8 +20,11 @@ from typing import Any, Callable, Iterable, Mapping
 CASE_FIELDS: dict[str, tuple[str, ...]] = {
     "fact_gap": ("expected", "detected", "claim_count", "claim_indices",
                  "requires_case_fact_count", "requires_legal_rule_count"),
-    "human_fact": ("requested", "request_count", "response_type",
-                   "response_http_status", "resume_result", "final_wait_type"),
+    "human_fact": ("requested", "request_count", "response_count", "response_type",
+                   "response_http_status", "resume_result", "final_wait_type",
+                   "response_strategy", "multi_fact_input_enabled", "runner_stop_reason",
+                   "human_fact_sequence", "human_asserted_present",
+                   "human_asserted_claim_count"),
     "legal": ("rag_triggered", "targeted_retrieval_triggered", "retrieval_count",
               "source_conflict_detected"),
     "loop": ("round_count", "actions", "observation_types", "next_actions",
@@ -33,6 +36,21 @@ CASE_FIELDS: dict[str, tuple[str, ...]] = {
     "usage": ("prompt_tokens", "completion_tokens", "total_tokens", "usage_available"),
     "diagnosis": ("claims", "event_fact_gap_candidates", "human_fact_dependency",
                   "writer_introduction_status"),
+    "claim_extraction": ("claim_extraction_called", "provider_status", "parse_status",
+                         "schema_status", "validation_status", "raw_item_count",
+                         "accepted_item_count", "dropped_item_count", "fallback_used",
+                         "failure_stage", "reason_code"),
+}
+
+_EXTRACTION_PROVIDER_STATUSES = {"NOT_CALLED", "SUCCESS", "ERROR", "TIMEOUT", "UNKNOWN"}
+_EXTRACTION_PARSE_STATUSES = {"NOT_ATTEMPTED", "SUCCESS", "ERROR"}
+_EXTRACTION_SCHEMA_STATUSES = {"NOT_ATTEMPTED", "SUCCESS", "ERROR"}
+_EXTRACTION_VALIDATION_STATUSES = {"NOT_ATTEMPTED", "SUCCESS", "ERROR"}
+_EXTRACTION_FAILURE_STAGES = {"NONE", "PROVIDER", "PARSE", "SCHEMA", "VALIDATION", "FALLBACK", "UNKNOWN"}
+_EXTRACTION_REASON_CODES = {
+    "NONE", "EMPTY_INPUT", "EMPTY_MODEL_CLAIMS", "NO_ACCEPTED_CLAIMS",
+    "PROVIDER_ERROR", "PROVIDER_TIMEOUT", "JSON_PARSE_ERROR",
+    "SCHEMA_VALIDATION_ERROR", "CLAIM_VALIDATION_ERROR", "FALLBACK_ERROR", "UNKNOWN",
 }
 
 _CLAIM_ORIGINS = {"EVENT", "WRITER", "MIXED", "EVENT_FACT_GAP", "UNKNOWN"}
@@ -49,7 +67,8 @@ METADATA_FIELDS = (
     "frozen_file", "frozen_sha256", "selected_case_ids", "AGENT_MODE",
     "OFFLINE_EVAL", "provider", "model", "external_provider_allowed",
     "other_external_network_allowed", "git_branch", "git_commit",
-    "working_tree_dirty", "evaluation_started_at",
+    "working_tree_dirty", "evaluation_started_at", "claim_extraction_telemetry_version",
+    "human_response_strategy", "max_fact_responses", "multi_fact_input_enabled",
 )
 
 
@@ -73,6 +92,8 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
     source = value if isinstance(value, Mapping) else {}
     if name == "diagnosis":
         return _safe_diagnosis(source)
+    if name == "claim_extraction":
+        return _safe_claim_extraction_telemetry(source)
     result: dict[str, Any] = {}
     for key in allowed:
         item = source.get(key)
@@ -80,6 +101,8 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
             result[key] = item if isinstance(item, (int, float)) else None
         elif key == "decision_telemetry":
             result[key] = _safe_decision_telemetry(source.get(key))
+        elif key == "human_fact_sequence":
+            result[key] = _safe_human_fact_sequence(source.get(key))
         elif key in {"claim_indices", "actions", "observation_types", "next_actions", "fallback_agents"}:
             if key == "claim_indices" and isinstance(item, list):
                 result[key] = [entry for entry in item if isinstance(entry, int)][:100]
@@ -87,7 +110,8 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
                 result[key] = [entry[:80] for entry in item if _is_label(entry, 80)][:100]
             else:
                 result[key] = None
-        elif key in {"response_type", "resume_result", "final_wait_type", "stop_reason"}:
+        elif key in {"response_type", "resume_result", "final_wait_type", "stop_reason",
+                     "response_strategy", "runner_stop_reason"}:
             result[key] = item if item is None or _is_label(item, 80) else None
         elif key == "response_http_status":
             result[key] = item if isinstance(item, int) else None
@@ -104,6 +128,27 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
         if result["usage_available"] is not True:
             result["prompt_tokens"] = result["completion_tokens"] = result["total_tokens"] = None
     return result
+
+
+def _safe_claim_extraction_telemetry(source: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "claim_extraction_called": (source.get("claim_extraction_called")
+                                    if type(source.get("claim_extraction_called")) is bool else None),
+        "provider_status": _safe_enum(source.get("provider_status"), _EXTRACTION_PROVIDER_STATUSES),
+        "parse_status": _safe_enum(source.get("parse_status"), _EXTRACTION_PARSE_STATUSES),
+        "schema_status": _safe_enum(source.get("schema_status"), _EXTRACTION_SCHEMA_STATUSES),
+        "validation_status": _safe_enum(source.get("validation_status"), _EXTRACTION_VALIDATION_STATUSES),
+        "raw_item_count": _safe_count(source.get("raw_item_count")),
+        "accepted_item_count": _safe_count(source.get("accepted_item_count")),
+        "dropped_item_count": _safe_count(source.get("dropped_item_count")),
+        "fallback_used": source.get("fallback_used") if type(source.get("fallback_used")) is bool else None,
+        "failure_stage": _safe_enum(source.get("failure_stage"), _EXTRACTION_FAILURE_STAGES),
+        "reason_code": _safe_enum(source.get("reason_code"), _EXTRACTION_REASON_CODES),
+    }
+
+
+def _safe_count(value: Any) -> int | None:
+    return value if type(value) is int and 0 <= value <= 100000 else None
 
 
 def _safe_decision_telemetry(value: Any) -> list[dict[str, Any]]:
@@ -143,6 +188,39 @@ def _safe_decision_telemetry(value: Any) -> list[dict[str, Any]]:
             [_safe_index(target) for target in targets[:100] if _safe_index(target) is not None]
             if isinstance(targets, list) else []
         )
+        rows.append(safe)
+    return rows
+
+
+def _safe_human_fact_sequence(value: Any) -> list[dict[str, Any]]:
+    """Persist bounded lifecycle metadata without request IDs or business text."""
+    if not isinstance(value, list):
+        return []
+    rows = []
+    allowed_progress = {"UNTOUCHED", "ATTEMPTED_UNRESOLVED", "COVERED"}
+    for item in value[:100]:
+        if not isinstance(item, Mapping):
+            continue
+        safe = {}
+        for key in ("sequence_index", "claim_index", "current_claim_index", "remaining_claim_count",
+                    "round_count", "remaining_rounds", "human_asserted_claim_count"):
+            raw = item.get(key)
+            safe[key] = raw if type(raw) is int and 0 <= raw <= 100000 else None
+        safe["request_present"] = item.get("request_present") if type(item.get("request_present")) is bool else None
+        for key in ("wait_type", "response_type", "resume_status", "next_wait_type", "observation_type"):
+            raw = item.get(key)
+            safe[key] = raw[:80] if _is_label(raw, 80) else None
+        status = item.get("response_http_status")
+        safe["response_http_status"] = status if type(status) is int and 100 <= status <= 599 else None
+        progress = []
+        for row in item.get("claim_progress", []) if isinstance(item.get("claim_progress"), list) else []:
+            if not isinstance(row, Mapping):
+                continue
+            index = _safe_index(row.get("claim_index"))
+            state = row.get("status")
+            if index is not None and state in allowed_progress:
+                progress.append({"claim_index": index, "status": state})
+        safe["claim_progress"] = progress[:100]
         rows.append(safe)
     return rows
 
@@ -228,15 +306,20 @@ def _safe_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
         if isinstance(selected, list) else []
     )
     for key in ("frozen_file", "frozen_sha256", "AGENT_MODE", "OFFLINE_EVAL", "provider",
-                "model", "git_branch", "git_commit"):
+                "model", "git_branch", "git_commit", "human_response_strategy"):
         value = safe.get(key)
         if value is not None and not isinstance(value, (str, bool)):
             safe[key] = None
         elif isinstance(value, str):
             safe[key] = value[:500]
-    for key in ("external_provider_allowed", "other_external_network_allowed", "working_tree_dirty"):
+    for key in ("external_provider_allowed", "other_external_network_allowed", "working_tree_dirty",
+                "multi_fact_input_enabled"):
         if not isinstance(safe.get(key), bool):
             safe[key] = None
+    if type(safe.get("max_fact_responses")) is not int or not 1 <= safe["max_fact_responses"] <= 10:
+        safe["max_fact_responses"] = None
+    if safe.get("claim_extraction_telemetry_version") != "v1":
+        safe["claim_extraction_telemetry_version"] = None
     return safe
 
 
@@ -250,6 +333,8 @@ def collect_run_metadata(
     *, frozen_file: str, frozen_sha256: str, selected_case_ids: list[str],
     provider: str, model: str, external_provider_allowed: bool,
     other_external_network_allowed: bool, repo_root: Path,
+    human_response_strategy: str = "single_frozen_response",
+    max_fact_responses: int = 1,
 ) -> dict[str, Any]:
     """Capture reproducibility metadata without reading or serializing secrets."""
     def git_value(*args: str) -> str | None:
@@ -270,9 +355,13 @@ def collect_run_metadata(
         "provider": provider, "model": model,
         "external_provider_allowed": external_provider_allowed,
         "other_external_network_allowed": other_external_network_allowed,
+        "claim_extraction_telemetry_version": "v1",
         "git_branch": git_value("branch", "--show-current"),
         "git_commit": git_value("rev-parse", "HEAD"),
         "working_tree_dirty": bool(dirty), "evaluation_started_at": utc_now(),
+        "human_response_strategy": human_response_strategy,
+        "max_fact_responses": max_fact_responses,
+        "multi_fact_input_enabled": human_response_strategy == "repeat_frozen_unavailable",
     }
 
 
@@ -406,6 +495,15 @@ def rebuild_summary(jsonl_path: Path) -> dict[str, Any]:
     reliability_names = CASE_FIELDS["reliability"]
     reliability_values = {name: [] for name in reliability_names if name.endswith("_count")}
     fallbacks: CounterLike = {}
+    extraction_status_counts: dict[str, CounterLike] = {
+        key: {} for key in ("provider_status", "parse_status", "schema_status",
+                            "validation_status", "failure_stage", "reason_code")
+    }
+    extraction_fallback_cases = 0
+    extraction_cases = 0
+    extraction_item_totals = {key: [] for key in (
+        "raw_item_count", "accepted_item_count", "dropped_item_count",
+    )}
     for record in records:
         for key in reliability_values:
             value = (record.get("reliability") or {}).get(key)
@@ -414,6 +512,19 @@ def rebuild_summary(jsonl_path: Path) -> dict[str, Any]:
         for agent in ((record.get("reliability") or {}).get("fallback_agents") or []):
             if isinstance(agent, str):
                 fallbacks[agent] = fallbacks.get(agent, 0) + 1
+        extraction = record.get("claim_extraction") or {}
+        if extraction.get("claim_extraction_called") is True:
+            extraction_cases += 1
+        if extraction.get("fallback_used") is True:
+            extraction_fallback_cases += 1
+        for key, counts in extraction_status_counts.items():
+            value = extraction.get(key)
+            if isinstance(value, str):
+                counts[value] = counts.get(value, 0) + 1
+        for key, values in extraction_item_totals.items():
+            value = extraction.get(key)
+            if type(value) is int:
+                values.append(value)
     return {
         "total_cases": len(records),
         "success_cases": sum(item.get("status") == "SUCCESS" for item in records),
@@ -422,9 +533,20 @@ def rebuild_summary(jsonl_path: Path) -> dict[str, Any]:
         "observation_type_counts": _count_values(
             tag for item in records for tag in ((item.get("loop") or {}).get("observation_types") or [])
         ),
+        "fact_response_count": sum(
+            (item.get("human_fact") or {}).get("response_count") or 0 for item in records
+        ),
         "reliability_totals": {key: sum(values) if values else None
                                 for key, values in reliability_values.items()},
         "fallback_agent_counts": fallbacks,
+        "claim_extraction_telemetry": {
+            "cases_observed": extraction_cases,
+            "fallback_cases": extraction_fallback_cases,
+            "status_counts": {key: dict(sorted(counts.items()))
+                              for key, counts in extraction_status_counts.items()},
+            "item_count_totals": {key: sum(values) if values else None
+                                  for key, values in extraction_item_totals.items()},
+        },
     }
 
 

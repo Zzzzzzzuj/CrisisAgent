@@ -32,7 +32,6 @@ def pause_for_claim(state, remaining_plan: list[dict]) -> bool:
     coverage = (state.metadata.get("legal_claim_coverage") or {}).get("claim_coverage", [])
     recommendations = (state.metadata.get("legal_claim_action_recommendation") or {}).get("claim_action_recommendations", [])
     claims = extraction.get("legal_claims", [])
-    draft = str((state.get_result("writer") or {}).get("statement", ""))
     if not isinstance(claims, list) or not isinstance(coverage, list) or not isinstance(recommendations, list):
         return False
     if state.metadata.get(FACT_KEY):
@@ -48,37 +47,63 @@ def pause_for_claim(state, remaining_plan: list[dict]) -> bool:
             continue
         if not any(isinstance(item, dict) and item.get("claim_index") == index and item.get("case_fact_status") == "unresolved" for item in coverage):
             continue
-        request = {
-            "request_id": str(uuid4()),
-            "claim_index": index,
-            "claim": claim["claim"],
-            "missing_fact": "该企业个案事实尚无可信的逐 Claim 核实结果",
-            "question": f"请确认以下陈述所依据的企业调查事实；若目前无法确认，请选择 FACT_UNAVAILABLE：{claim['claim']}",
-            "status": "pending",
-        }
-        state.metadata[FACT_KEY] = {
-            "request": request,
-            "draft": draft,
-            "draft_hash": sha256(draft.encode("utf-8")).hexdigest(),
-            "remaining_plan": deepcopy(remaining_plan),
-            "response": None,
-            "phase": PHASE_PENDING,
-            "observation": {"case_fact_status": "unresolved", "human_verification_attempted": False},
-            "revision_attempted": False,
-            "decision_attempted": False,
-        }
-        loop = state.metadata.get("legal_action_loop")
-        if isinstance(loop, dict):
-            loop["phase"] = "WAITING_HUMAN"
-            loop["current_gap"] = {"claim_index": index, "claim": claim["claim"]}
-            loop["request_id"] = request["request_id"]
-        state.metadata["human_wait_type"] = FACT_INPUT
-        state.set_status(WAITING_HUMAN)
-        _trace(state, 0, "REQUEST_HUMAN_FACT_VERIFICATION", request["request_id"], index,
-               {"case_fact_status": "unresolved"}, "case_fact_requires_human_input",
-               evidence_gap="CASE_FACT_UNRESOLVED")
-        return True
+        return pause_for_claim_index(state, remaining_plan, index)
     return False
+
+
+def pause_for_claim_index(state, remaining_plan: list[dict], claim_index: int,
+                          *, replace_completed: bool = False) -> bool:
+    """Create the next bounded claim-scoped request using the existing API contract."""
+    extraction = state.metadata.get("legal_claim_extraction") or {}
+    coverage = (state.metadata.get("legal_claim_coverage") or {}).get("claim_coverage", [])
+    claims = extraction.get("legal_claims", [])
+    existing = state.metadata.get(FACT_KEY)
+    if (type(claim_index) is not int or claim_index < 0 or claim_index >= len(claims)
+            or not isinstance(claims[claim_index], dict)
+            or claims[claim_index].get("requires_case_fact") is not True):
+        return False
+    if existing and not replace_completed:
+        return False
+    if existing and existing.get("phase") not in {PHASE_RESPONSE_RECORDED, PHASE_CONTINUING, PHASE_COMPLETED}:
+        return False
+    if not any(isinstance(item, dict) and item.get("claim_index") == claim_index
+               and item.get("case_fact_status") == "unresolved" for item in coverage):
+        return False
+
+    claim = claims[claim_index]
+    draft = str((state.get_result("writer") or {}).get("statement", ""))
+    request = {
+        "request_id": str(uuid4()),
+        "claim_index": claim_index,
+        "claim": claim["claim"],
+        "missing_fact": "该企业个案事实尚无可信的逐 Claim 核实结果",
+        "question": f"请确认以下陈述所依据的企业调查事实；若目前无法确认，请选择 FACT_UNAVAILABLE：{claim['claim']}",
+        "status": "pending",
+    }
+    state.metadata[FACT_KEY] = {
+        "request": request,
+        "draft": draft,
+        "draft_hash": sha256(draft.encode("utf-8")).hexdigest(),
+        "remaining_plan": deepcopy(remaining_plan),
+        "response": None,
+        "phase": PHASE_PENDING,
+        "observation": {"case_fact_status": "unresolved", "human_verification_attempted": False},
+        "revision_attempted": False,
+        "decision_attempted": False,
+    }
+    loop = state.metadata.get("legal_action_loop")
+    round_index = 0
+    if isinstance(loop, dict):
+        loop["phase"] = "WAITING_HUMAN"
+        loop["current_gap"] = {"claim_index": claim_index, "claim": claim["claim"]}
+        loop["request_id"] = request["request_id"]
+        round_index = int((loop.get("cursor") or {}).get("round_count", 0))
+    state.metadata["human_wait_type"] = FACT_INPUT
+    state.set_status(WAITING_HUMAN)
+    _trace(state, round_index, "REQUEST_HUMAN_FACT_VERIFICATION", request["request_id"], claim_index,
+           {"case_fact_status": "unresolved"}, "case_fact_requires_human_input",
+           evidence_gap="CASE_FACT_UNRESOLVED")
+    return True
 
 
 def record_response(state, response: dict) -> dict:
