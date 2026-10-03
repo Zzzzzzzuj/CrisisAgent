@@ -18,6 +18,7 @@ from backend.core.human_fact_runtime import (
     PHASE_RESPONSE_RECORDED,
     record_action,
     record_response,
+    pause_for_claim_index,
     revision_is_safe,
 )
 from backend.core.policy import evaluate_human_policy
@@ -92,11 +93,14 @@ def _continue_saved_response(state) -> dict:
             stop_reason = _resume_legal_loop(state)
         except Exception:
             return _finish_for_review(state, "legal_loop_resume_error")
+        if stop_reason == "human_fact_required" and state.metadata.get("human_wait_type") == FACT_INPUT:
+            return _result(state, stop_reason)
         if stop_reason not in {"no_information_gain", "fact_unavailable_requires_safe_revision",
                                "human_asserted_fact_requires_review"}:
             return _finish_for_review(state, stop_reason)
 
-    if response["response_type"] == "FACT_PROVIDED":
+    if (response["response_type"] == "FACT_PROVIDED"
+            or _has_human_asserted_history(state)):
         _record_action_once(state, 1, "STOP", "human_asserted_fact_requires_review",
                             {"case_fact_status": "unresolved", "verification_status": "human_asserted"})
         return _finish_for_review(state, "human_asserted_fact_requires_review")
@@ -274,11 +278,10 @@ def _resume_legal_loop(state) -> str:
         risk_level=str((state.get_result("sentiment") or {}).get("risk_level", "unknown")),
         policy=policy, cursor=loop["cursor"], human_observation=human_observation,
     )
-    if result["stop_reason"] == "human_fact_required":
-        result["stop_reason"] = "second_human_fact_not_supported"
-    result["phase"] = "STOPPED"
+    waiting_for_next_fact = result["stop_reason"] == "human_fact_required"
+    result["phase"] = "WAITING_HUMAN" if waiting_for_next_fact else "STOPPED"
     result["last_observation"] = deepcopy(loop.get("last_observation"))
-    result["next_action"] = "STOP_UNRESOLVED"
+    result["next_action"] = "REQUEST_HUMAN_FACT" if waiting_for_next_fact else "STOP_UNRESOLVED"
     state.metadata["legal_action_loop"] = result
     state.metadata["legal_claim_coverage"] = deepcopy(result.get("claim_coverage", {}))
     state.metadata["legal_claim_relation"] = deepcopy(result.get("claim_evidence_relation", {}))
@@ -306,7 +309,37 @@ def _resume_legal_loop(state) -> str:
                                          if index + 1 < len(new_actions) else None),
                          "claim_index": action.get("claim_index"),
                          "tool_calls_used": action.get("tool_calls_used"),
-                         "remaining_budget": action.get("remaining_budget")})
+                         "remaining_budget": action.get("remaining_budget"),
+                         "remaining_claim_count": sum(
+                             row.get("status") == "UNTOUCHED"
+                             for row in result.get("claim_progress", []) if isinstance(row, dict)
+                         )})
+    if waiting_for_next_fact:
+        gap = result.get("current_gap") or {}
+        if not pause_for_claim_index(
+            state, fact.get("remaining_plan", []), gap.get("claim_index"), replace_completed=True,
+        ):
+            result["phase"] = "STOPPED"
+            result["next_action"] = "STOP_UNRESOLVED"
+            result["stop_reason"] = "human_fact_request_invalid"
+            state.metadata["legal_action_loop"] = result
+            fact["legal_resume_completed"] = True
+            save_checkpoint(state)
+            return result["stop_reason"]
+        save_checkpoint(state)
+        return "human_fact_required"
     fact["legal_resume_completed"] = True
     save_checkpoint(state)
     return result["stop_reason"]
+
+
+def _has_human_asserted_history(state) -> bool:
+    loop = state.metadata.get("legal_action_loop")
+    cursor = loop.get("cursor") if isinstance(loop, dict) else None
+    actions = cursor.get("actions") if isinstance(cursor, dict) else None
+    return any(
+        isinstance(action, dict)
+        and action.get("selected_action") == "HUMAN_FACT_RESPONSE"
+        and action.get("observation_type") == "fact_provided"
+        for action in (actions if isinstance(actions, list) else [])
+    )

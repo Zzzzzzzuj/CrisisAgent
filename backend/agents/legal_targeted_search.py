@@ -209,6 +209,8 @@ def run_legal_action_loop(
         previous_observation = deepcopy(human_observation)
         actions.append({"round_index": rounds_used - 1, "selected_action": "HUMAN_FACT_RESPONSE",
                         "observation_type": human_observation.get("observation_type"),
+                        "source": human_observation.get("source"),
+                        "verification_status": human_observation.get("verification_status"),
                         "request_id": human_observation["request_id"],
                         "claim_index": human_observation["claim_index"],
                         "whether_new_information": human_observation.get("whether_new_information", False),
@@ -314,9 +316,6 @@ def run_legal_action_loop(
             else:
                 stop_reason = ("tool_budget_exhausted" if tool_calls_used >= max_calls and
                                any(row.get("recommended_action") == TARGETED_LEGAL_SEARCH
-                                   for row in rows if isinstance(row, dict)) else
-                               "second_human_fact_not_supported" if requested_gaps and
-                               any(row.get("recommended_action") == REQUEST_HUMAN_FACT_VERIFICATION
                                    for row in rows if isinstance(row, dict)) else
                                _terminal_stop_reason(actions, requested_gaps, human_response_type))
                 stop = _loop_action(round_index, STOP_UNRESOLVED, stop_reason, stop_reason,
@@ -434,7 +433,7 @@ def run_legal_action_loop(
     if tool_calls_used >= max_calls and stop_reason not in {
         "task_evidence_requirements_resolved", "human_fact_required", "tool_failure",
         "fact_unavailable_requires_safe_revision", "human_asserted_fact_requires_review",
-        "second_human_fact_not_supported", "no_information_gain",
+        "no_information_gain",
     }:
         stop_reason = "tool_budget_exhausted"
         if actions:
@@ -454,11 +453,13 @@ def run_legal_action_loop(
         "context_budget": context_budget,
         "context_chars_total": sum(item.get("context_chars", 0) for item in actions),
         "current_gap": current_gap,
+        "claim_progress": _claim_progress(claims, current_coverage, requested_gaps, attempted),
         "phase": "WAITING_HUMAN" if stop_reason == "human_fact_required" else "STOPPED",
         "stop_reason": stop_reason,
         "cursor": {"round_count": rounds_used, "tool_calls_used": tool_calls_used,
                    "current_claim_index": (current_gap or {}).get("claim_index") if current_gap else
-                                          (previous_observation or {}).get("claim_index"),
+                                          _latest_claim_index(actions, previous_observation),
+                   "claim_progress": _claim_progress(claims, current_coverage, requested_gaps, attempted),
                    "attempted_actions": attempted, "requested_fact_gaps": requested_gaps,
                    "consumed_request_ids": consumed_requests, "previous_observation": previous_observation,
                    "human_response_type": human_response_type,
@@ -496,6 +497,46 @@ def _human_stop_reason(observation_type: str | None) -> str:
     if observation_type == "fact_provided":
         return "human_asserted_fact_requires_review"
     return "no_information_gain"
+
+
+def _claim_progress(claims: list, coverage: dict, requested_gaps: list[int],
+                    attempted_actions: dict[int, int] | None = None) -> list[dict]:
+    """Summarize bounded progression without copying claim or evidence text."""
+    requested = set(requested_gaps)
+    attempted = attempted_actions or {}
+    by_index = {
+        row.get("claim_index"): row
+        for row in coverage.get("claim_coverage", [])
+        if isinstance(row, dict) and type(row.get("claim_index")) is int
+    }
+    progress = []
+    for index, claim in enumerate(claims if isinstance(claims, list) else []):
+        if not isinstance(claim, dict):
+            progress.append({"claim_index": index, "status": "ATTEMPTED_UNRESOLVED"})
+            continue
+        observed = by_index.get(index, {})
+        needs_case_fact = claim.get("requires_case_fact") is True
+        needs_legal_rule = claim.get("requires_legal_rule") is True
+        has_requirement = needs_case_fact or needs_legal_rule
+        case_covered = not needs_case_fact or observed.get("case_fact_status") == "resolved"
+        rule_covered = not needs_legal_rule or observed.get("legal_rule_status") == "candidate_found"
+        if has_requirement and case_covered and rule_covered:
+            status = "COVERED"
+        elif index in requested or attempted.get(index, 0) > 0:
+            status = "ATTEMPTED_UNRESOLVED"
+        else:
+            status = "UNTOUCHED"
+        progress.append({"claim_index": index, "status": status})
+    return progress
+
+
+def _latest_claim_index(actions: list[dict], previous_observation: dict | None) -> int | None:
+    for action in reversed(actions):
+        index = action.get("claim_index") if isinstance(action, dict) else None
+        if type(index) is int:
+            return index
+    index = previous_observation.get("claim_index") if isinstance(previous_observation, dict) else None
+    return index if type(index) is int else None
 
 
 def _stopped_resume(cursor: dict, reason: str) -> dict:

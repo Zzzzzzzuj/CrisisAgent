@@ -278,6 +278,159 @@ def test_fact_response_reenters_legal_loop_before_writer_v2(runtime, monkeypatch
     assert order == ["retrieve", "writer_v2"]
 
 
+def test_distinct_claim_fact_requests_persist_across_two_resumes(runtime, monkeypatch):
+    calls, revision = runtime
+    registry = dynamic_runtime._build_runtime_registry()
+    claims = [
+        {"claim": "第一项企业事实", "requires_legal_rule": False, "requires_case_fact": True},
+        {"claim": "第二项企业事实", "requires_legal_rule": False, "requires_case_fact": True},
+    ]
+
+    def legal(_payload):
+        calls["legal"] += 1
+        extraction = {"legal_claims": claims, "claim_extraction_status": "ok"}
+        relation = {"legal_claim_relations": [], "relation_status": "skipped"}
+        coverage = build_claim_coverage(claims, relation)
+        rag = {"retrieval_status": "disabled", "retrieval_executed": False}
+        loop = run_legal_action_loop(
+            extraction, coverage, relation, rag,
+            retrieve_call=lambda *_args, **_kwargs: pytest.fail("case facts must not call Legal RAG"),
+        )
+        return {"review_summary": "事实待核查", "_metadata": {
+            "claim_extraction": extraction,
+            "claim_coverage": loop["claim_coverage"],
+            "claim_action_recommendation": loop["claim_action_recommendation"],
+            "claim_evidence_relation": loop["claim_evidence_relation"],
+            "legal_action_loop": loop,
+        }}
+
+    registry["legal"] = legal
+    monkeypatch.setattr(dynamic_runtime, "_build_runtime_registry", lambda: registry)
+    monkeypatch.setattr(human_fact_resume, "_build_runtime_registry", lambda: registry)
+    revision["expected_claim"] = "第二项企业事实"
+
+    started = _start()
+    first_request = started["human_fact_request"]
+    assert first_request["claim_index"] == 0
+    first_response = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": first_request["request_id"], "response_type": "FACT_UNAVAILABLE",
+    })
+    assert first_response.status_code == 200, first_response.text
+    assert first_response.json()["state_status"] == "WAITING_HUMAN"
+    state = checkpoint.load_checkpoint(started["session_id"])
+    second_request = state.metadata["human_fact"]["request"]
+    assert second_request["claim_index"] == 1
+    assert second_request["request_id"] != first_request["request_id"]
+    cursor = state.metadata["legal_action_loop"]["cursor"]
+    assert cursor["requested_fact_gaps"] == [0, 1]
+    assert cursor["consumed_request_ids"] == [first_request["request_id"]]
+    assert cursor["current_claim_index"] == 1
+    assert calls["writer_v2"] == 0
+
+    second_response = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": second_request["request_id"], "response_type": "FACT_UNAVAILABLE",
+    })
+    assert second_response.status_code == 200, second_response.text
+    state = checkpoint.load_checkpoint(started["session_id"])
+    final_cursor = state.metadata["legal_action_loop"]["cursor"]
+    assert final_cursor["requested_fact_gaps"] == [0, 1]
+    assert final_cursor["consumed_request_ids"] == [
+        first_request["request_id"], second_request["request_id"],
+    ]
+    assert state.metadata["legal_action_loop"]["claim_progress"] == [
+        {"claim_index": 0, "status": "ATTEMPTED_UNRESOLVED"},
+        {"claim_index": 1, "status": "ATTEMPTED_UNRESOLVED"},
+    ]
+    resume_trace = [item for item in state.trace if item.get("agent") == "legal"
+                    and item.get("phase") == "resume"]
+    assert "第一项企业事实" not in str(resume_trace)
+    assert "第二项企业事实" not in str(resume_trace)
+    assert calls["writer_v2"] == 1
+
+
+def test_human_asserted_history_survives_second_request_checkpoint_and_resume(runtime, monkeypatch):
+    calls, revision = runtime
+    registry = dynamic_runtime._build_runtime_registry()
+    claims = [
+        {"claim": "第一项企业事实", "requires_legal_rule": False, "requires_case_fact": True},
+        {"claim": "第二项企业事实", "requires_legal_rule": False, "requires_case_fact": True},
+    ]
+
+    def legal(_payload):
+        extraction = {"legal_claims": claims, "claim_extraction_status": "ok"}
+        relation = {"legal_claim_relations": [], "relation_status": "skipped"}
+        coverage = build_claim_coverage(claims, relation)
+        rag = {"retrieval_status": "disabled", "retrieval_executed": False}
+        loop = run_legal_action_loop(
+            extraction, coverage, relation, rag,
+            retrieve_call=lambda *_args, **_kwargs: pytest.fail("case facts must not call Legal RAG"),
+        )
+        return {"review_summary": "事实待核查", "_metadata": {
+            "claim_extraction": extraction,
+            "claim_coverage": loop["claim_coverage"],
+            "claim_action_recommendation": loop["claim_action_recommendation"],
+            "claim_evidence_relation": loop["claim_evidence_relation"],
+            "legal_action_loop": loop,
+        }}
+
+    registry["legal"] = legal
+    monkeypatch.setattr(dynamic_runtime, "_build_runtime_registry", lambda: registry)
+    monkeypatch.setattr(human_fact_resume, "_build_runtime_registry", lambda: registry)
+    revision["expected_claim"] = "第二项企业事实"
+
+    started = _start()
+    first_request = started["human_fact_request"]
+    assert first_request["claim_index"] == 0
+    provided = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": first_request["request_id"],
+        "response_type": "FACT_PROVIDED",
+        "fact_text": "内部人员称已完成核查。",
+    })
+    assert provided.status_code == 200, provided.text
+    assert provided.json()["state_status"] == "WAITING_HUMAN"
+
+    state = checkpoint.load_checkpoint(started["session_id"])
+    second_request = state.metadata["human_fact"]["request"]
+    cursor = state.metadata["legal_action_loop"]["cursor"]
+    first_observation = next(
+        action for action in cursor["actions"]
+        if action.get("selected_action") == "HUMAN_FACT_RESPONSE"
+    )
+    assert second_request["claim_index"] == 1
+    assert first_observation["claim_index"] == 0
+    assert first_observation["observation_type"] == "fact_provided"
+    assert first_observation["source"] == "human_provided"
+    assert first_observation["verification_status"] == "human_asserted"
+    assert "内部人员称已完成核查" not in str(cursor)
+    assert calls["writer_v2"] == 0
+
+    duplicate = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": first_request["request_id"],
+        "response_type": "FACT_PROVIDED",
+        "fact_text": "内部人员称已完成核查。",
+    })
+    assert duplicate.status_code == 400
+    after_duplicate = checkpoint.load_checkpoint(started["session_id"])
+    assert after_duplicate.metadata["legal_action_loop"]["cursor"]["actions"] == cursor["actions"]
+    assert calls["writer_v2"] == 0
+
+    unavailable = _request("POST", f"/api/dynamic/{started['session_id']}/fact-response", {
+        "request_id": second_request["request_id"], "response_type": "FACT_UNAVAILABLE",
+    })
+    assert unavailable.status_code == 200, unavailable.text
+    state = checkpoint.load_checkpoint(started["session_id"])
+    final_cursor = state.metadata["legal_action_loop"]["cursor"]
+    asserted = [action for action in final_cursor["actions"]
+                if action.get("selected_action") == "HUMAN_FACT_RESPONSE"
+                and action.get("observation_type") == "fact_provided"]
+    assert len(asserted) == 1
+    assert asserted[0]["claim_index"] == 0
+    assert state.metadata["human_fact"]["response"]["response_type"] == "FACT_UNAVAILABLE"
+    assert state.metadata["human_wait_type"] == "FINAL_REVIEW"
+    assert state.metadata["legal_action_loop"]["stop_reason"] == "human_asserted_fact_requires_review"
+    assert calls["writer_v2"] == 0
+
+
 def test_legal_resume_error_fails_closed_without_writer_v2(runtime, monkeypatch):
     calls, _ = runtime
     started = _start()

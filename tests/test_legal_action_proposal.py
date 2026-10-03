@@ -3,6 +3,7 @@ import json
 import pytest
 
 from backend.agents.legal_action_policy import (
+    REQUEST_HUMAN_FACT,
     RETRIEVE_LEGAL_EVIDENCE,
     STOP_RESOLVED,
     compute_eligible_actions,
@@ -32,6 +33,37 @@ RELATION = {
 RAG = {"query": "broad", "retrieval_status": "executed_with_hits",
        "retrieval_executed": True, "fallback_used": False}
 RULE = {"chunk_id": "rule", "source": "law", "text": "经营者应当遵守相关法律规定。"}
+
+
+def test_human_fact_eligibility_and_validator_are_claim_scoped():
+    claims = [
+        {"claim": "第一项事实", "requires_legal_rule": False, "requires_case_fact": True},
+        {"claim": "第二项事实", "requires_legal_rule": False, "requires_case_fact": True},
+    ]
+    extraction, coverage, relation, recommendations = _inputs(claims=claims, relation={
+        "legal_claim_relations": [], "relation_status": "skipped",
+    })
+    eligible = compute_eligible_actions(
+        extraction, coverage, recommendations,
+        requested_fact_gaps=[0], attempted_actions={}, remaining_rounds=2,
+        remaining_tool_calls=2, max_same_action_per_gap=2,
+    )
+    assert eligible == [{"action": REQUEST_HUMAN_FACT, "target_claim_index": 1,
+                          "reason_code": "CASE_FACT_GAP"}]
+    allowed = validate_action_proposal(
+        eligible[0], eligible, extraction, coverage,
+        requested_fact_gaps=[0], consumed_request_ids=["request-1"], attempted_actions={},
+        remaining_rounds=2, remaining_tool_calls=2, max_same_action_per_gap=2,
+    )
+    assert allowed == {"allowed": True, "reason_code": "allowed", "safety_violation": False}
+    blocked = validate_action_proposal(
+        {"action": REQUEST_HUMAN_FACT, "target_claim_index": 0, "reason_code": "CASE_FACT_GAP"},
+        eligible, extraction, coverage,
+        requested_fact_gaps=[0], consumed_request_ids=["request-1"], attempted_actions={},
+        remaining_rounds=2, remaining_tool_calls=2, max_same_action_per_gap=2,
+    )
+    assert blocked["allowed"] is False
+    assert blocked["reason_code"] == "human_fact_already_consumed"
 
 
 def _inputs(claims=None, relation=None):
