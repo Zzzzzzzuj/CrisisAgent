@@ -44,6 +44,11 @@ FROZEN_CASE_PATH = ROOT / "evaluation" / "dynamic_real_case_v1.json"
 EXPECTED_FROZEN_SHA256 = "8d5b0f979350db7f0d1ba2bbd23f1dd308d5f618f5333a2b73b336ce29d4aa40"
 DEFAULT_CASE_IDS = ("privacy-03", "food-03", "outage-01", "complaint-02", "outage-02")
 DEFAULT_REPORT_DIR = ROOT / "evaluation" / "reports"
+DEFAULT_HUMAN_RESPONSE_STRATEGY = "single_frozen_response"
+REPEAT_FROZEN_UNAVAILABLE = "repeat_frozen_unavailable"
+HUMAN_RESPONSE_STRATEGIES = (DEFAULT_HUMAN_RESPONSE_STRATEGY, REPEAT_FROZEN_UNAVAILABLE)
+DEFAULT_MAX_FACT_RESPONSES = 3
+MAX_FACT_RESPONSES_LIMIT = 10
 
 class ExternalRequestBlocked(RuntimeError):
     def __init__(self, diagnostic: Mapping[str, Any]):
@@ -467,6 +472,7 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
 
     request = _read_map(initial.get("human_fact_request"))
     response_sent = _read_map(response_info)
+    response_events = response_sent.get("events") if isinstance(response_sent.get("events"), list) else []
     claim_relations = _read_map(legal_meta.get("claim_relations"))
     source_conflict = claim_relations.get("source_conflict_detected")
     if not isinstance(source_conflict, bool):
@@ -532,11 +538,24 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
         "claim_extraction": extraction_telemetry,
         "diagnosis": _diagnosis_view(claims, coverage_rows, recommendations, request),
         "human_fact": {
-            "requested": bool(request), "request_count": 1 if request else 0,
+            "requested": bool(request), "request_count": len(response_events) if response_events else (1 if request else 0),
+            "response_count": len(response_events),
             "response_type": response_sent.get("response_type"),
             "response_http_status": response_sent.get("http_status"),
             "resume_result": response_sent.get("resume_result"),
             "final_wait_type": metadata.get("human_wait_type"),
+            "response_strategy": response_sent.get("strategy"),
+            "multi_fact_input_enabled": response_sent.get("strategy") == REPEAT_FROZEN_UNAVAILABLE,
+            "runner_stop_reason": response_sent.get("runner_stop_reason"),
+            "human_fact_sequence": response_events,
+            "human_asserted_present": any(
+                event.get("human_asserted_claim_count", 0) > 0
+                for event in response_events if isinstance(event, Mapping)
+            ),
+            "human_asserted_claim_count": max(
+                (event.get("human_asserted_claim_count", 0)
+                 for event in response_events if isinstance(event, Mapping)), default=0,
+            ),
         },
         "legal": {
             "rag_triggered": rag.get("retrieval_executed") if isinstance(rag.get("retrieval_executed"), bool) else None,
@@ -570,14 +589,20 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
     }
 
 
-def _case_executor(client, case: Mapping[str, Any]):
+def _case_executor(
+    client, case: Mapping[str, Any], *,
+    human_response_strategy: str = DEFAULT_HUMAN_RESPONSE_STRATEGY,
+    max_fact_responses: int = DEFAULT_MAX_FACT_RESPONSES,
+):
     import time
 
     start = time.perf_counter()
     initial_response = client.post("/api/dynamic/run", json={"event": case["event"]})
     initial = _json_object(initial_response)
-    response_info: dict[str, Any] = {"http_status": None, "response_type": None,
-                                     "resume_result": None}
+    response_info: dict[str, Any] = {
+        "http_status": None, "response_type": None, "resume_result": None,
+        "strategy": human_response_strategy, "events": [], "runner_stop_reason": None,
+    }
     final: Mapping[str, Any] = initial
     session_id = initial.get("session_id")
     if not isinstance(session_id, str):
@@ -585,16 +610,42 @@ def _case_executor(client, case: Mapping[str, Any]):
 
     snapshot_response = client.get(f"/api/dynamic/{session_id}")
     snapshot = _json_object(snapshot_response)
-    metadata = _read_map(snapshot.get("metadata"))
-    is_fact_input = (snapshot.get("status") == "WAITING_HUMAN"
-                     and metadata.get("human_wait_type") == "FACT_INPUT")
-    if is_fact_input:
-        request = _read_map(initial.get("human_fact_request"))
-        ground_truth = _read_map(case.get("human_response"))
-        if not request or not ground_truth:
+    seen_request_ids: set[str] = set()
+    ground_truth = _read_map(case.get("human_response"))
+    while True:
+        metadata = _read_map(snapshot.get("metadata"))
+        state_status = snapshot.get("status") or snapshot.get("state_status")
+        wait_type = metadata.get("human_wait_type")
+        if state_status != "WAITING_HUMAN":
+            response_info["runner_stop_reason"] = "terminal_state"
+            break
+        if wait_type == "FINAL_REVIEW":
+            response_info["runner_stop_reason"] = "final_review"
+            break
+        if wait_type != "FACT_INPUT":
+            response_info["runner_stop_reason"] = "unknown_wait_type"
+            break
+        if len(response_info["events"]) >= max_fact_responses:
+            response_info["runner_stop_reason"] = "fact_response_budget_exhausted"
+            break
+        if (human_response_strategy == DEFAULT_HUMAN_RESPONSE_STRATEGY
+                and response_info["events"]):
+            response_info["runner_stop_reason"] = "single_response_limit"
+            break
+
+        request = _current_fact_request(snapshot, initial if not response_info["events"] else None)
+        request_id = request.get("request_id")
+        if not isinstance(request_id, str) or not request_id:
+            response_info["runner_stop_reason"] = "missing_fact_request"
+            break
+        if request_id in seen_request_ids:
+            response_info["runner_stop_reason"] = "duplicate_fact_request"
+            break
+        if not ground_truth:
             raise RuntimeError("FACT_INPUT has no frozen Human Fact ground truth")
+        seen_request_ids.add(request_id)
         payload = {
-            "request_id": request.get("request_id"),
+            "request_id": request_id,
             "response_type": ground_truth.get("response_type"),
             "fact_text": ground_truth.get("fact_text", ""),
         }
@@ -603,19 +654,81 @@ def _case_executor(client, case: Mapping[str, Any]):
             headers={"X-User-Id": "semantic-eval-runner", "X-User-Role": "legal_reviewer"},
         )
         response_json = _json_object(response)
-        response_info = {
-            "http_status": response.status_code,
-            "response_type": ground_truth.get("response_type"),
-            "resume_result": response_json.get("status"),
-        }
-    final_response = client.get(f"/api/dynamic/{session_id}")
-    final = _json_object(final_response)
-    if initial_response.status_code >= 400 or snapshot_response.status_code >= 400 or final_response.status_code >= 400:
+        next_response = client.get(f"/api/dynamic/{session_id}")
+        next_snapshot = _json_object(next_response)
+        response_info["http_status"] = response.status_code
+        response_info["response_type"] = ground_truth.get("response_type")
+        response_info["resume_result"] = response_json.get("status")
+        response_info["events"].append(_fact_response_event(
+            len(response_info["events"]), request, ground_truth, response,
+            response_json, next_snapshot,
+        ))
+        snapshot_response = next_response
+        snapshot = next_snapshot
+        if response.status_code >= 400 or next_response.status_code >= 400:
+            response_info["runner_stop_reason"] = "fact_response_error"
+            break
+        if human_response_strategy == DEFAULT_HUMAN_RESPONSE_STRATEGY:
+            response_info["runner_stop_reason"] = "single_response_complete"
+            break
+
+    final = snapshot
+    if initial_response.status_code >= 400 or snapshot_response.status_code >= 400:
         raise RuntimeError("Dynamic Runtime API returned an error status")
     result = _extract_case_result(case, initial, final, response_info,
                                   (time.perf_counter() - start) * 1000)
     result["started_at"] = initial.get("started_at")
     return result
+
+
+def _current_fact_request(snapshot: Mapping[str, Any], initial: Mapping[str, Any] | None) -> dict[str, Any]:
+    direct = _read_map(snapshot.get("human_fact_request"))
+    if direct:
+        return direct
+    metadata = _read_map(snapshot.get("metadata"))
+    request = _read_map(_read_map(metadata.get("human_fact")).get("request"))
+    if request:
+        return request
+    return _read_map((initial or {}).get("human_fact_request"))
+
+
+def _fact_response_event(sequence_index, request, ground_truth, response, response_json, snapshot):
+    metadata = _read_map(snapshot.get("metadata"))
+    loop = _read_map(metadata.get("legal_action_loop"))
+    cursor = _read_map(loop.get("cursor"))
+    progress = loop.get("claim_progress")
+    if not isinstance(progress, list):
+        progress = cursor.get("claim_progress") if isinstance(cursor.get("claim_progress"), list) else []
+    safe_progress = [
+        {"claim_index": row.get("claim_index"), "status": row.get("status")}
+        for row in progress if isinstance(row, Mapping)
+    ]
+    previous = _read_map(cursor.get("previous_observation"))
+    asserted_count = sum(
+        isinstance(action, Mapping)
+        and action.get("selected_action") == "HUMAN_FACT_RESPONSE"
+        and action.get("observation_type") == "fact_provided"
+        for action in cursor.get("actions", []) if isinstance(cursor.get("actions"), list)
+    )
+    return {
+        "sequence_index": sequence_index,
+        "request_present": isinstance(request.get("request_id"), str),
+        "claim_index": request.get("claim_index"),
+        "wait_type": "FACT_INPUT",
+        "response_type": ground_truth.get("response_type"),
+        "response_http_status": response.status_code,
+        "resume_status": response_json.get("status"),
+        "next_wait_type": metadata.get("human_wait_type"),
+        "observation_type": previous.get("observation_type") or previous.get("type"),
+        "current_claim_index": cursor.get("current_claim_index"),
+        "claim_progress": safe_progress,
+        "remaining_claim_count": sum(
+            row.get("status") == "UNTOUCHED" for row in safe_progress
+        ),
+        "round_count": cursor.get("round_count", loop.get("round_count")),
+        "remaining_rounds": cursor.get("remaining_rounds"),
+        "human_asserted_claim_count": asserted_count,
+    }
 
 
 def _json_object(response) -> dict[str, Any]:
@@ -663,14 +776,21 @@ def _resolve_real_provider_config():
 def run_validation(
     *, mode: str = "fake", output_dir: Path = DEFAULT_REPORT_DIR,
     continue_on_error: bool = False, confirm_real_provider: bool = False,
-    case_id: str | None = None, app=None,
+    case_id: str | None = None,
+    human_response_strategy: str = DEFAULT_HUMAN_RESPONSE_STRATEGY,
+    max_fact_responses: int = DEFAULT_MAX_FACT_RESPONSES,
+    app=None,
 ) -> tuple[dict[str, Any], Path, list[dict[str, str]]]:
     if mode not in {"fake", "real"}:
         raise ValueError("mode must be fake or real")
     if mode == "real" and not confirm_real_provider:
         raise RuntimeError("Real mode requires explicit confirm_real_provider=True.")
+    _validate_response_configuration(human_response_strategy, max_fact_responses)
     cases, frozen_hash = (load_frozen_cases() if case_id is None
                           else load_frozen_cases(case_id=case_id))
+    if human_response_strategy == REPEAT_FROZEN_UNAVAILABLE:
+        for case in cases:
+            _validate_repeat_unavailable_case(case)
     case_ids = [case["case_id"] for case in cases]
     from evaluation.real_llm_eval_harness import RealLLMEvalRun, collect_run_metadata
 
@@ -700,6 +820,8 @@ def run_validation(
         selected_case_ids=case_ids, provider=provider, model=model,
         external_provider_allowed=external_allowed, other_external_network_allowed=False,
         repo_root=ROOT,
+        human_response_strategy=human_response_strategy,
+        max_fact_responses=max_fact_responses,
     )
     metadata["AGENT_MODE"] = "mock" if mode == "fake" else "llm"
     metadata["OFFLINE_EVAL"] = "1" if mode == "fake" else os.getenv("OFFLINE_EVAL", "0")
@@ -751,7 +873,14 @@ def run_validation(
                 api_client = _CapabilityScopedClient(client, internal_socket_capability)
                 try:
                     def execute(case):
-                        result = _case_executor(api_client, case)
+                        if human_response_strategy == DEFAULT_HUMAN_RESPONSE_STRATEGY:
+                            result = _case_executor(api_client, case)
+                        else:
+                            result = _case_executor(
+                                api_client, case,
+                                human_response_strategy=human_response_strategy,
+                                max_fact_responses=max_fact_responses,
+                            )
                         if attempts:
                             raise ExternalRequestBlocked(attempts[0])
                         return result
@@ -764,6 +893,23 @@ def run_validation(
     return summary, run.jsonl_path, attempts
 
 
+def _validate_response_configuration(strategy: str, max_fact_responses: int) -> None:
+    if strategy not in HUMAN_RESPONSE_STRATEGIES:
+        raise ValueError(f"Unknown human response strategy: {strategy}")
+    if type(max_fact_responses) is not int or not 1 <= max_fact_responses <= MAX_FACT_RESPONSES_LIMIT:
+        raise ValueError(
+            f"max_fact_responses must be between 1 and {MAX_FACT_RESPONSES_LIMIT}"
+        )
+
+
+def _validate_repeat_unavailable_case(case: Mapping[str, Any]) -> None:
+    response = _read_map(case.get("human_response"))
+    if response.get("response_type") != "FACT_UNAVAILABLE" or str(response.get("fact_text") or "").strip():
+        raise ValueError(
+            "repeat_frozen_unavailable requires an empty FACT_UNAVAILABLE frozen response"
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("fake", "real"), default="fake")
@@ -772,6 +918,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_REPORT_DIR)
     parser.add_argument("--continue-on-error", action="store_true",
                         help="Continue with the next frozen case after writing an ERROR record.")
+    parser.add_argument("--human-response-strategy", choices=HUMAN_RESPONSE_STRATEGIES,
+                        default=DEFAULT_HUMAN_RESPONSE_STRATEGY,
+                        help="Explicit evaluation-only Human Fact response strategy.")
+    parser.add_argument("--max-fact-responses", type=int, default=DEFAULT_MAX_FACT_RESPONSES,
+                        help=f"Evaluation response bound (1-{MAX_FACT_RESPONSES_LIMIT}).")
     parser.add_argument("--confirm-real-provider", action="store_true",
                         help="Required explicit confirmation before any authorized DeepSeek request.")
     args = parser.parse_args(argv)
@@ -785,6 +936,8 @@ def main(argv: list[str] | None = None) -> int:
     summary, jsonl_path, attempts = run_validation(
         mode=args.mode, output_dir=args.output_dir, continue_on_error=args.continue_on_error,
         confirm_real_provider=args.confirm_real_provider, case_id=args.case_id,
+        human_response_strategy=args.human_response_strategy,
+        max_fact_responses=args.max_fact_responses,
     )
     diagnostics_path = jsonl_path.with_name(jsonl_path.stem + "_network_diagnostics.jsonl")
     print(json.dumps({"mode": args.mode, "summary": summary, "jsonl_path": str(jsonl_path),

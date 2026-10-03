@@ -204,6 +204,86 @@ def test_action_proposal_telemetry_is_persisted_without_business_text(tmp_path):
         assert text not in persisted
 
 
+def test_multi_fact_sequence_is_allowlisted_without_business_text(tmp_path):
+    run = RealLLMEvalRun(tmp_path, {
+        **_metadata(),
+        "human_response_strategy": "repeat_frozen_unavailable",
+        "max_fact_responses": 3,
+        "multi_fact_input_enabled": True,
+    })
+    result = _result({"case_id": "case-1"})
+    result["human_fact"] = {
+        "requested": True,
+        "request_count": 2,
+        "response_count": 2,
+        "response_type": "FACT_UNAVAILABLE",
+        "response_http_status": 200,
+        "resume_result": "queued",
+        "final_wait_type": "FINAL_REVIEW",
+        "response_strategy": "repeat_frozen_unavailable",
+        "multi_fact_input_enabled": True,
+        "runner_stop_reason": "final_review",
+        "human_asserted_present": False,
+        "human_asserted_claim_count": 0,
+        "human_fact_sequence": [{
+            "sequence_index": 0,
+            "request_present": True,
+            "claim_index": 0,
+            "wait_type": "FACT_INPUT",
+            "response_type": "FACT_UNAVAILABLE",
+            "response_http_status": 200,
+            "resume_status": "queued",
+            "next_wait_type": "FACT_INPUT",
+            "observation_type": "fact_unavailable",
+            "current_claim_index": 1,
+            "claim_progress": [
+                {"claim_index": 0, "status": "ATTEMPTED_UNRESOLVED"},
+                {"claim_index": 1, "status": "UNTOUCHED"},
+                {"claim_index": 2, "status": "PRIVATE_CLAIM_TEXT"},
+            ],
+            "remaining_claim_count": 1,
+            "round_count": 2,
+            "remaining_rounds": 1,
+            "human_asserted_claim_count": 0,
+            "request_id": "PRIVATE_REQUEST_ID",
+            "question": "PRIVATE_QUESTION_TEXT",
+            "fact_text": "PRIVATE_FACT_TEXT",
+            "claim": "PRIVATE_CLAIM_TEXT",
+            "event": "PRIVATE_EVENT_TEXT",
+            "prompt": "PRIVATE_PROMPT_TEXT",
+            "raw_response": "PRIVATE_RAW_RESPONSE",
+        }],
+    }
+    run.run_cases([{"case_id": "case-1"}], lambda _case: result)
+    saved = read_case_records(run.jsonl_path)[0]["human_fact"]
+    sequence = saved["human_fact_sequence"][0]
+    assert saved["response_count"] == 2
+    assert saved["response_strategy"] == "repeat_frozen_unavailable"
+    assert sequence["claim_progress"] == [
+        {"claim_index": 0, "status": "ATTEMPTED_UNRESOLVED"},
+        {"claim_index": 1, "status": "UNTOUCHED"},
+    ]
+    assert "request_id" not in sequence
+    persisted = "\n".join(path.read_text(encoding="utf-8") for path in tmp_path.iterdir())
+    for text in ("PRIVATE_REQUEST_ID", "PRIVATE_QUESTION_TEXT", "PRIVATE_FACT_TEXT",
+                 "PRIVATE_CLAIM_TEXT", "PRIVATE_EVENT_TEXT", "PRIVATE_PROMPT_TEXT",
+                 "PRIVATE_RAW_RESPONSE"):
+        assert text not in persisted
+
+
+def test_metadata_records_explicit_multi_fact_configuration(tmp_path):
+    run = RealLLMEvalRun(tmp_path, {
+        **_metadata(),
+        "human_response_strategy": "repeat_frozen_unavailable",
+        "max_fact_responses": 3,
+        "multi_fact_input_enabled": True,
+    })
+    saved = json.loads(run.metadata_path.read_text(encoding="utf-8"))
+    assert saved["human_response_strategy"] == "repeat_frozen_unavailable"
+    assert saved["max_fact_responses"] == 3
+    assert saved["multi_fact_input_enabled"] is True
+
+
 def test_runtime_cleanup_and_stdout_truncation_do_not_affect_reports(tmp_path, capsys):
     runtime = tmp_path / "runtime"
     runtime.mkdir()

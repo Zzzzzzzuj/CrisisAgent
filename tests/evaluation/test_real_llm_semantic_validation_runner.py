@@ -480,6 +480,167 @@ def test_human_fact_frozen_response_uses_fact_response_api(tmp_path, monkeypatch
     assert fixture["event"] not in persisted
 
 
+class _JSONResponse:
+    def __init__(self, value, status_code=200):
+        self._value = value
+        self.status_code = status_code
+
+    def json(self):
+        return self._value
+
+
+class _FactSequenceClient:
+    def __init__(self, snapshots):
+        self.snapshots = list(snapshots)
+        self.get_index = 0
+        self.fact_payloads = []
+        self.approval_calls = 0
+
+    def post(self, path, json=None, headers=None):
+        if path == "/api/dynamic/run":
+            first_request = ((self.snapshots[0].get("metadata") or {}).get("human_fact") or {}).get("request")
+            payload = {"session_id": "session-1"}
+            if first_request:
+                payload["human_fact_request"] = first_request
+            return _JSONResponse(payload)
+        if path.endswith("/fact-response"):
+            self.fact_payloads.append(dict(json or {}))
+            return _JSONResponse({"status": "queued"})
+        if path.endswith("/approve"):
+            self.approval_calls += 1
+        return _JSONResponse({}, 400)
+
+    def get(self, _path):
+        index = min(self.get_index, len(self.snapshots) - 1)
+        self.get_index += 1
+        return _JSONResponse(self.snapshots[index])
+
+
+def _fact_snapshot(request_id, claim_index, *, wait_type="FACT_INPUT", progress=None):
+    progress = progress or [{"claim_index": claim_index, "status": "ATTEMPTED_UNRESOLVED"}]
+    return {
+        "status": "WAITING_HUMAN",
+        "metadata": {
+            "human_wait_type": wait_type,
+            "human_fact": {"request": {"request_id": request_id, "claim_index": claim_index}},
+            "legal_action_loop": {
+                "round_count": claim_index + 1,
+                "claim_progress": progress,
+                "cursor": {
+                    "round_count": claim_index + 1,
+                    "remaining_rounds": max(0, 3 - claim_index),
+                    "current_claim_index": claim_index,
+                    "claim_progress": progress,
+                    "previous_observation": {"observation_type": "fact_unavailable"},
+                    "actions": [],
+                },
+            },
+        },
+        "results": {}, "trace": [],
+    }
+
+
+def _final_review_snapshot():
+    return {
+        "status": "WAITING_HUMAN",
+        "metadata": {"human_wait_type": "FINAL_REVIEW", "legal_action_loop": {
+            "round_count": 3, "claim_progress": [
+                {"claim_index": 0, "status": "ATTEMPTED_UNRESOLVED"},
+                {"claim_index": 1, "status": "ATTEMPTED_UNRESOLVED"},
+            ], "cursor": {"round_count": 3, "remaining_rounds": 0, "actions": []},
+        }},
+        "results": {}, "trace": [],
+    }
+
+
+def _unavailable_case():
+    return {"case_id": "food-01", "event": "fixture", "expected_fact_gap": True,
+            "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}}
+
+
+def test_explicit_repeat_handles_two_fact_inputs_then_stops_at_final_review():
+    client = _FactSequenceClient([
+        _fact_snapshot("request-1", 0),
+        _fact_snapshot("request-2", 1, progress=[
+            {"claim_index": 0, "status": "ATTEMPTED_UNRESOLVED"},
+            {"claim_index": 1, "status": "ATTEMPTED_UNRESOLVED"},
+        ]),
+        _final_review_snapshot(),
+    ])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+        max_fact_responses=3,
+    )
+    assert len(client.fact_payloads) == 2
+    assert all(row["response_type"] == "FACT_UNAVAILABLE" for row in client.fact_payloads)
+    assert client.approval_calls == 0
+    assert result["human_fact"]["response_count"] == 2
+    assert result["human_fact"]["runner_stop_reason"] == "final_review"
+    assert [row["claim_index"] for row in result["human_fact"]["human_fact_sequence"]] == [0, 1]
+
+
+def test_final_review_is_never_auto_approved():
+    client = _FactSequenceClient([_final_review_snapshot()])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+    )
+    assert client.fact_payloads == []
+    assert client.approval_calls == 0
+    assert result["human_fact"]["runner_stop_reason"] == "final_review"
+
+
+def test_repeat_strategy_has_independent_response_budget():
+    client = _FactSequenceClient([
+        _fact_snapshot("request-1", 0), _fact_snapshot("request-2", 1),
+        _fact_snapshot("request-3", 2),
+    ])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+        max_fact_responses=2,
+    )
+    assert len(client.fact_payloads) == 2
+    assert result["human_fact"]["runner_stop_reason"] == "fact_response_budget_exhausted"
+
+
+def test_repeat_strategy_blocks_duplicate_fact_request():
+    client = _FactSequenceClient([
+        _fact_snapshot("request-1", 0), _fact_snapshot("request-1", 0),
+    ])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+    )
+    assert len(client.fact_payloads) == 1
+    assert result["human_fact"]["runner_stop_reason"] == "duplicate_fact_request"
+
+
+def test_repeat_strategy_rejects_fact_provided_before_execution(tmp_path, monkeypatch):
+    fixture = {"case_id": "provided", "event": "fixture", "human_response": {
+        "response_type": "FACT_PROVIDED", "fact_text": "specific fact",
+    }}
+    monkeypatch.setattr(runner, "load_frozen_cases",
+                        lambda: ([fixture], runner.EXPECTED_FROZEN_SHA256))
+    with pytest.raises(ValueError, match="empty FACT_UNAVAILABLE"):
+        runner.run_validation(
+            mode="fake", output_dir=tmp_path,
+            human_response_strategy=runner.REPEAT_FROZEN_UNAVAILABLE,
+        )
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_default_strategy_keeps_single_response_semantics():
+    client = _FactSequenceClient([
+        _fact_snapshot("request-1", 0), _fact_snapshot("request-2", 1),
+    ])
+    result = runner._case_executor(client, _unavailable_case())
+    assert len(client.fact_payloads) == 1
+    assert result["human_fact"]["response_count"] == 1
+    assert result["human_fact"]["runner_stop_reason"] == "single_response_complete"
+
+
 def test_case_three_error_keeps_prior_results_and_default_stops(tmp_path, monkeypatch):
     from scripts import run_real_llm_semantic_validation as module
 
