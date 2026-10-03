@@ -228,9 +228,46 @@ def test_targeted_fake_case_preserves_frozen_identity_and_only_runs_selected_cas
     assert metadata["frozen_sha256"] == runner.EXPECTED_FROZEN_SHA256
 
 
-def test_targeted_case_outside_fixed_slice_is_rejected_before_run(tmp_path):
-    with pytest.raises(ValueError, match="fixed frozen evaluation slice"):
-        runner.run_validation(mode="fake", output_dir=tmp_path, case_id="outage-03")
+def test_explicit_food_01_fake_run_selects_single_frozen_case(tmp_path):
+    cases, digest = runner.load_frozen_cases(case_id="food-01")
+    summary, jsonl_path, attempts = runner.run_validation(
+        mode="fake", output_dir=tmp_path, case_id="food-01",
+    )
+
+    assert [case["case_id"] for case in cases] == ["food-01"]
+    assert digest == runner.EXPECTED_FROZEN_SHA256
+    assert cases[0]["human_response"]["response_type"] == "FACT_UNAVAILABLE"
+    assert summary["total_cases"] == 1
+    assert [row["case_id"] for row in read_case_records(jsonl_path)] == ["food-01"]
+    assert attempts == []
+
+
+def test_explicit_default_slice_case_selects_only_that_case():
+    cases, digest = runner.load_frozen_cases(case_id="privacy-03")
+
+    assert [case["case_id"] for case in cases] == ["privacy-03"]
+    assert digest == runner.EXPECTED_FROZEN_SHA256
+
+
+def test_unknown_explicit_case_is_rejected_before_run(tmp_path):
+    with pytest.raises(ValueError, match="Unknown frozen case id"):
+        runner.run_validation(mode="fake", output_dir=tmp_path, case_id="does-not-exist")
+    assert not list(tmp_path.iterdir())
+
+
+def test_cli_rejects_unknown_case_without_creating_run_artifacts(tmp_path):
+    completed = subprocess.run(
+        [sys.executable, str(RUNNER_SCRIPT), "--mode", "fake", "--case-id", "does-not-exist",
+         "--output-dir", str(tmp_path)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+
+    assert completed.returncode == 2
+    assert "Unknown frozen case id" in completed.stderr
     assert not list(tmp_path.iterdir())
 
 

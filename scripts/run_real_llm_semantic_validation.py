@@ -71,7 +71,9 @@ class _CapabilityScopedClient:
         return self._request("post", *args, **kwargs)
 
 
-def load_frozen_cases(path: Path | None = None) -> tuple[list[dict[str, Any]], str]:
+def load_frozen_cases(
+    path: Path | None = None, *, case_id: str | None = None,
+) -> tuple[list[dict[str, Any]], str]:
     path = path or FROZEN_CASE_PATH
     raw = path.read_bytes()
     actual_hash = _frozen_identity_sha256(raw)
@@ -81,6 +83,11 @@ def load_frozen_cases(path: Path | None = None) -> tuple[list[dict[str, Any]], s
         )
     document = json.loads(raw.decode("utf-8"))
     by_id = {case.get("case_id"): case for case in document.get("cases", [])}
+    if case_id is not None:
+        if case_id not in by_id:
+            raise ValueError(f"Unknown frozen case id: {case_id}")
+        return [by_id[case_id]], actual_hash
+
     missing = [case_id for case_id in DEFAULT_CASE_IDS if case_id not in by_id]
     if missing:
         raise RuntimeError(f"Frozen case slice is incomplete: {', '.join(missing)}")
@@ -662,11 +669,8 @@ def run_validation(
         raise ValueError("mode must be fake or real")
     if mode == "real" and not confirm_real_provider:
         raise RuntimeError("Real mode requires explicit confirm_real_provider=True.")
-    cases, frozen_hash = load_frozen_cases()
-    if case_id is not None:
-        if case_id not in DEFAULT_CASE_IDS:
-            raise ValueError(f"Case {case_id!r} is not in the fixed frozen evaluation slice")
-        cases = [case for case in cases if case["case_id"] == case_id]
+    cases, frozen_hash = (load_frozen_cases() if case_id is None
+                          else load_frozen_cases(case_id=case_id))
     case_ids = [case["case_id"] for case in cases]
     from evaluation.real_llm_eval_harness import RealLLMEvalRun, collect_run_metadata
 
@@ -763,8 +767,8 @@ def run_validation(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("fake", "real"), default="fake")
-    parser.add_argument("--case-id", choices=DEFAULT_CASE_IDS,
-                        help="Run one case from the fixed frozen evaluation slice.")
+    parser.add_argument("--case-id",
+                        help="Run one explicitly selected case from the frozen dataset.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_REPORT_DIR)
     parser.add_argument("--continue-on-error", action="store_true",
                         help="Continue with the next frozen case after writing an ERROR record.")
@@ -773,6 +777,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.mode == "real" and not args.confirm_real_provider:
         parser.error("--mode real requires --confirm-real-provider; no request was made")
+    if args.case_id is not None:
+        try:
+            load_frozen_cases(case_id=args.case_id)
+        except ValueError as exc:
+            parser.error(str(exc))
     summary, jsonl_path, attempts = run_validation(
         mode=args.mode, output_dir=args.output_dir, continue_on_error=args.continue_on_error,
         confirm_real_provider=args.confirm_real_provider, case_id=args.case_id,
