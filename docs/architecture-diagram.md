@@ -11,7 +11,7 @@ flowchart TD
     C --> D["AI 生成声明"]
     D --> E["Human Review 企业审核"]
     E --> F{"审核结果"}
-    F -->|通过| G["可发布声明"]
+    F -->|通过| G["已审核草稿 / 可进入受控后续处理"]
     F -->|驳回| H["重新修订或终止"]
     B --> I["高级分析"]
     I --> J["Agent Trace"]
@@ -20,43 +20,33 @@ flowchart TD
     I --> M["Runtime Metrics"]
 ```
 
-## 2. Dynamic Runtime 架构
+## 2. 固定外层 Workflow 与 Legal 内部循环
 
 ```mermaid
 flowchart TD
-    A["User Event"] --> B["Planner"]
-    B --> C["Plan Validator"]
-    C --> D["AgentState"]
-    D --> E["Executor"]
-    E --> F["Agent Adapter"]
-    F --> G["Sentiment Agent"]
-    F --> H["Writer Agent"]
-    F --> I["Redteam Agent"]
-    F --> J["Legal Agent"]
-    F --> K["Decision Agent"]
-    G --> D
-    H --> D
-    I --> D
-    J --> D
-    K --> D
-    D --> L["Runtime Evaluator"]
-    L --> M["Policy"]
-    M --> N["Human Gate"]
-    N --> O["Checkpoint"]
-    O --> P["Resume"]
+    A["Event"] --> S["Sentiment"] --> W1["Writer V1"] --> R["RedTeam"] --> L["Legal"]
+    L --> C["Claim / 当前状态"] --> E["Program: Eligible Actions"]
+    E -->|唯一动作| X["程序处理"]
+    E -->|多个有意义动作| P["Legal LLM Proposal"] --> V["Program Validator"] --> X
+    X --> O["Action Observation"] --> U["更新 Claim Progress / 重算"]
+    U -->|继续| E
+    U -->|停止 / 完成| LS["Legal Stop"] --> W2["Writer V2"] --> D["Decision"] --> H["Human Review"]
+    O -. 需要企业事实 .-> WF["Checkpoint / WAITING_HUMAN"]
+    WF --> FR["Human Fact Response"] --> HO["Structured Observation"]
+    HO -. 恢复同一 Legal Loop .-> U
 ```
 
 ## 3. Agent 协作链路
 
 ```mermaid
 flowchart LR
-    A["事件输入"] --> B["Agent A 舆情分析"]
-    B --> C["Agent C 文案生成"]
-    C --> D["Agent D 红队攻击"]
-    D --> E["Agent B 合规审查"]
-    E --> F["Agent C 二次修订"]
-    F --> G["Agent E 最终决策"]
-    G --> H["final_statement + scores"]
+    A["事件输入"] --> B["Sentiment"]
+    B --> C["Writer V1"]
+    C --> D["RedTeam"]
+    D --> E["Legal bounded loop"]
+    E --> F["Writer V2"]
+    F --> G["Decision"]
+    G --> H["回应草稿 + 决策结果"]
 ```
 
 ## 4. RAG / Memory / Tools 位置
@@ -81,12 +71,16 @@ flowchart TD
 stateDiagram-v2
     [*] --> INIT
     INIT --> RUNNING
-    RUNNING --> WAITING_HUMAN: high risk or low quality
-    WAITING_HUMAN --> RUNNING: approve
-    WAITING_HUMAN --> FAILED: reject
-    RUNNING --> COMPLETED: evaluation passed
-    RUNNING --> FAILED: max iterations reached
+    RUNNING --> LEGAL_LOOP: enter Legal stage
+    LEGAL_LOOP --> WAITING_HUMAN: request case fact and checkpoint
+    WAITING_HUMAN --> LEGAL_LOOP: response becomes Observation; resume same cursor
+    LEGAL_LOOP --> RUNNING: Legal stops; outer Workflow continues
+    RUNNING --> FINAL_REVIEW: draft requires review
+    FINAL_REVIEW --> COMPLETED: reviewer approves draft
+    FINAL_REVIEW --> REJECTED: reviewer rejects draft
 ```
+
+Human Review approves or rejects a draft; approval does not publish it automatically.
 
 ## 6. Observability
 

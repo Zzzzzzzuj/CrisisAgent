@@ -1,6 +1,6 @@
 # Harness 受控迭代 Demo
 
-本文演示一条基于 `tool_timeout` Bad Case 的受控 Harness 迭代链路。当前实现实际执行的是离线 Golden Case Evaluation；Replay Runner 尚未完成，文中的 Replay Case 只作为来源标识和后续验证计划保存。
+本文记录项目早期、针对 `tool_timeout` Bad Case 的历史 Harness Golden Case demo。该阶段的 Replay Runner 尚未完成，因此文中的 Replay Case 当时只作为来源标识和后续验证计划保存；这仅描述该历史 demo，不代表当前整个项目没有 Replay 能力。
 
 ## 1. Failure Diagnosis
 
@@ -49,13 +49,13 @@ Candidate 记录 `parent_version`、`proposal_id`、`changed_fields`，然后进
 
 ## 5. Golden Case Evaluation
 
-当前评测调用已有 Harness Comparison 和 Eval Center 的离线 Golden Cases：
+该历史 demo 当时调用已有 Harness Comparison 和 Eval Center 的离线 Golden Cases：
 
 ```text
 POST /api/harnesses/{harness_id}/{version}/evaluate
 ```
 
-同一批 Golden Cases 对比 baseline 和 candidate，并保存 `comparison_id`、两侧 `spec_hash`、指标差异和门槛结果。当前不是完整 Replay Evaluation；真实 Replay Runner 属于后续计划。
+同一批 Golden Cases 对比 baseline 和 candidate，并保存 `comparison_id`、两侧 `spec_hash`、指标差异和门槛结果。该 `tool_timeout` demo 当时没有执行真实 Replay Evaluation。
 
 ## 6. 人工审批与启用
 
@@ -99,4 +99,8 @@ DRAFT → ACCEPTED → EVALUATED → APPROVED → ACTIVE
 
 ## 面试讲解版
 
-我没有让 Agent 自动修改自己的生产配置，而是把 Bad Case 转成结构化 Proposal。Proposal 先绑定 baseline 版本和 hash，人工接受后才生成 Candidate，再用同一批离线 Golden Cases 做对比，最后还要人工审批才能启用。新版本出现问题时可以回滚，整个过程通过 Proposal、Comparison、Approval 和 HarnessSpec 版本关联起来。当前 Golden Case 链路已经验证，完整 Replay Runner 仍是后续计划。
+我没有让 Agent 自动修改自己的运行配置，而是把 Bad Case 转成结构化 Proposal，并通过评测与人工审批控制 Candidate 生命周期。本节只讲项目早期 `tool_timeout` Golden Case demo 的范围。
+
+## Current Status Note
+
+后续项目已具备 `Bad Case → Candidate → Trigger Replay → Frozen Regression → Safety Gate → Human Approval / Reject` 的受控验证路径。RV-004 中 Candidate 的局部改进未能通过整体结果判断，Comparison 为 `UNKNOWN`，Candidate 被 `REJECTED`，Active Harness 版本保持不变。这说明候选修改可以被实验否决；它不是 self-training 或 autonomous self-evolution。

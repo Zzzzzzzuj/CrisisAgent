@@ -2,23 +2,25 @@
 
 ## 30 秒项目介绍
 
-CrisisAgent 是我做的一个企业危机响应 AI Agent 项目。它不是让大模型直接写公关稿，而是把一次危机事件拆成舆情研判、文案生成、红队质疑、法律合规审查、二次修订、最终决策和人工审核。后端用 FastAPI 和自研轻量 Dynamic Runtime，支持 AgentState、Checkpoint/Resume、Legal RAG、Guardrails、Auth/RBAC、PostgreSQL 持久化和 Vue Dashboard 展示。
+CrisisAgent 是一个面向企业危机回应的可审计多 Agent 原型。外层固定经过 Sentiment、Writer V1、RedTeam、Legal、Writer V2 和 Decision；我重点深化 Legal，让它围绕 Claim 在有限预算内执行 Action、接收 Observation 并重新判断。系统生成的是待审核草稿，不是自动发布。
 
 ## 1 分钟项目介绍
 
-CrisisAgent 解决的是“企业遇到食品安全、数据泄露、服务故障等事件时，如何让 AI 生成可审查、可追踪、可恢复的危机回应”。我没有直接套一个外部 Agent 框架，而是在项目里实现了 Planner、Plan Validator、Executor 和 AgentState。每个 Agent 的输入输出都落在共享状态里，trace 记录每一步耗时、输出摘要、错误、RAG 来源和 fallback。
+CrisisAgent 解决的是“事实不完整、法律依据待查时，如何安全地产生可审查的危机回应”。**固定的是高风险审核流程，不是模型输出。** Legal 先由程序计算 eligible actions；有多个有意义选项时，Legal LLM 才提议动作，再由 Program Validator 校验。**模型拥有提议权，程序拥有执行权。**
 
-生产化方面，我把最初的 JSON checkpoint 扩展成 repository 接口，支持 PostgreSQL 和 Alembic；新增 async runtime，让 `/api/dynamic/run` 可以返回 queued；加了 Auth/RBAC，让真实审核人 approve/reject 并写 audit log；还加了 LLM timeout/retry、JSON repair、Guardrails、runtime metrics 和 `/ready`。目前定位是 production-ready prototype，不是已经上线的生产服务。
+企业事实缺口进入 Human Fact，法律规则缺口进入 Legal RAG；人工回复作为 Observation 恢复同一次 Legal Task，并保留 Claim Progress 与预算。`FACT_PROVIDED` 仍是 `human_asserted`，不是独立核验事实。系统最终生成待审核草稿，不能自动发布。
 
 ## 3 分钟项目介绍
 
-这个项目的核心思路是：危机公关不是一个单点生成任务，而是一条风险控制链路。用户输入一个危机事件后，系统先做 Sentiment 分析，判断风险等级、公众情绪和关键词；Writer v1 生成第一版声明；RedTeam 模拟公众质疑；Legal Agent 结合 Retrieval Need Gate 和 RAG 做合规审查；Writer v2 根据红队和法律建议改写；Decision Agent 输出最终声明和评分。
+这个项目的核心思路是：危机回应不是一次 LLM 文案生成，而是一条固定的高风险审核流程。Sentiment、Writer V1、RedTeam、Legal、Writer V2 和 Decision 各自承担固定步骤，必要时由 Human Review 接手。固定的是审核顺序，不是每一步的模型输出。
 
-Dynamic Runtime 部分我实现了 Planner、Validator、Executor 和 AgentState。Planner 负责生成任务计划，Validator 保证依赖顺序正确，Executor 根据计划执行 Agent，并把结果、trace、失败 Agent 和 approval 状态写入 AgentState。高风险、低评分、LLM fallback 或 Guardrail 命中会进入 Human Review。系统会保存 checkpoint，审核通过后可以从原 session resume。
+Legal 是我重点做深的阶段。它先抽取 Claim 并识别每个 Claim 需要企业事实还是法律规则依据，再由程序计算当前 eligible actions。只有多个有意义选项时才调用 Legal LLM 提议；Program Validator 检查白名单、目标 Claim 和预算，通过后程序才执行。动作结果形成 Observation，更新 Claim Progress 后重新计算下一步；达到停止条件或预算上限后进入既有安全审核路径。
 
-RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回低分 chunk，所以加了 rerank 后的相关度过滤。后来为了减少无关任务触发 RAG，又做了 Retrieval Need Gate v3，区分“topic 相关”和“当前危机响应意图”。再通过 frozen challenge 和 retrieval holdout 验证 Gate 和 Reranker 的效果。Reranker v2 是手写 domain-aware rule，不是 Cross Encoder，这一点我会明确说明。
+Human Fact 和 Legal RAG 处理不同问题：前者补充企业个案事实，后者检索法律规则候选材料，RAG 不能证明企业事实。人工回复会作为新 Observation 恢复同一 Legal Loop，不会重跑整个 Workflow；`FACT_PROVIDED` 仍是 `human_asserted`，需要保守处理。
 
-生产化阶段我补了 PostgreSQL checkpoint backend、Alembic migration、Auth/RBAC、真实审核人审计、LLM reliability、Guardrails、RAG knowledge ingestion、Observability 和 readiness。最后一轮测试结果是 `447 passed`。真实 DeepSeek + BGE smoke 的结果是 `PASS_WITH_LLM_FALLBACK_OBSERVED`，说明真实模型请求和 BGE 能跑通，但也观察到 structured output 不稳定，所以不能夸大成生产可靠性。
+一次 food-01 Bad Case 暴露了 Human Fact 不可得时任务过早停止、后续 Claim 未继续处理的问题。补上 Claim progression 与受限恢复后，food-01 的一次 Real Provider Trigger Replay 观察到多个 Claim 依次处理，并在预算耗尽后进入 Final Review。该次 Claim Extraction Provider 调用和结构化解析成功，但单次运行不是严格 A/B；它证明有界多 Claim continuation 在该次真实运行中发生，不证明通用自主规划、Proposal 优于 deterministic baseline 或 Claim Extraction 全面语义正确。
+
+最近一次完整离线回归（2026-10-03）为 `1078 passed, 1 skipped`，这是工程回归证据，不是 Agent 语义质量指标。项目仍是 engineering prototype：尚未完整生产部署，也未完成外部真实用户验证。
 
 ## 面试官可能追问
 
@@ -28,7 +30,7 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 ### 2. Dynamic Runtime 和 Fixed Workflow 有什么区别？
 
-背诵版回答：Fixed Workflow 是固定顺序，适合稳定回归；Dynamic Runtime 是通过 Planner 生成计划，再由 Validator 补齐和校验依赖，Executor 按计划执行。它的好处是所有中间状态都在 AgentState 里，便于 checkpoint、resume、trace 和后续扩展。
+背诵版回答：外层六步 Workflow 固定，避免高风险审核步骤被跳过；Legal 内部则允许有限的任务推进。程序先算 eligible actions，必要时让 Legal LLM 提议，再由 Validator 决定提议是否可执行。Observation 更新 Claim Progress 后会重新计算动作，Checkpoint 支持 Human Fact 后恢复同一次 Legal Task。
 
 ### 3. Legal RAG 为什么要加 Retrieval Need Gate？
 
@@ -108,7 +110,7 @@ RAG 部分重点放在 Legal Agent。开始时我发现无关 query 也会返回
 
 ### 18. 你怎么验证项目不是只跑通一个 demo？
 
-背诵版回答：我做了多层测试和评测。普通 pytest 当前是 505 passed；Evaluation 里有 Response V2、RAG Baseline、RAG Retrieval Eval、RAG Bad Case Loop、Knowledge Ingestion Regression、Gate Challenge、Reranker Holdout、Final E2E Regression 和 Real Model Smoke。并且我保留了 Gate v1/v2 的失败结果，没有只展示最终好看的数字。
+背诵版回答：最近一次完整离线回归（2026-10-03）是 1078 passed、1 skipped，说明工程回归通过，不等于 Agent 语义质量。Real Provider 证据目前是 food-01 一次 bounded multi-Claim Trigger Replay，不是 benchmark；外部真实用户验证尚未完成。我会把自动化测试、冻结集、真实模型运行和 User 0 内部浏览器 E2E 分开描述。
 
 ### 19. 这个项目最大的不足是什么？
 
