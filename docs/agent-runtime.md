@@ -95,10 +95,10 @@ backend/core/plan_validator.py
 - 自动补充依赖。
 - 修正执行顺序。
 
-例如 legal 依赖 writer 和 redteam，如果 Planner 只给了 legal，Validator 会补齐：
+Validator 只补齐请求步骤所需的上游依赖。若 Planner 只请求 `legal`，缺少的 `sentiment`、`writer` 和 `redteam` 会被补入；不会仅因请求 Legal 而追加下游 `writer_v2` 或 `decision`：
 
 ```text
-sentiment → writer → redteam → legal → decision
+sentiment → writer → redteam → legal
 ```
 
 ## Executor
@@ -187,7 +187,7 @@ RUNNING
 
 WAITING_HUMAN
   ↓ reject
-FAILED
+REJECTED
 ```
 
 ## Checkpoint Resume

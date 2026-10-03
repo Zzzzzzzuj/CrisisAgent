@@ -20,11 +20,13 @@
 python -m pytest tests -q
 ```
 
-当前回归结果：
+最近一次有记录的完整离线回归（2026-10-03）：
 
 ```text
-505 passed
+1078 passed, 1 skipped
 ```
+
+pytest 和 regression 是工程回归证据，不等同于 Agent semantic quality，也不是模型质量分数。
 
 ## 2. Runtime Tests
 
@@ -234,6 +236,13 @@ data/code_knowledge_index.json
 
 ## 13. What The Evaluation Does Not Prove
 
+评测证据应分层阅读，不能合并成一个质量分数：
+
+- **Engineering Regression**：检查代码、接口、状态流转和安全边界的回归。
+- **Frozen Evaluation**：在固定 Case 与数据集 identity 上比较行为。
+- **Real Provider / LLM Evaluation**：观察特定真实模型运行；food-01 是一次 bounded multi-Claim Trigger Replay，不是 benchmark。
+- **User 0 Browser E2E**：内部端到端使用验证，不等于外部真实用户验证。
+
 当前评测不能证明：
 
 - 线上生产 SLA
@@ -243,4 +252,4 @@ data/code_knowledge_index.json
 - 分布式队列可靠性
 - pgvector / ANN 检索效果
 
-更准确的结论是：CrisisAgent 已经具备较完整的 AI Agent 工程化验证体系，适合作为 production-ready prototype 和面试展示项目。
+更准确的结论是：CrisisAgent 是一个 engineering prototype，具备多层工程验证，但评测结果不能替代语义质量或生产就绪证明。项目尚未完整生产部署；crash recovery 仍为 partial，外部 Provider 调用不保证 exactly-once，外部真实用户验证也尚未完成。
