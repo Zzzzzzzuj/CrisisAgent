@@ -9,16 +9,10 @@ from multiprocessing import Process, Queue
 from pathlib import Path
 from queue import Empty
 
-from dotenv import load_dotenv
-
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-
-load_dotenv(PROJECT_ROOT / ".env")
-load_dotenv(PROJECT_ROOT / "backend" / ".env", override=True)
 
 from backend.config import get_config
 from backend.core.dynamic_runtime import run_dynamic_agent
