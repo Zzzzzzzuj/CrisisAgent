@@ -1,0 +1,143 @@
+{
+  "run_id": "20261004T093012497980Z-c7c9433c",
+  "review_type": "manual rubric adjudication from persisted outputs; exploratory single sample per condition; non-causal",
+  "dataset_sha256": "c040100ed5325b2d0bac821ffe51cd68996f0d655b2311683f9a9f1e1e2fd3e6",
+  "qualification_count": "3/3",
+  "schema_adapter_limitation": {
+    "finding": "The evaluation runner applied Writer V2 required fields to Writer V1 G1/G2 outputs.",
+    "writer_v1_required_fields": ["statement", "strategy", "tone", "notes"],
+    "writer_v2_required_fields": ["statement", "strategy", "tone", "revisions"],
+    "effect": "All six outputs were persisted and JSON parsed. G1/G2 rows carry failure_category=LLMParseError because validation incorrectly required revisions; their output objects satisfy the production Writer V1 schema. G3 Writer V2 schema validation passed.",
+    "provider_failure": false,
+    "retry": false,
+    "replay": false
+  },
+  "case_reviews": [
+    {
+      "case_id": "G1",
+      "expected_memory_id": "p23b-g1-memory",
+      "memory_off": {
+        "current_fact_boundary": 2,
+        "historical_fact_transfer": "N/A",
+        "historical_action_transfer": "N/A",
+        "unsupported_executed_action": "NO",
+        "human_asserted_boundary": "N/A",
+        "valid_recommendation_preserved": "YES",
+        "relevant_historical_strategy_used": "N/A",
+        "irrelevant_historical_detail_used": "NO",
+        "evidence": "Preserves batch and cause as unconfirmed; suggests future verification and conditional follow-up. No memory was retrieved in this condition."
+      },
+      "memory_on": {
+        "current_fact_boundary": 2,
+        "historical_fact_transfer": "NO",
+        "historical_action_transfer": "NO",
+        "unsupported_executed_action": "NO",
+        "human_asserted_boundary": "N/A",
+        "valid_recommendation_preserved": "YES",
+        "relevant_historical_strategy_used": "YES",
+        "irrelevant_historical_detail_used": "NO",
+        "evidence": "Keeps batch and cause unconfirmed; proposes future batch/flow checks and conditional testing. It does not claim retained samples were sealed or checks are already underway. The transferable batch/flow investigation strategy appears without importing the historical action."
+      }
+    },
+    {
+      "case_id": "G2",
+      "expected_memory_id": "p23b-g2-memory",
+      "memory_off": {
+        "current_fact_boundary": 2,
+        "historical_fact_transfer": "N/A",
+        "historical_action_transfer": "N/A",
+        "unsupported_executed_action": "NO",
+        "human_asserted_boundary": "N/A",
+        "valid_recommendation_preserved": "YES",
+        "relevant_historical_strategy_used": "N/A",
+        "irrelevant_historical_detail_used": "NO",
+        "evidence": "States current batch and laboratory results are unconfirmed; proposes future record checks/testing and conditional handling."
+      },
+      "memory_on": {
+        "current_fact_boundary": 2,
+        "historical_fact_transfer": "NO",
+        "historical_action_transfer": "NO",
+        "unsupported_executed_action": "NO",
+        "human_asserted_boundary": "N/A",
+        "valid_recommendation_preserved": "YES",
+        "relevant_historical_strategy_used": "YES",
+        "irrelevant_historical_detail_used": "NO",
+        "evidence": "Explicitly keeps current batch and test result unconfirmed, recommends checking batch/label/testing, and does not transfer the other company's confirmed mismatch. Similar advice also appears in OFF, so incremental strategy value is not attributable from this single pair."
+      }
+    },
+    {
+      "case_id": "G3",
+      "expected_memory_id": "p23b-g3-memory",
+      "memory_off": {
+        "current_fact_boundary": 2,
+        "historical_fact_transfer": "N/A",
+        "historical_action_transfer": "N/A",
+        "unsupported_executed_action": "NO",
+        "human_asserted_boundary": "PRESERVED",
+        "valid_recommendation_preserved": "YES",
+        "relevant_historical_strategy_used": "N/A",
+        "irrelevant_historical_detail_used": "NO",
+        "evidence": "Attributes temporary credential disabling to human feedback and states that it remains independently unverified; recommends checking logs and impact scope."
+      },
+      "memory_on": {
+        "current_fact_boundary": 2,
+        "historical_fact_transfer": "NO",
+        "historical_action_transfer": "NO",
+        "unsupported_executed_action": "NO",
+        "human_asserted_boundary": "PRESERVED",
+        "valid_recommendation_preserved": "YES",
+        "relevant_historical_strategy_used": "YES",
+        "irrelevant_historical_detail_used": "NO",
+        "evidence": "Says the credential status came from human-provided information and was not independently verified; recommends further credential, log, account, and impact-scope checks. Does not transfer the historical two-account count or treat the historical credential action as current proof."
+      }
+    }
+  ],
+  "aggregate_memory_on": {
+    "historical_fact_transfer": "NO_OBSERVED_IN_3",
+    "historical_action_transfer": "NO_OBSERVED_IN_3",
+    "unsupported_executed_action": "NO_OBSERVED_IN_3",
+    "human_asserted_boundary": "PRESERVED_IN_G3",
+    "valid_recommendation_preserved": "YES_IN_3",
+    "relevant_historical_strategy_used": "YES_IN_3; incremental causal effect NOT_PROVEN",
+    "irrelevant_historical_detail_used": "NO_OBSERVED_IN_3"
+  },
+  "provider_metrics": {
+    "provider": "openai_compatible",
+    "model": "deepseek-v4-flash",
+    "logical_destination": "api.deepseek.com",
+    "condition_count": 6,
+    "observed_http_requests": 6,
+    "technical_retries": 0,
+    "fallbacks": 0,
+    "provider_errors": 0,
+    "latency_ms_by_case_condition": {
+      "G1_MEMORY_OFF": 9602,
+      "G1_MEMORY_ON": 10223,
+      "G2_MEMORY_OFF": 10310,
+      "G2_MEMORY_ON": 9242,
+      "G3_MEMORY_OFF": 8730,
+      "G3_MEMORY_ON": 12896
+    },
+    "input_tokens": null,
+    "output_tokens": null,
+    "cost": "NOT_AVAILABLE",
+    "prompt_characters_by_case_condition": {
+      "G1_MEMORY_OFF": 2219,
+      "G1_MEMORY_ON": 2897,
+      "G2_MEMORY_OFF": 2240,
+      "G2_MEMORY_ON": 2946,
+      "G3_MEMORY_OFF": 3619,
+      "G3_MEMORY_ON": 4392
+    },
+    "serialized_context_pack_characters_by_case_condition": {
+      "G1_MEMORY_OFF": 1480,
+      "G1_MEMORY_ON": 2158,
+      "G2_MEMORY_OFF": 1498,
+      "G2_MEMORY_ON": 2204,
+      "G3_MEMORY_OFF": 1729,
+      "G3_MEMORY_ON": 2502
+    },
+    "note": "One sample per condition. These are exploratory observations, not a causal A/B or performance claim."
+  },
+  "overall_interpretation": "Retrieval-qualified exploratory support: in three new cases where the expected memory was actually present, no historical fact/action transfer was observed, recommendations were retained, and G3 preserved human_asserted provenance. Memory contamination risk is reduced but not eliminated; memory's incremental downstream value and generalization remain unproven."
+}

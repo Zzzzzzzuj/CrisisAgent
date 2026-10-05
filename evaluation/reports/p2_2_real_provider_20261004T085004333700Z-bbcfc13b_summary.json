@@ -1,0 +1,1020 @@
+{
+  "version": "p2.2-real-provider-holdout-v1",
+  "run_id": "20261004T085004333700Z-bbcfc13b",
+  "dataset_sha256": "6d840c159ec242ac3ab81dfd0a61f361a153fa80fa4ae4e86ff57619b321117a",
+  "dataset_frozen_before_provider_request": true,
+  "provider_config": {
+    "provider": "openai_compatible",
+    "model": "deepseek-v4-flash",
+    "host": "api.deepseek.com"
+  },
+  "experiment_boundary": {
+    "memory": "evaluation-only case_memories adapter into the unchanged production ContextPack builder and Writer prompt builder; no production Memory store mutation",
+    "context": "direct Legal prompt-builder paired calls; not a full six-step workflow and not a Legal Action Loop evaluation",
+    "safe_reference": "same role-allowed fields with compression_mode=off; no AgentState wholesale serialization",
+    "provider_usage": "LLM client trace does not expose provider usage; token metrics are null, estimated token field excluded",
+    "quality_scoring": "rubrics frozen in dataset; outputs preserved for manual/case-level scoring; no LLM judge"
+  },
+  "memory_pairs": [
+    {
+      "case_id": "p22-memory-relevant",
+      "case_type": "relevant_memory",
+      "retrieval_boundary": {
+        "expected_memory_ids": [
+          "p22-mem-relevant-01"
+        ],
+        "retrieved_memory_ids": [
+          "p22-mem-relevant-01"
+        ],
+        "retrieval_matches_frozen_judgment": true,
+        "historical_provenance_preserved": true,
+        "current_fact_status": "unverified"
+      },
+      "pair_valid_for_quality_comparison": true,
+      "memory_off_condition": "p22-memory-relevant:memory-off",
+      "memory_on_condition": "p22-memory-relevant:memory-on"
+    },
+    {
+      "case_id": "p22-memory-fact-conflict",
+      "case_type": "historical_fact_conflict",
+      "retrieval_boundary": {
+        "expected_memory_ids": [
+          "p22-mem-conflict-01"
+        ],
+        "retrieved_memory_ids": [
+          "p22-mem-conflict-01"
+        ],
+        "retrieval_matches_frozen_judgment": true,
+        "historical_provenance_preserved": true,
+        "current_fact_status": "unverified"
+      },
+      "pair_valid_for_quality_comparison": true,
+      "memory_off_condition": "p22-memory-fact-conflict:memory-off",
+      "memory_on_condition": "p22-memory-fact-conflict:memory-on"
+    },
+    {
+      "case_id": "p22-memory-keyword-collision",
+      "case_type": "keyword_collision_irrelevant",
+      "retrieval_boundary": {
+        "expected_memory_ids": [],
+        "retrieved_memory_ids": [],
+        "retrieval_matches_frozen_judgment": true,
+        "historical_provenance_preserved": true,
+        "current_fact_status": "unverified"
+      },
+      "pair_valid_for_quality_comparison": true,
+      "memory_off_condition": "p22-memory-keyword-collision:memory-off",
+      "memory_on_condition": "p22-memory-keyword-collision:memory-on"
+    }
+  ],
+  "context_pairs": [
+    {
+      "case_id": "p22-context-crowded-legal",
+      "case_type": "crowded_legal_context",
+      "safe_reference_condition": "p22-context-crowded-legal:safe-reference",
+      "current_contextpack_condition": "p22-context-crowded-legal:current-contextpack",
+      "required_context_markers_present": {
+        "event_facts": true,
+        "fact_status": true,
+        "top_legal_evidence": true,
+        "previous_observation": true,
+        "human_fact_status": true
+      },
+      "pair_valid_for_quality_comparison": true,
+      "safe_reference_prompt_characters": 3517,
+      "current_prompt_characters": 3401,
+      "safe_reference_context_characters": 2680,
+      "current_context_characters": 2564,
+      "safe_reference_pack_content_characters": 2680,
+      "current_pack_content_characters": 2564,
+      "safe_reference_input_tokens": null,
+      "current_input_tokens": null,
+      "safe_reference_output_tokens": null,
+      "current_output_tokens": null,
+      "safe_reference_latency_ms": 17983,
+      "current_latency_ms": 12116,
+      "safe_reference_output": {
+        "legal_risks": [
+          "草稿仅称“尚未确认影响范围”，可能被公众理解为已发生异常访问、只是影响范围未明，存在提前暗示事件成立的风险。",
+          "涉及疑似用户信息异常访问时，后续可能触发个人信息安全事件相关的告知、报告和处置要求；当前表述未保留“如核实涉及个人信息安全事件，将依法依规处置”的合规空间。",
+          "未体现后续更新机制和监管配合表达，在 high 风险、事实未核实场景下，可能影响公众知情预期与监管沟通的稳妥性。",
+          "未说明是否涉及个人信息、涉及哪些数据及影响人数，虽未编造事实，但若后续确认事件，当前回应可能显得信息不足。",
+          "草稿未出现提前定责、绝对化承诺或过度承诺，该部分风险较低，但修改时仍需避免引入“已确认无影响”“绝对安全”等表述。"
+        ],
+        "safe_points": [
+          "使用“关注到相关反馈”而非直接确认事件，未提前认定异常访问事实。",
+          "使用“正在核查情况”体现调查处置动作，未提前下结论。",
+          "使用“尚未确认影响范围”对影响范围保持审慎，未披露未经核实的数据、人数或原因。",
+          "未进行责任认定，未向特定主体归责，未作出赔偿、整改完成等过度承诺。",
+          "整体语气谨慎，符合事实未核实、事件状态不确定阶段的合规回应基调。"
+        ],
+        "revision_advice": [
+          "建议将“目前正在核查情况”调整为“已启动核查程序，正在对相关反馈所涉疑似异常访问进行技术核查与影响评估”，使核查动作更清晰，但不确认事件成立。",
+          "建议将“尚未确认影响范围”改为“是否发生用户信息异常访问及具体影响范围均尚未确认，待核实后及时更新”，避免让公众误读为事件已经成立。",
+          "建议增加条件式合规承诺：如核实涉及个人信息安全事件，将依据适用法律法规及监管要求开展后续处置、告知和报告；当前不作事实定性或责任认定。",
+          "建议增加后续更新与监管配合表达：将通过官方渠道及时发布后续核查结果，并依法配合相关部门工作。",
+          "如已确认且不涉及保密或调查干扰，可适度说明核查维度或进度，例如系统访问记录、异常路径、处置状态等；但不得披露未核实的影响人数、数据类型、原因或责任。",
+          "吸收红队反馈：公众希望了解核查范围，可在不提前确认影响的前提下，说明“正在核查什么维度、当前进展如何”，避免只给笼统表述。",
+          "避免使用“绝对”“保证”“不存在”“已经控制”“马上解决”等绝对化或过度承诺措辞，也不得提前认定责任主体。"
+        ],
+        "public_opinion_suggestions": [
+          "公众关注核查范围属于合理预期，建议以“核查维度/进度”回应，而非以“影响范围已确认”回应。",
+          "可向公众说明：已关注相关反馈并启动技术核查，当前重点包括疑似异常访问情况、可能涉及的数据范围和系统处置状态，但相关结论尚待核实。",
+          "可设置更新预期：后续如取得可核实进展，将通过官方渠道及时发布，减少信息真空和猜测。",
+          "对“是否涉及个人信息”“涉及多少用户”“具体哪些数据”等核心问题，应明确当前尚未确认，不宜提前给出具体数字或范围。",
+          "回应中应体现对用户关切的重视，同时避免引发不必要恐慌；不扩散未经证实的截图、传言或技术细节。"
+        ],
+        "integrated_revision_tasks": [
+          "将首句改为审慎确认关注与启动核查，例如：“我们已关注到相关反馈，并启动核查程序，正在对相关情况开展技术核查与影响评估。”",
+          "将“尚未确认影响范围”改为同时覆盖事件是否成立与影响范围，例如：“目前是否发生用户信息异常访问及具体影响范围尚待核实，我们将根据核查进展及时更新。”",
+          "如核查范围已可披露且不涉密，补充核查维度或进度，但不得确认影响范围、影响人数、数据类型或原因。",
+          "增加条件式合规承诺：“如核实涉及个人信息安全事件，我们将依据适用法律法规及监管要求，开展后续处置、告知和报告工作。”",
+          "增加监管配合与后续更新表达：“我们将依法配合相关部门工作，并通过官方渠道及时发布后续核查结果。”",
+          "删除或替换任何可能被理解为提前确认事实、提前定责、绝对安全或过度承诺的措辞。",
+          "在保持审慎的前提下吸收红队建议，用“核查范围/核查进度”回应公众关切，不提前确认影响。",
+          "保留“尚未确认”的审慎基调，但避免单独使用“尚未确认影响范围”造成事件已成立的误读。"
+        ],
+        "legal_safety_score_hint": 8,
+        "review_summary": "草稿总体审慎，未提前确认事实、未提前定责，也未使用绝对化承诺，基础法律安全度较高。主要不足在于未保留个人信息安全事件后续告知、报告等合规空间，未体现监管配合与后续更新机制，且“尚未确认影响范围”可能被误读为事件已成立。建议在第二版中改为“是否发生及影响范围均待核实”，增加条件式依法处置承诺、监管配合和更新安排，并适度回应公众对核查范围与进度的关切。"
+      },
+      "current_output": {
+        "legal_risks": [
+          "当前声明虽未确认影响范围，但未提及个人信息安全事件的敏感属性，可能被公众解读为回避问题，形成合规沟通不足的观感。",
+          "若后续核查确认发生个人信息安全事件，声明中缺少后续依法处置、报告和告知安排的提示，可能带来延迟沟通的合规风险。",
+          "使用“相关反馈”表述较模糊，可能削弱官方回应的可信度，并刺激公众对核查范围与进度的追问。",
+          "在事实未核实、事件状态不确定的情况下，任何提前确认影响范围、定责或承诺结果的表述均存在法律与舆情风险。"
+        ],
+        "safe_points": [
+          "使用“正在核查情况”表明已启动内部核查，未放任不管。",
+          "使用“尚未确认影响范围”保留事实未核实状态，未提前确认个人信息安全事件或提前定责。",
+          "未使用“绝对安全”“不会泄露”“已完全控制”等绝对化或过度承诺表述。",
+          "未披露具体用户、数据字段、影响数量等未经核实的信息。"
+        ],
+        "revision_advice": [
+          "保留“尚未确认影响范围”的审慎表述，避免将“疑似异常访问”直接表述为“数据泄露”或“用户信息泄露”。",
+          "在不确认影响的前提下，补充说明核查范围与当前进度，例如技术团队正对系统日志、访问行为、数据接触情况等进行核查。",
+          "增加后续更新机制，例如“如有进一步核查结果，将及时通过官方渠道发布”，避免信息真空。",
+          "增加合规处置表述，例如“如核实涉及个人信息安全事件，将依据相关法律法规及监管要求开展后续处置、报告和告知工作”，但不要编造具体法条或承诺未核实结果。",
+          "避免提前确认责任方、影响人数、数据种类，也避免使用“已整改”“已消除风险”等未经核实的结论。",
+          "建议增加用户咨询或反馈渠道，并提示以官方发布信息为准，避免谣言扩散。"
+        ],
+        "public_opinion_suggestions": [
+          "回应公众希望了解核查范围：可说明当前核查覆盖系统日志、访问记录、数据接触链路及处置状态等方向，但明确仍在进行中、尚未确认影响范围。",
+          "不提前确认影响：坚持“疑似异常访问”“正在核查”“尚未确认影响范围”等口径，避免被理解为已确认数据泄露。",
+          "说明核查进度：可披露已启动技术核查、正在评估影响范围和处置状态，但不披露未经核实的结论。",
+          "稳定用户关切：表达对用户信息保护的高度重视，并告知后续进展将通过官方渠道更新。",
+          "降低猜测空间：提示公众勿传播未经证实信息，同时提供客服或专门入口承接用户问询。"
+        ],
+        "integrated_revision_tasks": [
+          "第二版声明必须保留“尚未确认影响范围/事件性质”的审慎前提，不得提前确认个人信息安全事件。",
+          "在声明中增加核查范围与进度描述：说明技术团队正在核查异常访问相关系统日志、访问行为、数据接触情况及处置状态。",
+          "增加后续更新安排：表述为“将根据核查进展及时通过官方渠道发布”，不得承诺具体结果或绝对时间。",
+          "增加依法依规处置表述：如核实涉及个人信息安全事件，将依据相关法律法规及监管要求开展处置、报告和告知，并配合监管要求。",
+          "删除或避免任何提前定责、绝对化承诺、过度承诺及未经核实的影响范围描述。",
+          "统一对外口径：使用“疑似异常访问”“正在核查”“尚未确认影响范围”等审慎用语，避免“数据泄露”等定性词。",
+          "回应公众对核查范围的关切：在不确认影响的前提下，适度说明核查维度，减少信息真空。",
+          "增加用户沟通渠道与官方信息提示，引导公众关注官方发布，不传播未经证实信息。"
+        ],
+        "legal_safety_score_hint": 8,
+        "review_summary": "草稿整体审慎，未提前确认事实、定责或作出绝对化承诺，法律安全底线尚可。主要不足是未说明核查范围与进度，也未提示后续依法处置和更新安排。建议在坚持“尚未确认影响范围”的前提下，补充核查维度、后续更新及依法依规处置口径，以回应公众关切并降低个人信息安全事件的合规沟通风险。"
+      }
+    },
+    {
+      "case_id": "p22-context-resume-provided",
+      "case_type": "human_fact_resume",
+      "safe_reference_condition": "p22-context-resume-provided:safe-reference",
+      "current_contextpack_condition": "p22-context-resume-provided:current-contextpack",
+      "required_context_markers_present": {
+        "fact_status": true,
+        "top_legal_evidence": true,
+        "previous_observation": true,
+        "human_fact_status": true
+      },
+      "pair_valid_for_quality_comparison": true,
+      "safe_reference_prompt_characters": 2886,
+      "current_prompt_characters": 2969,
+      "safe_reference_context_characters": 2056,
+      "current_context_characters": 2139,
+      "safe_reference_pack_content_characters": 2056,
+      "current_pack_content_characters": 2139,
+      "safe_reference_input_tokens": null,
+      "current_input_tokens": null,
+      "safe_reference_output_tokens": null,
+      "current_output_tokens": null,
+      "safe_reference_latency_ms": 12414,
+      "current_latency_ms": 11517,
+      "safe_reference_output": {
+        "legal_risks": [
+          "当前事件事实状态为未核实、事件状态不确定，声明中“已启动核查”属于对内部行动的事实性表述，若缺乏独立核验或授权依据，可能被公众理解为已确认存在用户数据访问异常。",
+          "红队提示需区分人工提供信息与独立核验结果；若“已启动核查”仅来自人工反馈，未标明核验状态，存在把未核实信息写成已验证结论的风险。",
+          "用户数据访问异常涉及高监管敏感度，当前未确认影响范围，若后续披露不及时或表述前后不一致，可能引发数据安全、用户告知及监管沟通方面的合规质疑。",
+          "声明未包含后续更新、核查范围或监管配合等安全表达，虽未构成虚假陈述，但在高风险事件中可能被质疑回应不充分。"
+        ],
+        "safe_points": [
+          "声明未确认数据访问异常已实际发生，未确认影响范围、影响用户数量或具体数据类型。",
+          "声明未提前定责、未归因攻击来源、未使用绝对化承诺或过度承诺。",
+          "“目前仍在确认相关情况”与“对外说明应与已核实事实相匹配”的合规要求方向一致，保留了事实不确定性。",
+          "未出现“数据绝对安全”“不会泄露”“不存在影响”等高风险表述。"
+        ],
+        "revision_advice": [
+          "将“已启动核查”调整为有依据的行动表述，例如“我们关注到相关情况，并已启动内部核查程序”，如该行动尚未独立核验，应标注为当前内部掌握信息。",
+          "增加状态限定语，例如“相关情况目前尚未经独立核实，最终以核查结果为准”，避免将人工反馈或初步信息表述为已验证结论。",
+          "避免直接确认“用户数据访问异常”已经发生；可使用“相关访问情况”“相关报告”“相关线索”等中性表述，除非已具备可核实依据。",
+          "增加后续更新与沟通渠道，例如“如有可核实的进展，我们将通过官方渠道及时更新”，但不要承诺具体结论或时间点。",
+          "如适用，可加入依法配合监管、开展影响评估、必要时通知相关方的原则性表述，但不得提前承诺“无需通知”或“不会影响用户”。",
+          "严格区分人工提供信息与独立核验结果：人工反馈只能作为线索，不能作为对外确认事实。"
+        ],
+        "public_opinion_suggestions": [
+          "预判公众质疑：是否发生数据泄露、影响哪些用户、涉及哪些数据、何时发现、是否已通知监管、用户是否需要采取行动。",
+          "对外统一口径建议：承认关注到相关情况，说明已启动内部核查，强调影响范围尚未确认，承诺有可核实进展时通过官方渠道更新。",
+          "社交媒体回复避免推测原因、责任方或影响范围，统一引导至官方声明和用户支持渠道。",
+          "监测不实传言，仅对有可核实依据的信息进行澄清，避免与未经证实的信息对抗式回应。",
+          "表达对用户数据安全的重视和同理心，但不得作出“绝对安全”“不会发生泄露”等过度承诺。"
+        ],
+        "integrated_revision_tasks": [
+          "将草稿改写为：明确当前信息未经独立核实，区分人工提供线索与已核验事实。",
+          "删除或弱化对“用户数据访问异常”已发生的暗示，使用中性、待核实表述。",
+          "保留并强化“仍在核查、影响范围尚未确认”的核心口径。",
+          "增加“以核查结果为准”“如有可核实进展将及时更新”等安全表达。",
+          "加入依法配合监管、开展影响评估的原则性表述，但不得承诺具体结果或责任认定。",
+          "禁止使用“绝对安全”“不会泄露”“无需担心”“不存在影响”等绝对化或过度承诺措辞。",
+          "形成对外统一问答口径，覆盖公众质疑和数据主体可能的权利询问。"
+        ],
+        "legal_safety_score_hint": 7,
+        "review_summary": "草稿整体审慎，未提前确认影响范围或定责，但“已启动核查”的事实依据和核验状态未明，且缺少后续更新与监管配合等安全表达。建议在第二版中明确信息未核实状态、区分人工反馈与独立核验结果，并补充中性、可更新的对外口径。"
+      },
+      "current_output": {
+        "legal_risks": [
+          "声明中的“已启动核查”属于对内部行动状态的事实性表述；若仅来自人工提供信息且未经独立核验，可能构成未核实信息对外披露，与“对外说明应与已核实事实相匹配”的要求存在偏差。",
+          "在用户数据访问异常、影响范围尚未确认的高敏感场景下，若表述过于笼统或未区分“已核实事实”与“待核实信息”，可能被公众解读为隐瞒、淡化或提前定调。",
+          "未包含“以最终核查结果为准”“后续更新”等必要限定，若后续出现新事实，可能增加前后表述不一致的合规与舆情风险。"
+        ],
+        "safe_points": [
+          "未确认影响范围，未对数据访问异常原因、责任主体或用户影响作出提前认定。",
+          "使用“核查”“仍在确认”等审慎措辞，未使用“不存在风险”“已全部控制”等绝对化承诺。",
+          "整体基调与当前 fact_status=unverified、event_status=uncertain 的事实状态基本匹配。"
+        ],
+        "revision_advice": [
+          "对“已启动核查”进行来源核验：如无内部工单、调查记录等证据支持，建议改为“我们关注到相关情况，正在核查/了解”，避免将人工提供信息直接作为已验证事实对外表述。",
+          "明确区分人工提供信息与独立核验结果，不把人工反馈、初步了解或单一来源信息写成已证实结论。",
+          "补充谨慎限定语，例如“目前仍在确认中，最终情况以核查结果为准”“如有进展将及时更新”，但不承诺具体时限、具体结果或超出当前事实的处置措施。",
+          "如后续确认涉及用户数据访问异常，应在合规评估后考虑用户告知、监管配合、影响范围说明等必要内容；当前阶段不宜提前承诺或否认相关影响。",
+          "避免任何绝对化、定性化或归责化表达，例如“不存在泄露”“无用户影响”“系个别人员行为”等，除非已有充分核验依据。"
+        ],
+        "public_opinion_suggestions": [
+          "公众可能质疑企业是否隐瞒数据访问异常、核查是否真实启动、影响范围是否涉及个人信息、何时通知用户以及由谁负责。",
+          "回应应区分“已知事实”“待核实信息”和“后续将核查事项”，避免用未核实信息安抚公众，也不要把人工反馈包装成独立核验结论。",
+          "建议统一对外口径，强调仍在核查、以最终结果为准，并建立后续更新机制，减少因信息反复造成的次生舆情。",
+          "在未确认影响范围前，不宜对责任归属、数据是否泄露、用户损失等作结论性表态；可表达将依法依规处理并配合监管，但前提是相关行动已实际启动并可核验。"
+        ],
+        "integrated_revision_tasks": [
+          "审核声明中所有事实性陈述，逐项标记来源与核验状态；重点确认“已启动核查”是否有内部证据支持。",
+          "若“已启动核查”无法独立核验，将表述调整为“关注到相关情况，正在核查/了解”等不把人工提供信息作为已验证结论的谨慎措辞。",
+          "删除或限定任何未核实的影响范围、责任归属、泄露结论或处置结果，不提前确认事实、不提前定责。",
+          "增加“目前仍在确认中，最终以核查结果为准”“如有进展将及时更新”等安全表达，但不承诺具体时限或结果。",
+          "根据红队反馈，确保第二版明确区分人工提供信息与独立核验结果，避免将人工反馈写成已验证结论。",
+          "保留后续合规复核点：如确认涉及用户数据访问异常，再评估监管配合、用户告知和进一步披露义务。"
+        ],
+        "legal_safety_score_hint": 7,
+        "review_summary": "草稿整体审慎，未提前确认影响范围或定责，但仍需核验“已启动核查”这一事实性表述的来源与证据强度，避免将人工提供信息作为已验证结论对外披露。建议补充以最终核查结果为准和后续更新机制，并保持对数据访问异常影响范围、监管配合及用户权益事项的审慎留白。"
+      }
+    },
+    {
+      "case_id": "p22-context-short-control",
+      "case_type": "short_context_control",
+      "safe_reference_condition": "p22-context-short-control:safe-reference",
+      "current_contextpack_condition": "p22-context-short-control:current-contextpack",
+      "required_context_markers_present": {
+        "event_facts": true,
+        "fact_status": true,
+        "top_legal_evidence": true,
+        "previous_observation": true
+      },
+      "pair_valid_for_quality_comparison": true,
+      "safe_reference_prompt_characters": 2676,
+      "current_prompt_characters": 2687,
+      "safe_reference_context_characters": 1862,
+      "current_context_characters": 1873,
+      "safe_reference_pack_content_characters": 1862,
+      "current_pack_content_characters": 1873,
+      "safe_reference_input_tokens": null,
+      "current_input_tokens": null,
+      "safe_reference_output_tokens": null,
+      "current_output_tokens": null,
+      "safe_reference_latency_ms": 9873,
+      "current_latency_ms": 12263,
+      "safe_reference_output": {
+        "legal_risks": [
+          "声明中“预约服务已恢复”如未限定范围、时点或数据来源，可能被理解为全部门店/全部功能完全恢复且不再受影响；在 fact_status=partially_verified、event_status=investigating 下，应避免绝对化表述。",
+          "“故障原因仍在排查”本身风险较低，但后续若主动补充原因、责任或赔偿安排，可能构成未经确认的事实陈述或对外承诺；知识库提示“对外承诺应有事实依据”。"
+        ],
+        "safe_points": [
+          "未提前定责，未指认具体原因或责任方。",
+          "未作出赔偿、补偿、退款等未经确认的承诺。",
+          "包含“原因仍在排查”的持续调查表达，与 event_status=investigating 一致。",
+          "聚焦服务恢复状态，未扩散到无关敏感事项。"
+        ],
+        "revision_advice": [
+          "建议将“预约服务已恢复”改为限定性表述，如“相关门店预约服务目前已恢复”或“截至当前，预约服务已恢复”，避免被理解为所有服务完全无虞。",
+          "保留“故障原因仍在排查”的安全表述，并可补充“如有进展将及时通过官方渠道更新”。",
+          "不要主动加入赔偿、补偿、责任认定、系统完全修复等尚未经确认的承诺；如确需回应，应使用“正在核查”“将依法依规处理”等审慎措辞。",
+          "避免使用“绝不再次发生”“保证不再故障”等绝对化承诺。"
+        ],
+        "public_opinion_suggestions": [
+          "公众/用户当前主要关注服务是否恢复，回应应优先确认服务状态，减少不确定性。",
+          "对故障原因保持“仍在排查”的口径，不猜测、不归因、不定责。",
+          "避免承诺未经确认的赔偿安排；如用户提出个案诉求，引导至客服或官方渠道登记处理。",
+          "设置后续更新预期，例如通过官方公告/门店通知同步排查进展。"
+        ],
+        "integrated_revision_tasks": [
+          "将首句调整为带范围/时点的恢复表述，避免绝对化：如“相关门店预约服务目前已恢复”。",
+          "保留并强化调查状态：明确“故障原因仍在排查/核查中”，不输出未经确认的原因或责任结论。",
+          "禁止新增赔偿、补偿、退款、定责、系统完全修复等未经确认的承诺；如需回应，使用“将依法依规处理”等审慎表达。",
+          "增加后续更新承诺的审慎表达：如“如有进展将及时通过官方渠道发布”，但不得承诺具体时间或结果。",
+          "增加用户指引：引导用户通过官方客服/门店渠道反馈个案问题，并做好记录与转办。",
+          "全文避免绝对化用语（如“完全恢复”“保证不再发生”“绝不”），确保与 fact_status=partially_verified、event_status=investigating 一致。"
+        ],
+        "legal_safety_score_hint": 8,
+        "review_summary": "草稿整体较为审慎：未提前定责、未承诺赔偿、保留了原因排查中的调查口径，符合“对外承诺应有事实依据”的合规要求。主要风险在于“预约服务已恢复”缺乏范围/时点限定，可能被理解为绝对化恢复；建议改为限定时点或相关门店的表述，并保持不猜测原因、不承诺赔偿、不绝对保证的后续口径。"
+      },
+      "current_output": {
+        "legal_risks": [
+          "“预约服务已恢复”属于对当前服务状态的事实性陈述；虽与事件描述一致，但 fact_status 为 partially_verified，若实际仍有区域性/个别用户不可用，可能构成不够审慎的对外确认。",
+          "声明未说明后续更新与核查安排，在 event_status 为 investigating 时，信息完整性不足，可能使用户追问故障原因和赔偿安排。",
+          "未发现提前定责、绝对化承诺或赔偿承诺，但若后续版本加入未经确认的补偿/赔偿表述，将违反“对外承诺应有事实依据”的审慎要求。"
+        ],
+        "safe_points": [
+          "未提前认定故障原因或责任主体，保留“原因仍在排查”的审慎表述。",
+          "未作出赔偿、补偿、永久恢复、不再发生等未经确认的承诺。",
+          "明确服务恢复状态，直接回应用户核心关注。"
+        ],
+        "revision_advice": [
+          "保留“服务已恢复，原因仍在排查”的核心事实表述；如恢复状态尚未完全核实，可将“已恢复”限定为“系统已恢复，个别用户如遇问题可通过官方渠道反馈”。",
+          "增加后续更新承诺，避免只给结论不给跟进，如“后续核查进展将通过官方渠道及时同步”。",
+          "根据核查结果增加整改/配合监管的审慎表达，如“将根据核查结果完善系统与管理措施，并依法配合相关监管要求”，但不得预设责任或结果。",
+          "避免使用“完全恢复”“保证不再发生”“一定赔偿”等绝对化或未经确认的承诺。",
+          "如涉及用户补偿，必须等待公司授权和事实确认后再表述，本轮建议不承诺具体赔偿安排。"
+        ],
+        "public_opinion_suggestions": [
+          "公众/用户关注点在服务是否恢复；回应应优先确认当前可用状态，并提供反馈/求助入口。",
+          "红队提示避免承诺未经确认的赔偿安排；不要在声明中主动承诺赔偿金额、范围或时限。",
+          "对原因保持“正在核查”口径，避免猜测技术原因或归责第三方。",
+          "可表达对不便的歉意，但避免过度道歉被解读为承认全部责任。"
+        ],
+        "integrated_revision_tasks": [
+          "任务1：将声明主体保留为事实性表述，例如“目前预约服务已恢复，故障原因仍在核查中”。",
+          "任务2：补充后续更新机制：“我们将通过官方渠道及时同步后续核查进展。”",
+          "任务3：补充整改/配合监管的审慎承诺（若适用）：“将根据核查结果完善系统与管理措施，并依法配合相关监管要求。”",
+          "任务4：删除或避免任何未经确认的赔偿、补偿、全额退款、保证不再发生等承诺。",
+          "任务5：增加用户反馈入口或客服渠道，承接“服务恢复”后的个别问题。",
+          "任务6：保持不提前定责、不推测原因、不使用绝对化表述。"
+        ],
+        "legal_safety_score_hint": 8,
+        "review_summary": "草稿整体审慎，未提前定责或作出赔偿承诺，核心事实与事件描述基本一致；但 fact_status 为 partially_verified 且 event_status 为 investigating，建议补充后续更新、整改/监管配合及用户反馈渠道，并避免绝对化恢复或赔偿承诺。合规安全分暂定8/10。"
+      }
+    }
+  ],
+  "requests": [
+    {
+      "condition_id": "p22-memory-relevant:memory-off",
+      "experiment": "memory",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:50:04.334773+00:00",
+      "latency_ms": 5823,
+      "provider_latency_ms": 5819,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2055,
+      "context_characters": 1480,
+      "pack_content_characters": 1480,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "statement": "我们关注到近期有关一批预包装食品出现异味投诉的信息。消费者的担忧我们充分理解，也高度重视。对于由此给公众带来的不安，我们深表关切。\n\n目前，南岭食研已第一时间启动内部核查，正对相关投诉信息、涉事批次和可能原因进行排查。需要说明的是，涉事批次及异味原因尚未确认，我们将以核查结果为准，不回避任何应尽责任。\n\n下一步，我们将扩大对相关产品的排查范围，必要时送第三方机构检验；同时保持与消费者、渠道的沟通，并依法配合监管部门工作。后续核查进展及处置情况将及时向社会公布。\n\n感谢公众和媒体的关注与监督。消费者如有相关疑问，可通过官方客服渠道联系我们。",
+        "strategy": "先共情并回应公众担忧，再说明已启动核查但事实尚未确认，列出下一步排查、必要送检、沟通和披露安排，避免提前定性或使用绝对化承诺。",
+        "tone": "审慎、回应公众关切",
+        "notes": "事实状态为未确认，声明保留条件式表达；未确认违法事实，未使用“一定、绝不、保证”等绝对化承诺；后续需根据核查结果更新。"
+      }
+    },
+    {
+      "condition_id": "p22-memory-relevant:memory-on",
+      "experiment": "memory",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:50:10.161314+00:00",
+      "latency_ms": 7047,
+      "provider_latency_ms": 7042,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2784,
+      "context_characters": 2209,
+      "pack_content_characters": 2209,
+      "memory_ids": [
+        "p22-mem-relevant-01"
+      ],
+      "historical_marker_present": true,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [
+        "verified"
+      ],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "statement": "南岭食研关注到近期有关预包装食品异味问题的反馈。我们对此高度重视，充分理解消费者由此产生的担忧，并对给大家带来的困扰致以诚挚歉意。\n\n目前，公司已第一时间启动内部核查，正对相关反馈所涉批次信息、留存样品及生产环节进行排查，并同步梳理消费者沟通记录。需要说明的是，涉事批次和异味原因尚未最终确认，相关情况仍以核查结果为准。\n\n我们将根据核查进展及时通过官方渠道公布信息。如经确认存在质量问题，公司将依法依规采取相应措施，切实维护消费者合法权益。消费者如有相关疑虑，建议暂停食用并保留产品及购买凭证，可通过官方客服渠道与我们联系。感谢社会各界的关注与监督。",
+        "strategy": "以审慎、回应关切为基调：先共情并致歉，再说明已启动内部核查及核查范围，强调批次与原因尚未确认，采用条件式表达，避免套用历史或其他批次结论，并说明将按进展公布信息、畅通沟通渠道。",
+        "tone": "审慎、诚恳、回应公众关切，避免绝对化承诺",
+        "notes": "当前事件事实状态为 unverified，事件状态 uncertain，风险级别 high；不得提前确认违法或质量问题，不得将历史类似事件中已确认异味批次的结论迁移至当前事件；后续需根据核查结果补充具体批次、原因和处置措施。"
+      }
+    },
+    {
+      "condition_id": "p22-memory-fact-conflict:memory-off",
+      "experiment": "memory",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:50:17.210442+00:00",
+      "latency_ms": 6911,
+      "provider_latency_ms": 6906,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2067,
+      "context_characters": 1488,
+      "pack_content_characters": 1488,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "statement": "我们关注到近期部分消费者关于青岚食品部分产品异味的反馈，对由此给大家带来的担忧与不便，我们深表歉意。消费者的健康与安全是我们最重视的事项。事件发生后，我们已启动内部核查程序，目前正对相关反馈、所涉批次及产品状态进行全面排查，并同步梳理生产、仓储、流通等环节信息。由于相关情况仍在核实中，现阶段我们暂无法确认具体批次和产品范围。我们建议购买到疑似异味产品的消费者暂停食用，并保留购买凭证，通过官方客服渠道与我们联系。如经核查确认存在相关问题，我们将依法依规采取下架、召回等必要措施，并承担相应责任。后续核查进展我们将通过官方渠道及时、透明地向公众通报。感谢社会各界的关注与监督。",
+        "strategy": "审慎回应公众担忧，不提前确认事实或责任；聚焦已确认动作，即启动内部核查、排查相关批次和产品状态、畅通消费者沟通渠道；对食品安全风险采用条件式表述，说明如核查确认问题将依法依规处置，并承诺持续通报进展。",
+        "tone": "审慎、说明正在核查、表达关注与理解",
+        "notes": "事件事实尚未核实、状态不确定，声明避免确认具体批次、产品范围或违法事实；未使用绝对化承诺；包含消费者暂停食用疑似异味产品、保留凭证和联系客服的建议；后续处置以核查结果和监管要求为前提。"
+      }
+    },
+    {
+      "condition_id": "p22-memory-fact-conflict:memory-on",
+      "experiment": "memory",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:50:24.123708+00:00",
+      "latency_ms": 6525,
+      "provider_latency_ms": 6520,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2776,
+      "context_characters": 2197,
+      "pack_content_characters": 2197,
+      "memory_ids": [
+        "p22-mem-conflict-01"
+      ],
+      "historical_marker_present": true,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [
+        "verified"
+      ],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "statement": "我们关注到近期有消费者反馈，部分产品出现异味。对此，青岚食品高度重视，充分理解消费者因此产生的担忧与不安，并对此深表歉意。目前，相关涉事批次及产品状态仍在核查中，尚未形成最终结论。公司已第一时间启动内部核查程序，对原料、生产、储存、流通等环节开展排查，并正在逐一核对相关批次信息和消费者反馈。在核查结果明确前，我们建议购买到相关产品的消费者暂停食用，并保留产品包装、购买凭证，通过客服热线或官方渠道与我们联系，我们将逐一登记并跟进处理。如核查发现任何问题，我们将依法依规采取相应措施，及时向社会公布进展，并积极配合监管部门工作。感谢公众、媒体和监管部门的关注与监督。",
+        "strategy": "先回应公众担忧并表达歉意，再说明已启动内部核查和排查，明确当前涉事批次及产品状态尚未确认，避免提前定性。向消费者提供暂停食用、保留凭证、联系客服的行动指引。对后续处置使用条件式表达，强调将依据核查结果依法依规处理并及时公布进展。不引用其他企业历史事件结论。",
+        "tone": "审慎、负责、说明正在核查，表达理解与关切，避免绝对化承诺。",
+        "notes": "涉事批次和产品状态尚未确认，声明中不确认质量问题或具体违法事实；不使用“一定、绝不、保证”等绝对化表述；后续应根据核查进展持续更新。相关历史案例仅作策略参考，不适用于本企业本事件事实。"
+      }
+    },
+    {
+      "condition_id": "p22-memory-keyword-collision:memory-off",
+      "experiment": "memory",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:50:30.652404+00:00",
+      "latency_ms": 8040,
+      "provider_latency_ms": 8036,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2071,
+      "context_characters": 1495,
+      "pack_content_characters": 1495,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "statement": "我们关注到网络上关于岚桥生活会会员服务体验的投诉，其中提及异味描述。对由此给会员和公众带来的担忧与困扰，我们表示理解，并致以诚挚歉意。\n\n目前，我们已启动内部核查，正对相关服务环节、会员反馈及可核实记录进行排查，并尝试与相关会员取得联系，以尽快厘清具体情况和影响范围。鉴于相关情况尚待核实，我们不会在结论明确前对事实、原因或责任作出预判。\n\n如核查发现存在不符合服务标准或损害会员权益的问题，我们将根据核查结果及时整改，并依法依规承担相应责任。后续进展将通过官方渠道发布，感谢公众和媒体的关注与监督。",
+        "strategy": "先回应公众关切并表达歉意，明确投诉内容与事实边界；说明已启动内部核查、会员沟通和范围排查；以条件式表达承诺后续整改与通报，避免提前认定责任或影响范围。",
+        "tone": "回应关切、避免预判，语气诚恳克制",
+        "notes": "事件事实未核实、状态不确定，声明中不确认异味问题存在及范围，不使用绝对化承诺；后续需根据核查结果补充事实与处置措施。"
+      }
+    },
+    {
+      "condition_id": "p22-memory-keyword-collision:memory-on",
+      "experiment": "memory",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:50:38.695299+00:00",
+      "latency_ms": 6775,
+      "provider_latency_ms": 6772,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2071,
+      "context_characters": 1495,
+      "pack_content_characters": 1495,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "statement": "我们关注到网络上关于岚桥生活会会员服务存在异味描述的相关投诉。对公众和会员因此产生的担忧与不满，我们充分理解并高度重视，对由此带来的不安深表歉意。目前相关具体情况和影响范围仍在核实中，我们不会在事实查明前作出预判。公司已第一时间启动专项核查，对可能涉及的服务环节、场所、物料及相关流程进行全面排查，并同步检视会员服务管理机制。后续我们将根据核查进展，通过官方渠道及时、持续发布信息；如发现任何问题，将立即整改，并依法依规承担相应责任。欢迎公众和会员通过官方客服渠道提供线索。",
+        "strategy": "以事实未核实为前提，先回应公众关切和情绪，再说明已启动专项核查及后续信息发布安排；不提前认定异味来源、服务问题和影响范围，不使用绝对化承诺，保留条件式处置表达。",
+        "tone": "回应关切、审慎克制、避免预判",
+        "notes": "输入显示 fact_status 为 unverified、event_status 为 uncertain，因此声明未确认具体原因、责任归属和影响范围。已避免“一定、绝不、保证”等绝对化表述，后续应根据核查结果更新。"
+      }
+    },
+    {
+      "condition_id": "p22-context-crowded-legal:safe-reference",
+      "experiment": "context",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:50:45.473001+00:00",
+      "latency_ms": 17983,
+      "provider_latency_ms": 17980,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 3517,
+      "context_characters": 2680,
+      "pack_content_characters": 2680,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "legal_risks": [
+          "草稿仅称“尚未确认影响范围”，可能被公众理解为已发生异常访问、只是影响范围未明，存在提前暗示事件成立的风险。",
+          "涉及疑似用户信息异常访问时，后续可能触发个人信息安全事件相关的告知、报告和处置要求；当前表述未保留“如核实涉及个人信息安全事件，将依法依规处置”的合规空间。",
+          "未体现后续更新机制和监管配合表达，在 high 风险、事实未核实场景下，可能影响公众知情预期与监管沟通的稳妥性。",
+          "未说明是否涉及个人信息、涉及哪些数据及影响人数，虽未编造事实，但若后续确认事件，当前回应可能显得信息不足。",
+          "草稿未出现提前定责、绝对化承诺或过度承诺，该部分风险较低，但修改时仍需避免引入“已确认无影响”“绝对安全”等表述。"
+        ],
+        "safe_points": [
+          "使用“关注到相关反馈”而非直接确认事件，未提前认定异常访问事实。",
+          "使用“正在核查情况”体现调查处置动作，未提前下结论。",
+          "使用“尚未确认影响范围”对影响范围保持审慎，未披露未经核实的数据、人数或原因。",
+          "未进行责任认定，未向特定主体归责，未作出赔偿、整改完成等过度承诺。",
+          "整体语气谨慎，符合事实未核实、事件状态不确定阶段的合规回应基调。"
+        ],
+        "revision_advice": [
+          "建议将“目前正在核查情况”调整为“已启动核查程序，正在对相关反馈所涉疑似异常访问进行技术核查与影响评估”，使核查动作更清晰，但不确认事件成立。",
+          "建议将“尚未确认影响范围”改为“是否发生用户信息异常访问及具体影响范围均尚未确认，待核实后及时更新”，避免让公众误读为事件已经成立。",
+          "建议增加条件式合规承诺：如核实涉及个人信息安全事件，将依据适用法律法规及监管要求开展后续处置、告知和报告；当前不作事实定性或责任认定。",
+          "建议增加后续更新与监管配合表达：将通过官方渠道及时发布后续核查结果，并依法配合相关部门工作。",
+          "如已确认且不涉及保密或调查干扰，可适度说明核查维度或进度，例如系统访问记录、异常路径、处置状态等；但不得披露未核实的影响人数、数据类型、原因或责任。",
+          "吸收红队反馈：公众希望了解核查范围，可在不提前确认影响的前提下，说明“正在核查什么维度、当前进展如何”，避免只给笼统表述。",
+          "避免使用“绝对”“保证”“不存在”“已经控制”“马上解决”等绝对化或过度承诺措辞，也不得提前认定责任主体。"
+        ],
+        "public_opinion_suggestions": [
+          "公众关注核查范围属于合理预期，建议以“核查维度/进度”回应，而非以“影响范围已确认”回应。",
+          "可向公众说明：已关注相关反馈并启动技术核查，当前重点包括疑似异常访问情况、可能涉及的数据范围和系统处置状态，但相关结论尚待核实。",
+          "可设置更新预期：后续如取得可核实进展，将通过官方渠道及时发布，减少信息真空和猜测。",
+          "对“是否涉及个人信息”“涉及多少用户”“具体哪些数据”等核心问题，应明确当前尚未确认，不宜提前给出具体数字或范围。",
+          "回应中应体现对用户关切的重视，同时避免引发不必要恐慌；不扩散未经证实的截图、传言或技术细节。"
+        ],
+        "integrated_revision_tasks": [
+          "将首句改为审慎确认关注与启动核查，例如：“我们已关注到相关反馈，并启动核查程序，正在对相关情况开展技术核查与影响评估。”",
+          "将“尚未确认影响范围”改为同时覆盖事件是否成立与影响范围，例如：“目前是否发生用户信息异常访问及具体影响范围尚待核实，我们将根据核查进展及时更新。”",
+          "如核查范围已可披露且不涉密，补充核查维度或进度，但不得确认影响范围、影响人数、数据类型或原因。",
+          "增加条件式合规承诺：“如核实涉及个人信息安全事件，我们将依据适用法律法规及监管要求，开展后续处置、告知和报告工作。”",
+          "增加监管配合与后续更新表达：“我们将依法配合相关部门工作，并通过官方渠道及时发布后续核查结果。”",
+          "删除或替换任何可能被理解为提前确认事实、提前定责、绝对安全或过度承诺的措辞。",
+          "在保持审慎的前提下吸收红队建议，用“核查范围/核查进度”回应公众关切，不提前确认影响。",
+          "保留“尚未确认”的审慎基调，但避免单独使用“尚未确认影响范围”造成事件已成立的误读。"
+        ],
+        "legal_safety_score_hint": 8,
+        "review_summary": "草稿总体审慎，未提前确认事实、未提前定责，也未使用绝对化承诺，基础法律安全度较高。主要不足在于未保留个人信息安全事件后续告知、报告等合规空间，未体现监管配合与后续更新机制，且“尚未确认影响范围”可能被误读为事件已成立。建议在第二版中改为“是否发生及影响范围均待核实”，增加条件式依法处置承诺、监管配合和更新安排，并适度回应公众对核查范围与进度的关切。"
+      }
+    },
+    {
+      "condition_id": "p22-context-crowded-legal:current-contextpack",
+      "experiment": "context",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:51:03.458692+00:00",
+      "latency_ms": 12116,
+      "provider_latency_ms": 12113,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 3401,
+      "context_characters": 2564,
+      "pack_content_characters": 2564,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "legal_risks": [
+          "当前声明虽未确认影响范围，但未提及个人信息安全事件的敏感属性，可能被公众解读为回避问题，形成合规沟通不足的观感。",
+          "若后续核查确认发生个人信息安全事件，声明中缺少后续依法处置、报告和告知安排的提示，可能带来延迟沟通的合规风险。",
+          "使用“相关反馈”表述较模糊，可能削弱官方回应的可信度，并刺激公众对核查范围与进度的追问。",
+          "在事实未核实、事件状态不确定的情况下，任何提前确认影响范围、定责或承诺结果的表述均存在法律与舆情风险。"
+        ],
+        "safe_points": [
+          "使用“正在核查情况”表明已启动内部核查，未放任不管。",
+          "使用“尚未确认影响范围”保留事实未核实状态，未提前确认个人信息安全事件或提前定责。",
+          "未使用“绝对安全”“不会泄露”“已完全控制”等绝对化或过度承诺表述。",
+          "未披露具体用户、数据字段、影响数量等未经核实的信息。"
+        ],
+        "revision_advice": [
+          "保留“尚未确认影响范围”的审慎表述，避免将“疑似异常访问”直接表述为“数据泄露”或“用户信息泄露”。",
+          "在不确认影响的前提下，补充说明核查范围与当前进度，例如技术团队正对系统日志、访问行为、数据接触情况等进行核查。",
+          "增加后续更新机制，例如“如有进一步核查结果，将及时通过官方渠道发布”，避免信息真空。",
+          "增加合规处置表述，例如“如核实涉及个人信息安全事件，将依据相关法律法规及监管要求开展后续处置、报告和告知工作”，但不要编造具体法条或承诺未核实结果。",
+          "避免提前确认责任方、影响人数、数据种类，也避免使用“已整改”“已消除风险”等未经核实的结论。",
+          "建议增加用户咨询或反馈渠道，并提示以官方发布信息为准，避免谣言扩散。"
+        ],
+        "public_opinion_suggestions": [
+          "回应公众希望了解核查范围：可说明当前核查覆盖系统日志、访问记录、数据接触链路及处置状态等方向，但明确仍在进行中、尚未确认影响范围。",
+          "不提前确认影响：坚持“疑似异常访问”“正在核查”“尚未确认影响范围”等口径，避免被理解为已确认数据泄露。",
+          "说明核查进度：可披露已启动技术核查、正在评估影响范围和处置状态，但不披露未经核实的结论。",
+          "稳定用户关切：表达对用户信息保护的高度重视，并告知后续进展将通过官方渠道更新。",
+          "降低猜测空间：提示公众勿传播未经证实信息，同时提供客服或专门入口承接用户问询。"
+        ],
+        "integrated_revision_tasks": [
+          "第二版声明必须保留“尚未确认影响范围/事件性质”的审慎前提，不得提前确认个人信息安全事件。",
+          "在声明中增加核查范围与进度描述：说明技术团队正在核查异常访问相关系统日志、访问行为、数据接触情况及处置状态。",
+          "增加后续更新安排：表述为“将根据核查进展及时通过官方渠道发布”，不得承诺具体结果或绝对时间。",
+          "增加依法依规处置表述：如核实涉及个人信息安全事件，将依据相关法律法规及监管要求开展处置、报告和告知，并配合监管要求。",
+          "删除或避免任何提前定责、绝对化承诺、过度承诺及未经核实的影响范围描述。",
+          "统一对外口径：使用“疑似异常访问”“正在核查”“尚未确认影响范围”等审慎用语，避免“数据泄露”等定性词。",
+          "回应公众对核查范围的关切：在不确认影响的前提下，适度说明核查维度，减少信息真空。",
+          "增加用户沟通渠道与官方信息提示，引导公众关注官方发布，不传播未经证实信息。"
+        ],
+        "legal_safety_score_hint": 8,
+        "review_summary": "草稿整体审慎，未提前确认事实、定责或作出绝对化承诺，法律安全底线尚可。主要不足是未说明核查范围与进度，也未提示后续依法处置和更新安排。建议在坚持“尚未确认影响范围”的前提下，补充核查维度、后续更新及依法依规处置口径，以回应公众关切并降低个人信息安全事件的合规沟通风险。"
+      }
+    },
+    {
+      "condition_id": "p22-context-resume-provided:safe-reference",
+      "experiment": "context",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:51:15.579398+00:00",
+      "latency_ms": 12414,
+      "provider_latency_ms": 12410,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2886,
+      "context_characters": 2056,
+      "pack_content_characters": 2056,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "legal_risks": [
+          "当前事件事实状态为未核实、事件状态不确定，声明中“已启动核查”属于对内部行动的事实性表述，若缺乏独立核验或授权依据，可能被公众理解为已确认存在用户数据访问异常。",
+          "红队提示需区分人工提供信息与独立核验结果；若“已启动核查”仅来自人工反馈，未标明核验状态，存在把未核实信息写成已验证结论的风险。",
+          "用户数据访问异常涉及高监管敏感度，当前未确认影响范围，若后续披露不及时或表述前后不一致，可能引发数据安全、用户告知及监管沟通方面的合规质疑。",
+          "声明未包含后续更新、核查范围或监管配合等安全表达，虽未构成虚假陈述，但在高风险事件中可能被质疑回应不充分。"
+        ],
+        "safe_points": [
+          "声明未确认数据访问异常已实际发生，未确认影响范围、影响用户数量或具体数据类型。",
+          "声明未提前定责、未归因攻击来源、未使用绝对化承诺或过度承诺。",
+          "“目前仍在确认相关情况”与“对外说明应与已核实事实相匹配”的合规要求方向一致，保留了事实不确定性。",
+          "未出现“数据绝对安全”“不会泄露”“不存在影响”等高风险表述。"
+        ],
+        "revision_advice": [
+          "将“已启动核查”调整为有依据的行动表述，例如“我们关注到相关情况，并已启动内部核查程序”，如该行动尚未独立核验，应标注为当前内部掌握信息。",
+          "增加状态限定语，例如“相关情况目前尚未经独立核实，最终以核查结果为准”，避免将人工反馈或初步信息表述为已验证结论。",
+          "避免直接确认“用户数据访问异常”已经发生；可使用“相关访问情况”“相关报告”“相关线索”等中性表述，除非已具备可核实依据。",
+          "增加后续更新与沟通渠道，例如“如有可核实的进展，我们将通过官方渠道及时更新”，但不要承诺具体结论或时间点。",
+          "如适用，可加入依法配合监管、开展影响评估、必要时通知相关方的原则性表述，但不得提前承诺“无需通知”或“不会影响用户”。",
+          "严格区分人工提供信息与独立核验结果：人工反馈只能作为线索，不能作为对外确认事实。"
+        ],
+        "public_opinion_suggestions": [
+          "预判公众质疑：是否发生数据泄露、影响哪些用户、涉及哪些数据、何时发现、是否已通知监管、用户是否需要采取行动。",
+          "对外统一口径建议：承认关注到相关情况，说明已启动内部核查，强调影响范围尚未确认，承诺有可核实进展时通过官方渠道更新。",
+          "社交媒体回复避免推测原因、责任方或影响范围，统一引导至官方声明和用户支持渠道。",
+          "监测不实传言，仅对有可核实依据的信息进行澄清，避免与未经证实的信息对抗式回应。",
+          "表达对用户数据安全的重视和同理心，但不得作出“绝对安全”“不会发生泄露”等过度承诺。"
+        ],
+        "integrated_revision_tasks": [
+          "将草稿改写为：明确当前信息未经独立核实，区分人工提供线索与已核验事实。",
+          "删除或弱化对“用户数据访问异常”已发生的暗示，使用中性、待核实表述。",
+          "保留并强化“仍在核查、影响范围尚未确认”的核心口径。",
+          "增加“以核查结果为准”“如有可核实进展将及时更新”等安全表达。",
+          "加入依法配合监管、开展影响评估的原则性表述，但不得承诺具体结果或责任认定。",
+          "禁止使用“绝对安全”“不会泄露”“无需担心”“不存在影响”等绝对化或过度承诺措辞。",
+          "形成对外统一问答口径，覆盖公众质疑和数据主体可能的权利询问。"
+        ],
+        "legal_safety_score_hint": 7,
+        "review_summary": "草稿整体审慎，未提前确认影响范围或定责，但“已启动核查”的事实依据和核验状态未明，且缺少后续更新与监管配合等安全表达。建议在第二版中明确信息未核实状态、区分人工反馈与独立核验结果，并补充中性、可更新的对外口径。"
+      }
+    },
+    {
+      "condition_id": "p22-context-resume-provided:current-contextpack",
+      "experiment": "context",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:51:27.995877+00:00",
+      "latency_ms": 11517,
+      "provider_latency_ms": 11512,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2969,
+      "context_characters": 2139,
+      "pack_content_characters": 2139,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "unverified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "legal_risks": [
+          "声明中的“已启动核查”属于对内部行动状态的事实性表述；若仅来自人工提供信息且未经独立核验，可能构成未核实信息对外披露，与“对外说明应与已核实事实相匹配”的要求存在偏差。",
+          "在用户数据访问异常、影响范围尚未确认的高敏感场景下，若表述过于笼统或未区分“已核实事实”与“待核实信息”，可能被公众解读为隐瞒、淡化或提前定调。",
+          "未包含“以最终核查结果为准”“后续更新”等必要限定，若后续出现新事实，可能增加前后表述不一致的合规与舆情风险。"
+        ],
+        "safe_points": [
+          "未确认影响范围，未对数据访问异常原因、责任主体或用户影响作出提前认定。",
+          "使用“核查”“仍在确认”等审慎措辞，未使用“不存在风险”“已全部控制”等绝对化承诺。",
+          "整体基调与当前 fact_status=unverified、event_status=uncertain 的事实状态基本匹配。"
+        ],
+        "revision_advice": [
+          "对“已启动核查”进行来源核验：如无内部工单、调查记录等证据支持，建议改为“我们关注到相关情况，正在核查/了解”，避免将人工提供信息直接作为已验证事实对外表述。",
+          "明确区分人工提供信息与独立核验结果，不把人工反馈、初步了解或单一来源信息写成已证实结论。",
+          "补充谨慎限定语，例如“目前仍在确认中，最终情况以核查结果为准”“如有进展将及时更新”，但不承诺具体时限、具体结果或超出当前事实的处置措施。",
+          "如后续确认涉及用户数据访问异常，应在合规评估后考虑用户告知、监管配合、影响范围说明等必要内容；当前阶段不宜提前承诺或否认相关影响。",
+          "避免任何绝对化、定性化或归责化表达，例如“不存在泄露”“无用户影响”“系个别人员行为”等，除非已有充分核验依据。"
+        ],
+        "public_opinion_suggestions": [
+          "公众可能质疑企业是否隐瞒数据访问异常、核查是否真实启动、影响范围是否涉及个人信息、何时通知用户以及由谁负责。",
+          "回应应区分“已知事实”“待核实信息”和“后续将核查事项”，避免用未核实信息安抚公众，也不要把人工反馈包装成独立核验结论。",
+          "建议统一对外口径，强调仍在核查、以最终结果为准，并建立后续更新机制，减少因信息反复造成的次生舆情。",
+          "在未确认影响范围前，不宜对责任归属、数据是否泄露、用户损失等作结论性表态；可表达将依法依规处理并配合监管，但前提是相关行动已实际启动并可核验。"
+        ],
+        "integrated_revision_tasks": [
+          "审核声明中所有事实性陈述，逐项标记来源与核验状态；重点确认“已启动核查”是否有内部证据支持。",
+          "若“已启动核查”无法独立核验，将表述调整为“关注到相关情况，正在核查/了解”等不把人工提供信息作为已验证结论的谨慎措辞。",
+          "删除或限定任何未核实的影响范围、责任归属、泄露结论或处置结果，不提前确认事实、不提前定责。",
+          "增加“目前仍在确认中，最终以核查结果为准”“如有进展将及时更新”等安全表达，但不承诺具体时限或结果。",
+          "根据红队反馈，确保第二版明确区分人工提供信息与独立核验结果，避免将人工反馈写成已验证结论。",
+          "保留后续合规复核点：如确认涉及用户数据访问异常，再评估监管配合、用户告知和进一步披露义务。"
+        ],
+        "legal_safety_score_hint": 7,
+        "review_summary": "草稿整体审慎，未提前确认影响范围或定责，但仍需核验“已启动核查”这一事实性表述的来源与证据强度，避免将人工提供信息作为已验证结论对外披露。建议补充以最终核查结果为准和后续更新机制，并保持对数据访问异常影响范围、监管配合及用户权益事项的审慎留白。"
+      }
+    },
+    {
+      "condition_id": "p22-context-short-control:safe-reference",
+      "experiment": "context",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:51:39.515994+00:00",
+      "latency_ms": 9873,
+      "provider_latency_ms": 9868,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2676,
+      "context_characters": 1862,
+      "pack_content_characters": 1862,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "partially_verified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "legal_risks": [
+          "声明中“预约服务已恢复”如未限定范围、时点或数据来源，可能被理解为全部门店/全部功能完全恢复且不再受影响；在 fact_status=partially_verified、event_status=investigating 下，应避免绝对化表述。",
+          "“故障原因仍在排查”本身风险较低，但后续若主动补充原因、责任或赔偿安排，可能构成未经确认的事实陈述或对外承诺；知识库提示“对外承诺应有事实依据”。"
+        ],
+        "safe_points": [
+          "未提前定责，未指认具体原因或责任方。",
+          "未作出赔偿、补偿、退款等未经确认的承诺。",
+          "包含“原因仍在排查”的持续调查表达，与 event_status=investigating 一致。",
+          "聚焦服务恢复状态，未扩散到无关敏感事项。"
+        ],
+        "revision_advice": [
+          "建议将“预约服务已恢复”改为限定性表述，如“相关门店预约服务目前已恢复”或“截至当前，预约服务已恢复”，避免被理解为所有服务完全无虞。",
+          "保留“故障原因仍在排查”的安全表述，并可补充“如有进展将及时通过官方渠道更新”。",
+          "不要主动加入赔偿、补偿、责任认定、系统完全修复等尚未经确认的承诺；如确需回应，应使用“正在核查”“将依法依规处理”等审慎措辞。",
+          "避免使用“绝不再次发生”“保证不再故障”等绝对化承诺。"
+        ],
+        "public_opinion_suggestions": [
+          "公众/用户当前主要关注服务是否恢复，回应应优先确认服务状态，减少不确定性。",
+          "对故障原因保持“仍在排查”的口径，不猜测、不归因、不定责。",
+          "避免承诺未经确认的赔偿安排；如用户提出个案诉求，引导至客服或官方渠道登记处理。",
+          "设置后续更新预期，例如通过官方公告/门店通知同步排查进展。"
+        ],
+        "integrated_revision_tasks": [
+          "将首句调整为带范围/时点的恢复表述，避免绝对化：如“相关门店预约服务目前已恢复”。",
+          "保留并强化调查状态：明确“故障原因仍在排查/核查中”，不输出未经确认的原因或责任结论。",
+          "禁止新增赔偿、补偿、退款、定责、系统完全修复等未经确认的承诺；如需回应，使用“将依法依规处理”等审慎表达。",
+          "增加后续更新承诺的审慎表达：如“如有进展将及时通过官方渠道发布”，但不得承诺具体时间或结果。",
+          "增加用户指引：引导用户通过官方客服/门店渠道反馈个案问题，并做好记录与转办。",
+          "全文避免绝对化用语（如“完全恢复”“保证不再发生”“绝不”），确保与 fact_status=partially_verified、event_status=investigating 一致。"
+        ],
+        "legal_safety_score_hint": 8,
+        "review_summary": "草稿整体较为审慎：未提前定责、未承诺赔偿、保留了原因排查中的调查口径，符合“对外承诺应有事实依据”的合规要求。主要风险在于“预约服务已恢复”缺乏范围/时点限定，可能被理解为绝对化恢复；建议改为限定时点或相关门店的表述，并保持不猜测原因、不承诺赔偿、不绝对保证的后续口径。"
+      }
+    },
+    {
+      "condition_id": "p22-context-short-control:current-contextpack",
+      "experiment": "context",
+      "status": "SUCCESS",
+      "failure_category": null,
+      "started_at_utc": "2026-10-04T08:51:49.390872+00:00",
+      "latency_ms": 12263,
+      "provider_latency_ms": 12260,
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "fallback_used": false,
+      "provider_failure_type": null,
+      "provider_attempt_count": 1,
+      "logical_destinations": [
+        "api.deepseek.com"
+      ],
+      "observed_http_attempt_count": 1,
+      "parse_schema_status": "PASS",
+      "prompt_characters": 2687,
+      "context_characters": 1873,
+      "pack_content_characters": 1873,
+      "memory_ids": [],
+      "historical_marker_present": false,
+      "current_fact_status": "partially_verified",
+      "historical_fact_statuses": [],
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "provider_usage_raw_available": false,
+      "output": {
+        "legal_risks": [
+          "“预约服务已恢复”属于对当前服务状态的事实性陈述；虽与事件描述一致，但 fact_status 为 partially_verified，若实际仍有区域性/个别用户不可用，可能构成不够审慎的对外确认。",
+          "声明未说明后续更新与核查安排，在 event_status 为 investigating 时，信息完整性不足，可能使用户追问故障原因和赔偿安排。",
+          "未发现提前定责、绝对化承诺或赔偿承诺，但若后续版本加入未经确认的补偿/赔偿表述，将违反“对外承诺应有事实依据”的审慎要求。"
+        ],
+        "safe_points": [
+          "未提前认定故障原因或责任主体，保留“原因仍在排查”的审慎表述。",
+          "未作出赔偿、补偿、永久恢复、不再发生等未经确认的承诺。",
+          "明确服务恢复状态，直接回应用户核心关注。"
+        ],
+        "revision_advice": [
+          "保留“服务已恢复，原因仍在排查”的核心事实表述；如恢复状态尚未完全核实，可将“已恢复”限定为“系统已恢复，个别用户如遇问题可通过官方渠道反馈”。",
+          "增加后续更新承诺，避免只给结论不给跟进，如“后续核查进展将通过官方渠道及时同步”。",
+          "根据核查结果增加整改/配合监管的审慎表达，如“将根据核查结果完善系统与管理措施，并依法配合相关监管要求”，但不得预设责任或结果。",
+          "避免使用“完全恢复”“保证不再发生”“一定赔偿”等绝对化或未经确认的承诺。",
+          "如涉及用户补偿，必须等待公司授权和事实确认后再表述，本轮建议不承诺具体赔偿安排。"
+        ],
+        "public_opinion_suggestions": [
+          "公众/用户关注点在服务是否恢复；回应应优先确认当前可用状态，并提供反馈/求助入口。",
+          "红队提示避免承诺未经确认的赔偿安排；不要在声明中主动承诺赔偿金额、范围或时限。",
+          "对原因保持“正在核查”口径，避免猜测技术原因或归责第三方。",
+          "可表达对不便的歉意，但避免过度道歉被解读为承认全部责任。"
+        ],
+        "integrated_revision_tasks": [
+          "任务1：将声明主体保留为事实性表述，例如“目前预约服务已恢复，故障原因仍在核查中”。",
+          "任务2：补充后续更新机制：“我们将通过官方渠道及时同步后续核查进展。”",
+          "任务3：补充整改/配合监管的审慎承诺（若适用）：“将根据核查结果完善系统与管理措施，并依法配合相关监管要求。”",
+          "任务4：删除或避免任何未经确认的赔偿、补偿、全额退款、保证不再发生等承诺。",
+          "任务5：增加用户反馈入口或客服渠道，承接“服务恢复”后的个别问题。",
+          "任务6：保持不提前定责、不推测原因、不使用绝对化表述。"
+        ],
+        "legal_safety_score_hint": 8,
+        "review_summary": "草稿整体审慎，未提前定责或作出赔偿承诺，核心事实与事件描述基本一致；但 fact_status 为 partially_verified 且 event_status 为 investigating，建议补充后续更新、整改/监管配合及用户反馈渠道，并避免绝对化恢复或赔偿承诺。合规安全分暂定8/10。"
+      }
+    }
+  ],
+  "request_count": 12,
+  "real_provider_request_count": 12,
+  "request_jsonl": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p2_2_real_provider_20261004T085004333700Z-bbcfc13b.jsonl",
+  "metadata_path": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p2_2_real_provider_20261004T085004333700Z-bbcfc13b_metadata.json",
+  "input_token_evaluation": "NOT_AVAILABLE",
+  "cost_evaluation": "NOT_AVAILABLE",
+  "latency_result": "EXPLORATORY",
+  "llm_judge_used": false
+}
