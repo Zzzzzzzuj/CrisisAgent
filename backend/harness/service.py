@@ -51,16 +51,26 @@ def create_harness_version(spec: dict[str, Any], parent_version: str | None = No
 def set_harness_enabled(harness_id: str, version: str) -> dict[str, Any]:
     repository = get_harness_repository()
     specs = repository.list_specs()
-    target = None
-    for item in specs:
-        metadata = item.get("metadata", {})
-        if metadata.get("harness_id") == harness_id and metadata.get("version") == version:
-            target = item
-        elif metadata.get("status") in {"active", "ACTIVE"}:
-            # Keep the previous version approvable so an operator can roll back to it.
-            metadata["status"] = "APPROVED"
-    if target is None:
+    target_index = next((index for index, item in enumerate(specs)
+                         if item.get("metadata", {}).get("harness_id") == harness_id
+                         and item.get("metadata", {}).get("version") == version), None)
+    if target_index is None:
         raise KeyError(f"HarnessSpec not found: {harness_id}@{version}")
+    target = specs[target_index]
+    metadata = target.get("metadata", {})
+    if metadata.get("status") in {"active", "ACTIVE"}:
+        return deepcopy(target)
+    approval = metadata.get("approval") if isinstance(metadata.get("approval"), dict) else {}
+    approval_gate = approval.get("gate_result") if isinstance(approval.get("gate_result"), dict) else {}
+    if (metadata.get("status") != "APPROVED"
+            or not approval.get("comparison_id")
+            or approval_gate.get("passed") is not True):
+        raise ValueError("Only an evaluated, safety-passing, human-approved HarnessSpec can be enabled.")
+
+    for index, item in enumerate(specs):
+        if index != target_index and item.get("metadata", {}).get("status") in {"active", "ACTIVE"}:
+            # Keep the previous version available as a known-safe rollback target.
+            item["metadata"]["status"] = "APPROVED"
     target["metadata"]["status"] = "active"
     repository.replace(specs)
     return deepcopy(target)
@@ -177,11 +187,29 @@ def _set_path(target: dict[str, Any], path: str, value: Any) -> None:
 
 
 def approve_harness_version(harness_id: str, version: str, comparison_id: str, reviewer: str, gate_result: dict[str, Any]) -> dict[str, Any]:
+    if (not isinstance(comparison_id, str) or not comparison_id.strip()
+            or not isinstance(reviewer, str) or not reviewer.strip()
+            or not isinstance(gate_result, dict) or gate_result.get("passed") is not True):
+        raise ValueError("Human approval requires a passing evaluation gate, comparison, and reviewer.")
+    from backend.evaluation.harness_comparison import evaluate_comparison_gate
+    from backend.evaluation.harness_comparison_store import get_harness_comparison_store
+
+    comparison = get_harness_comparison_store().get(comparison_id)
+    if (not isinstance(comparison, dict)
+            or comparison.get("candidate", {}).get("harness_id") != harness_id
+            or comparison.get("candidate", {}).get("version") != version):
+        raise ValueError("A persisted evaluation comparison for this candidate is required for approval.")
+    verified_gate = evaluate_comparison_gate(comparison)
+    if verified_gate.get("passed") is not True:
+        raise ValueError("Candidate evaluation and safety gates must pass before approval.")
+
     repository = get_harness_repository()
     specs = repository.list_specs()
     for spec in specs:
         metadata = spec.get("metadata", {})
         if metadata.get("harness_id") == harness_id and metadata.get("version") == version:
+            if metadata.get("comparison_id") not in {None, comparison_id}:
+                raise ValueError("Approval comparison does not match the evaluated candidate.")
             if metadata.get("status") == "APPROVED":
                 approval = metadata.get("approval", {})
                 if approval.get("comparison_id") == comparison_id:
@@ -189,7 +217,7 @@ def approve_harness_version(harness_id: str, version: str, comparison_id: str, r
                 raise ValueError("HarnessSpec is already approved by another comparison.")
             if metadata.get("status") != "EVALUATED":
                 raise ValueError("Only EVALUATED HarnessSpec can be approved.")
-            metadata.update({"status": "APPROVED", "approval": {"comparison_id": comparison_id, "reviewer": reviewer, "approved_at": _now(), "reason": gate_result.get("reason", ""), "gate_result": deepcopy(gate_result)}})
+            metadata.update({"status": "APPROVED", "approval": {"comparison_id": comparison_id, "reviewer": reviewer, "approved_at": _now(), "reason": gate_result.get("reason", ""), "gate_result": deepcopy(verified_gate)}})
             repository.replace(specs)
             return deepcopy(spec)
     raise KeyError(f"HarnessSpec not found: {harness_id}@{version}")

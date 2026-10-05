@@ -299,6 +299,9 @@ legal_context: {legal_context}
 
 审查要求：
 - 优先参考 retrieved_context / legal_context 中的法律风险规范、企业危机回应规范和历史案例经验。
+- 区分当前 Case 事实、历史案例经验、建议采取的行动和已有依据支持的当前行动。历史案例只能支持策略参考，不能证明当前企业已采取相同行动。
+- integrated_revision_tasks 和 revision_advice 是给后续 Writer 的建议，不是当前行动已执行的证据。当前输入未明确支持时，不得将建议表述成已经/正在执行。
+- Human Fact 的 verification_status 为 human_asserted 时，必须保留人工提供来源，不得称为 independently verified；FACT_UNAVAILABLE 对应事实保持未知。
 - 不要编造不存在的法律条文；如果知识不足，请在建议中保持审慎表达。
 - 检查是否提前确认事实、提前定责、使用绝对化承诺或过度承诺。
 - 检查是否包含调查/核查、整改、监管配合、后续更新等安全表达。

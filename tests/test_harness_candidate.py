@@ -56,9 +56,18 @@ def test_gate_pass_hold_and_reject_cases():
 def test_evaluated_approved_active_and_rollback_records_are_scoped(tmp_path, monkeypatch):
     candidate = _candidate(tmp_path, monkeypatch)
     harness_id = candidate["metadata"]["harness_id"]
+    monkeypatch.setenv("HARNESS_COMPARISON_STORE_PATH", str(tmp_path / "comparisons.json"))
     gate = {"passed": True, "failure_reasons": [], "checks": {"all": True}}
     evaluated = mark_harness_evaluated(harness_id, "2.0.0", "comparison-1", gate)
     assert evaluated["metadata"]["status"] == "EVALUATED"
+    from backend.evaluation.harness_comparison_store import get_harness_comparison_store
+    get_harness_comparison_store().save({
+        "comparison_id": "comparison-1",
+        "mode": "main_workflow_replay",
+        "baseline": {"harness_id": "crisisagent-default", "version": "1.0.0", "metrics": {}, "cases": []},
+        "candidate": {"harness_id": harness_id, "version": "2.0.0", "metrics": {}, "cases": []},
+        "policy_diff": {},
+    })
     approved = approve_harness_version(harness_id, "2.0.0", "comparison-1", "admin", gate)
     assert approved["metadata"]["status"] == "APPROVED"
     active = enable_approved_harness_version(harness_id, "2.0.0")

@@ -1,5 +1,6 @@
 """Recommend, but never execute, a next action for each Legal claim."""
 
+import re
 from collections import Counter
 
 
@@ -24,6 +25,54 @@ _NORMAL_RETRIEVAL = "executed_with_hits"
 _NO_HIT = "executed_no_hit"
 _NOT_COMPLETED = {"not_started", "disabled", "skipped_by_gate", "retrieval_error"}
 _PAIR_REASONS = {"claim_context_insufficient", "semantic_relation_unclear"}
+_CLAUSE_BREAK = re.compile(r"[，,；;。！？?!\n]+")
+_CURRENT_FACT_MARKERS = ("公司", "我司", "本公司", "本企业", "该企业", "涉事", "本次", "当前", "该产品")
+_FACT_STATE_MARKERS = ("是否", "已", "尚未", "正在", "有没有", "未确认")
+_RULE_MARKERS = ("法律", "法规", "规定", "法定", "义务", "监管要求", "合规")
+_DEPENDENT_REFERENCES = ("该类", "该类别", "上述", "这一", "该产品", "本次", "涉事", "具体类别", "哪类")
+_GENERIC_RULE_PATTERNS = ("可能违反", "是否违反", "是否合法", "是否合规")
+_NON_TOPIC_PAIRS = {"公司", "企业", "是否", "法律", "法规", "规定", "需要", "当前",
+                    "已经", "尚未", "确认", "问题", "情况", "相关", "何时", "哪些"}
+
+
+def classify_legal_query_dependency(claim: dict) -> dict:
+    """Identify a separable rule question; ambiguity remains fact-dependent."""
+    if not isinstance(claim, dict):
+        return {"dependency_type": "FACT_DEPENDENT", "reason_code": "INVALID_CLAIM", "legal_rule_topic": None}
+    legal = claim.get("requires_legal_rule") is True
+    fact = claim.get("requires_case_fact") is True
+    text = claim.get("claim")
+    if not isinstance(text, str) or not text.strip():
+        return {"dependency_type": "FACT_DEPENDENT", "reason_code": "INVALID_CLAIM", "legal_rule_topic": None}
+    text = text.strip()
+    if not (legal and fact):
+        return {"dependency_type": "NOT_APPLICABLE", "reason_code": "SINGLE_GAP_TYPE",
+                "legal_rule_topic": text if legal else None}
+
+    clauses = [part.strip() for part in _CLAUSE_BREAK.split(text) if part.strip()]
+    fact_clauses = [part for part in clauses if any(marker in part for marker in _CURRENT_FACT_MARKERS)
+                    and any(marker in part for marker in _FACT_STATE_MARKERS)]
+    for rule_clause in clauses:
+        if (not any(marker in rule_clause for marker in _RULE_MARKERS)
+                or any(marker in rule_clause for marker in _DEPENDENT_REFERENCES)
+                or any(marker in rule_clause for marker in _CURRENT_FACT_MARKERS)):
+            continue
+        if any(_shares_topic(fact_clause, rule_clause) for fact_clause in fact_clauses
+               if fact_clause != rule_clause):
+            return {"dependency_type": "INDEPENDENT", "reason_code": "SEPARATE_RULE_CLAUSE",
+                    "legal_rule_topic": rule_clause}
+
+    if (len(clauses) == 1 and not any(marker in text for marker in _CURRENT_FACT_MARKERS)
+            and any(pattern in text for pattern in _GENERIC_RULE_PATTERNS)):
+        return {"dependency_type": "INDEPENDENT", "reason_code": "GENERAL_CONDITIONAL_RULE",
+                "legal_rule_topic": text}
+    return {"dependency_type": "FACT_DEPENDENT", "reason_code": "RULE_TOPIC_REQUIRES_CASE_FACT",
+            "legal_rule_topic": None}
+
+
+def _shares_topic(fact_clause: str, rule_clause: str) -> bool:
+    pairs = {fact_clause[index:index + 2] for index in range(len(fact_clause) - 1)}
+    return any(pair not in _NON_TOPIC_PAIRS and pair in rule_clause for pair in pairs)
 
 
 def recommend_legal_actions(
@@ -69,6 +118,8 @@ def compute_eligible_actions(
     remaining_rounds: int,
     remaining_tool_calls: int,
     max_same_action_per_gap: int,
+    claim_relation: dict | None = None,
+    rag_info: dict | None = None,
 ) -> list[dict]:
     """Return safe, meaningful runtime actions without choosing between them."""
     if remaining_rounds <= 0:
@@ -80,6 +131,8 @@ def compute_eligible_actions(
         return []
     requested = set(requested_fact_gaps or [])
     attempted = attempted_actions or {}
+    relation_rows = claim_relation.get("legal_claim_relations", []) if isinstance(claim_relation, dict) else []
+    retrieval_status = rag_info.get("retrieval_status") if isinstance(rag_info, dict) else None
     options = []
     for row in rows:
         if not isinstance(row, dict) or type(row.get("claim_index")) is not int:
@@ -90,8 +143,25 @@ def compute_eligible_actions(
         action = row.get("recommended_action")
         if action == REQUEST_HUMAN_FACT_VERIFICATION and index not in requested:
             options.append(_option(REQUEST_HUMAN_FACT, index, "CASE_FACT_GAP"))
-        elif (action == TARGETED_LEGAL_SEARCH and remaining_tool_calls > 0
-              and attempted.get(index, 0) < max_same_action_per_gap):
+        claim = claims[index]
+        observed = next((item for item in coverage if isinstance(item, dict)
+                         and item.get("claim_index") == index), None)
+        if (not isinstance(claim, dict) or not isinstance(observed, dict)
+                or remaining_tool_calls <= 0 or attempted.get(index, 0) >= max_same_action_per_gap):
+            continue
+        dependency = classify_legal_query_dependency(claim)
+        mixed = claim.get("requires_case_fact") is True and claim.get("requires_legal_rule") is True
+        if mixed and dependency["dependency_type"] != "INDEPENDENT":
+            continue
+        if mixed and (not isinstance(claim_relation, dict) or not isinstance(rag_info, dict)):
+            continue
+        rule_action = action
+        if mixed:
+            rule_claim = {**claim, "requires_case_fact": False}
+            rule_coverage = {**observed, "case_fact_status": "not_required"}
+            rule_action, _ = _decide(rule_claim, rule_coverage, claim_relation, relation_rows,
+                                     rag_info, retrieval_status)
+        if rule_action == TARGETED_LEGAL_SEARCH:
             options.append(_option(RETRIEVE_LEGAL_EVIDENCE, index, "LEGAL_RULE_GAP"))
     if options:
         return options
@@ -156,6 +226,9 @@ def validate_action_proposal(
         and observed.get("legal_rule_status") in {"no_candidate", "uncertain"}
     ):
         return _validation(False, "retrieval_prerequisite_missing", safety_violation=True)
+    if (action == RETRIEVE_LEGAL_EVIDENCE and claim.get("requires_case_fact") is True
+            and classify_legal_query_dependency(claim)["dependency_type"] != "INDEPENDENT"):
+        return _validation(False, "fact_dependent_legal_query", safety_violation=True)
     if action == USE_EXISTING_EVIDENCE and observed.get("legal_rule_status") != "candidate_found":
         return _validation(False, "evidence_not_available", safety_violation=True)
     if action == STOP_RESOLVED and _has_unresolved_requirement(claim_extraction, claim_coverage):

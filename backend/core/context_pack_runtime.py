@@ -62,6 +62,15 @@ class ContextPackRuntimeProvider:
         }
         evidence = state.metadata.get("legal_evidence") or []
         memories = get_case_memory_store().list_memories(entity_id=ingestion.get("entity_id"), limit=100)
+        previous_observation = None
+        human_fact_status = None
+        if agent_name == "legal":
+            legal_loop = state.metadata.get("legal_action_loop") or {}
+            cursor = legal_loop.get("cursor") or {}
+            previous_observation = _safe_observation(
+                legal_loop.get("last_observation") or cursor.get("previous_observation")
+            )
+            human_fact_status = _safe_human_fact_status(state.metadata.get("human_fact"))
         policy = ((state.metadata.get("harness_spec") or {}).get("context_policy") or {})
         try:
             budget = max(1, int(policy.get("token_budget_hint", policy.get("max_tokens", 3000))))
@@ -71,10 +80,83 @@ class ContextPackRuntimeProvider:
             event=event,
             public_signals=list(ingestion.get("source_items") or [])[:50],
             alerts=[], legal_evidence=evidence, case_memories=memories,
+            previous_observation=previous_observation, human_fact_status=human_fact_status,
             human_review_notes=list((state.metadata.get("policy") or {}).get("triggers", [])),
             token_budget_hint=budget, target_agent=agent_name,
             compression_mode=str(policy.get("compression_mode", "auto")),
         )
+
+
+def _safe_observation(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    enums = {
+        "observation_type": {"legal_retrieval", "fact_provided", "fact_unavailable", "retrieval_hit", "retrieval_no_hit",
+                             "tool_timeout", "tool_error", "invalid_output"},
+        "status": {"completed", "failed", "no_hit", "fallback", "relation_failed"},
+        "legal_rule_status": {"candidate_found", "no_candidate", "uncertain", "not_required"},
+        "case_fact_status": {"resolved", "unresolved", "not_required"},
+        "verification_status": {"human_asserted", "independently_verified", "unresolved"},
+        "source": {"human_provided", "human_response", "legal_retrieval"},
+        "claim_relation": {"supported", "partially_supported", "unsupported", "uncertain", "conflict"},
+    }
+    safe = {}
+    for key, allowed_values in enums.items():
+        candidate = value.get(key, value.get("type") if key == "observation_type" else None)
+        if isinstance(candidate, str) and candidate in allowed_values:
+            safe[key] = candidate
+    if safe.get("observation_type") == "fact_provided":
+        safe["verification_status"] = "human_asserted"
+        safe["source"] = "human_provided"
+    elif safe.get("observation_type") == "fact_unavailable":
+        safe["verification_status"] = "unresolved"
+    claim_index = value.get("claim_index")
+    if type(claim_index) is int and claim_index >= 0:
+        safe["claim_index"] = claim_index
+    for key in ("claim_state_changed", "whether_new_information"):
+        if isinstance(value.get(key), bool):
+            safe[key] = value[key]
+    return safe or None
+
+
+def _safe_human_fact_status(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    request = value.get("request") if isinstance(value.get("request"), dict) else {}
+    response = value.get("response") if isinstance(value.get("response"), dict) else {}
+    observation = value.get("observation") if isinstance(value.get("observation"), dict) else {}
+    response_type = response.get("response_type")
+    if response_type not in {"FACT_PROVIDED", "FACT_UNAVAILABLE"}:
+        return None
+    safe = {
+        "response_type": response_type,
+        "claim_index": request.get("claim_index"),
+        "case_fact_status": observation.get("case_fact_status"),
+        "human_verification_attempted": observation.get("human_verification_attempted"),
+        "fact_currently_unavailable": observation.get("fact_currently_unavailable"),
+        "source": observation.get("source"),
+        "verification_status": observation.get("verification_status"),
+    }
+    allowed_values = {
+        "response_type": {"FACT_PROVIDED", "FACT_UNAVAILABLE"},
+        "case_fact_status": {"resolved", "unresolved", "not_required"},
+        "source": {"human_provided", "human_response"},
+        "verification_status": {"human_asserted", "independently_verified", "unresolved"},
+    }
+    result = {}
+    for key, item in safe.items():
+        if key in allowed_values and item in allowed_values[key]:
+            result[key] = item
+        elif key in {"human_verification_attempted", "fact_currently_unavailable"} and isinstance(item, bool):
+            result[key] = item
+        elif key == "claim_index" and type(item) is int and item >= 0:
+            result[key] = item
+    if response_type == "FACT_PROVIDED":
+        result["source"] = "human_provided"
+        result["verification_status"] = "human_asserted"
+    else:
+        result["verification_status"] = "unresolved"
+    return result or None
 
 
 def _pack_hash(pack: dict[str, Any]) -> str:

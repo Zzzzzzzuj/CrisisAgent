@@ -165,6 +165,11 @@ def call_llm(prompt: str) -> str:
 
 
 def _build_writer_prompt(payload: dict, memory_context: str, context: str) -> str:
+    # Runtime ContextPack already contains historical memories; do not repeat it as legacy memory.
+    runtime_pack = payload.get("context_pack") or {}
+    if runtime_pack:
+        memory_context = ""
+    pack_text = payload.get("context_pack_text") or runtime_pack.get("rendered_context", "")
     return f"""
 你是 CrisisAgent 的策略文案 Agent C，负责为企业危机公关生成第一版对外声明。
 
@@ -178,17 +183,20 @@ def _build_writer_prompt(payload: dict, memory_context: str, context: str) -> st
 {memory_context}
 
 本轮 ContextPack（按 Writer 角色裁剪）：
-{payload.get("context_pack_text", "")}
+{pack_text}
 
 统一上下文 context:
 {context}
 
 写作要求：
 - 先表达关注、理解公众担忧或歉意。
-- 说明已启动调查/核查/排查，不要提前确认违法事实。
+- 说明当前输入明确支持的事实状态；输入未证明行动已经发生时，使用建议性或条件性措辞，不得写成已启动、正在执行或已完成。
+- 可以建议立即调查、核查或排查，但建议动作不代表当前企业已经执行该动作。
 - 如果涉及食品安全、监管、数据隐私等高风险场景，要保留条件式表达。
 - 不要使用“一定、绝不、保证”等绝对化承诺。
 - 语气应参考 sentiment_analysis.recommended_tone。
+- 历史经验仅供参考处理策略；不得将历史案例中的事实或已执行动作写成当前 Case 的事实。
+- 人工提供的信息必须保留“据人工提供/尚待独立核实”等来源边界，不得改写成独立核实结论。
 - 输出中文。
 
 只输出 JSON，不要输出 markdown，不要输出额外解释。JSON schema：
@@ -202,6 +210,13 @@ def _build_writer_prompt(payload: dict, memory_context: str, context: str) -> st
 
 
 def _build_context(payload: dict, memory_context: str) -> str:
+    runtime_pack = payload.get("context_pack") or {}
+    if runtime_pack:
+        pack_text = payload.get("context_pack_text") or runtime_pack.get("rendered_context", "")
+        item = ContextManager().add_context(source="context_pack", content=pack_text, priority=100)
+        _set_context_info(before_tokens=item.token_size, after_tokens=item.token_size,
+                          sources=["context_pack"] if pack_text else [])
+        return ""
     manager = ContextManager()
     manager.add_context(
         source="event",
@@ -402,7 +417,9 @@ def _build_writer_v2_prompt(payload: dict) -> str:
 
 写作要求：
 - 保留事实谨慎，不提前确认事实，不提前定责。
-- 增加核查行动、整改方向、监管配合和后续更新安排。
+- 提供有帮助的核查/整改/监管配合/后续更新建议，但只有当前 Case 输入明确支持时，才能表述为已经或正在执行。
+- 历史经验只支持策略参考，不支持当前事实或当前行动状态；建议动作不得升级为已执行动作。
+- 人工提供的信息应明确归因于人工来源，不能称为独立核实；FACT_UNAVAILABLE 必须保持未知。
 - 增强公众沟通，回应消费者/用户/公众担忧。
 - 吸收 redteam_review.issues / suggestions。
 - 优先执行 legal_review.revision_advice 和 legal_review.integrated_revision_tasks。
@@ -425,7 +442,10 @@ def _writer_v2_stability_requirements() -> str:
     return """
 Writer_v2 评测稳定性硬性要求：
 - statement 必须包含明确共情表达，例如“对受到影响的消费者表示歉意”“我们高度重视公众关切”“理解消费者的担忧”。
-- statement 必须至少包含“调查”“核查”“排查”三个词中的一个，说明已经启动事实核验行动。
+- statement 应说明当前已确认的核查状态或有用的下一步安排；不得仅为满足文案要求而声称调查、核查或排查已经启动。
+- 当前输入未证明行动已执行时，可以且应使用“建议立即核查”“将尽快核实”“可考虑”等建议性/条件性表达。建议不等于已执行。
+- ContextPack 中标记为 historical_experience 的内容属于历史案例经验，只能借鉴策略；不得移植历史事实或历史行动状态。
+- human_asserted 信息必须保留人工来源归属，不得称为 independently_verified；FACT_UNAVAILABLE 对应事实仍未知。
 - statement 必须包含“配合监管部门”或“接受监督”，说明监管沟通安排。
 - statement 必须包含至少一种后续措施，例如“整改”“召回”“第三方审计”“信息公开”“持续更新”。
 - statement 必须使用条件式、谨慎表达，不能在调查完成前确认违法事实或直接定责。
@@ -435,7 +455,7 @@ Writer_v2 评测稳定性硬性要求：
 
 输出前自检：
 - 如果 statement 缺少歉意/关切表达，请补充。
-- 如果 statement 缺少调查/核查/排查，请补充。
+- 如果没有任何核查安排，请补充一个适当的建议或条件性下一步；不得将其改写成已执行事实。
 - 如果 statement 缺少配合监管部门/接受监督，请补充。
 - 如果 statement 缺少整改/召回/第三方审计/信息公开/持续更新，请补充。
 - 如果 statement 包含提前定责或绝对化承诺，请改写。

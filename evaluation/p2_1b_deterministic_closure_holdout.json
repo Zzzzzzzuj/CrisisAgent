@@ -1,0 +1,85 @@
+{
+  "version": "p2.1b-deterministic-closure-holdout-v1",
+  "memory_top_k": 2,
+  "protection_snapshot": {
+    "path": "backend/core/context_pack_runtime.py",
+    "sha256_before_production_edit": "4861a20f1457d12553ec8da326542bfc2d41e5d8cb850bdf2e857381f2f8674e",
+    "tracked_diff_before_production_edit": "",
+    "working_tree_status": "modified_only_by_lf_to_crlf_eol; index=lf; worktree=crlf"
+  },
+  "memories": [
+    {"memory_id": "b-food-single-tag", "source_event_id": "event-food-neighbor", "entity_name": "岭南食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["异味"], "final_statement_summary": "历史产品事件处置记录。"},
+    {"memory_id": "b-same-company-unrelated", "source_event_id": "event-company-maintenance", "entity_name": "青禾食品", "crisis_type": "food_safety", "risk_level": "low", "fact_status": "verified", "tags": ["系统", "维护"], "final_statement_summary": "历史系统维护事件。"},
+    {"memory_id": "b-risk-only", "source_event_id": "event-risk-only", "entity_name": "远山平台", "crisis_type": "data_privacy", "risk_level": "high", "fact_status": "unverified", "tags": ["完全不同"], "final_statement_summary": "相似风险等级的其他事件。"},
+    {"memory_id": "b-related-cross-company", "source_event_id": "event-related-cross-company", "entity_name": "远峰食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["过期", "原料"], "final_statement_summary": "历史过期原料事件经验。"},
+    {"memory_id": "b-related-group-one", "source_event_id": "event-related-group-one", "entity_name": "晨禾食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["批次", "召回"], "case_group_id": "related-food-series", "final_statement_summary": "同一案例组的处置经验一。"},
+    {"memory_id": "b-related-group-two", "source_event_id": "event-related-group-two", "entity_name": "晨禾食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["批次", "召回"], "case_group_id": "related-food-series", "final_statement_summary": "同一案例组的处置经验二。"},
+    {"memory_id": "b-privacy-unrelated", "source_event_id": "event-privacy-unrelated", "entity_name": "云舟科技", "crisis_type": "data_privacy", "risk_level": "low", "fact_status": "unverified", "tags": ["权限配置"], "final_statement_summary": "无关数据权限事件。"}
+  ],
+  "queries": [
+    {"query_case_id": "b-same-domain-single-tag", "kind": "same_domain_keyword_neighbor", "query": {"entity_name": "新岭食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["异味", "本次批次"]}, "relevant_memory_ids": []},
+    {"query_case_id": "b-same-company-different-event", "kind": "same_company_different_event", "query": {"entity_name": "青禾食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["原料", "召回"], "event_id": "current-food-event"}, "relevant_memory_ids": []},
+    {"query_case_id": "b-different-company-similar-risk", "kind": "different_company_similar_risk", "query": {"entity_name": "新云舟平台", "crisis_type": "data_privacy", "risk_level": "high", "fact_status": "unverified", "tags": ["新型攻击"]}, "relevant_memory_ids": []},
+    {"query_case_id": "b-truly-related-cross-company", "kind": "truly_related_cross_company", "query": {"entity_name": "新峰食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "unverified", "tags": ["过期", "原料"]}, "relevant_memory_ids": ["b-related-cross-company"]},
+    {"query_case_id": "b-no-related-memory", "kind": "no_related_memory", "query": {"entity_name": "陌生企业", "crisis_type": "consumer_complaint", "risk_level": "medium", "fact_status": "unverified", "tags": ["全新服务问题"]}, "relevant_memory_ids": []},
+    {"query_case_id": "b-multiple-related", "kind": "multiple_related_memories", "query": {"entity_name": "晨禾食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["批次", "召回"], "case_group_id": "related-food-series"}, "relevant_memory_ids": ["b-related-group-one", "b-related-group-two"]}
+  ],
+  "context_cases": [
+    {
+      "case_id": "b-previous-observation-legal",
+      "agent_name": "legal",
+      "event": {"event_id": "current-event-1", "event_summary": "平台故障仍在调查。", "company": "星河服务", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"},
+      "metadata": {"legal_action_loop": {"last_observation": {"observation_type": "legal_retrieval", "legal_rule_status": "candidate_found", "claim_index": 1, "claim_relation": "partially_supported"}}},
+      "required": [{"path": "previous_observation.observation_type", "equals": "legal_retrieval"}, {"path": "previous_observation.legal_rule_status", "equals": "candidate_found"}, {"path": "previous_observation.claim_index", "equals": 1}]
+    },
+    {
+      "case_id": "b-fact-provided",
+      "agent_name": "legal",
+      "event": {"event_id": "current-event-2", "event_summary": "企业内部处置状态仍需判断。", "company": "青禾服务", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"},
+      "metadata": {"legal_action_loop": {"last_observation": {"observation_type": "fact_provided", "claim_index": 0}}, "human_fact": {"request": {"request_id": "req-provided", "claim_index": 0}, "response": {"response_type": "FACT_PROVIDED", "fact_text": "PRIVATE_FACT_BODY_MUST_NOT_BE_COPIED"}, "observation": {"case_fact_status": "unresolved", "human_verification_attempted": true, "source": "human_provided", "verification_status": "human_asserted"}}},
+      "required": [{"path": "human_fact_status.response_type", "equals": "FACT_PROVIDED"}, {"path": "human_fact_status.verification_status", "equals": "human_asserted"}, {"path": "human_fact_status.source", "equals": "human_provided"}, {"path": "previous_observation.observation_type", "equals": "fact_provided"}],
+      "forbidden_text": "PRIVATE_FACT_BODY_MUST_NOT_BE_COPIED"
+    },
+    {
+      "case_id": "b-fact-unavailable",
+      "agent_name": "legal",
+      "event": {"event_id": "current-event-3", "event_summary": "故障原因尚未确认。", "company": "明川服务", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"},
+      "metadata": {"legal_action_loop": {"last_observation": {"observation_type": "fact_unavailable", "claim_index": 2}}, "human_fact": {"request": {"request_id": "req-unavailable", "claim_index": 2}, "response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}, "observation": {"case_fact_status": "unresolved", "fact_currently_unavailable": true, "human_verification_attempted": true, "verification_status": "unresolved"}}},
+      "required": [{"path": "human_fact_status.response_type", "equals": "FACT_UNAVAILABLE"}, {"path": "human_fact_status.fact_currently_unavailable", "equals": true}, {"path": "previous_observation.observation_type", "equals": "fact_unavailable"}]
+    },
+    {
+      "case_id": "b-observation-human-fact-evidence",
+      "agent_name": "legal",
+      "event": {"event_id": "current-event-4", "event_summary": "用户数据风险正在核查。", "company": "云舟平台", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"},
+      "metadata": {"legal_action_loop": {"last_observation": {"observation_type": "fact_provided", "legal_rule_status": "unresolved", "claim_index": 0, "claim_relation": "unsupported"}}, "human_fact": {"request": {"request_id": "req-combined", "claim_index": 0}, "response": {"response_type": "FACT_PROVIDED", "fact_text": "PRIVATE_COMBINED_BODY"}, "observation": {"case_fact_status": "unresolved", "human_verification_attempted": true, "source": "human_provided", "verification_status": "human_asserted"}}, "legal_evidence": [{"evidence_id": "b-required-rule", "required_for_decision": true, "relevance_score": 0.9, "text": "仅作为法律规则依据的安全摘要。"}]},
+      "required": [{"path": "previous_observation.observation_type", "equals": "fact_provided"}, {"path": "human_fact_status.verification_status", "equals": "human_asserted"}, {"path": "top_legal_evidence", "item_id": "b-required-rule"}],
+      "forbidden_text": "PRIVATE_COMBINED_BODY"
+    },
+    {
+      "case_id": "b-crowded-required-state",
+      "agent_name": "legal",
+      "event": {"event_id": "current-event-5", "event_summary": "服务恢复情况及影响仍在核查。", "company": "远帆服务", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"},
+      "metadata": {"legal_action_loop": {"last_observation": {"observation_type": "fact_unavailable", "legal_rule_status": "candidate_found", "claim_index": 3}}, "human_fact": {"request": {"request_id": "req-crowded", "claim_index": 3}, "response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}, "observation": {"case_fact_status": "unresolved", "fact_currently_unavailable": true, "human_verification_attempted": true, "verification_status": "unresolved"}}, "legal_evidence": [{"evidence_id": "b-crowded-optional-1", "relevance_score": 0.99, "text": "可选背景一。"}, {"evidence_id": "b-crowded-required", "required_for_decision": true, "relevance_score": 0.5, "text": "必需法律限制摘要。"}, {"evidence_id": "b-crowded-optional-2", "relevance_score": 0.95, "text": "可选背景二。"}]},
+      "budget_chars": 120,
+      "required": [{"path": "previous_observation.observation_type", "equals": "fact_unavailable"}, {"path": "human_fact_status.response_type", "equals": "FACT_UNAVAILABLE"}, {"path": "top_legal_evidence", "item_id": "b-crowded-required"}],
+      "expected_budget_status": "REQUIRED_OVERFLOW"
+    },
+    {
+      "case_id": "b-no-human-fact",
+      "agent_name": "legal",
+      "event": {"event_id": "current-event-6", "event_summary": "公开信息显示服务短暂中断。", "company": "海岬服务", "risk_level": "medium", "fact_status": "unverified", "event_status": "uncertain"},
+      "metadata": {"legal_action_loop": {"last_observation": {"observation_type": "legal_retrieval", "legal_rule_status": "no_hit", "claim_index": 0}}},
+      "required": [{"path": "previous_observation.observation_type", "equals": "legal_retrieval"}],
+      "absent": ["human_fact_status"]
+    },
+    {
+      "case_id": "b-writer-role-boundary",
+      "agent_name": "writer",
+      "event": {"event_id": "current-event-7", "event_summary": "企业正在核查相关事实。", "company": "晨曦服务", "risk_level": "medium", "fact_status": "unverified", "event_status": "uncertain"},
+      "metadata": {"legal_action_loop": {"last_observation": {"observation_type": "fact_provided", "claim_index": 0}}, "human_fact": {"request": {"request_id": "req-role", "claim_index": 0}, "response": {"response_type": "FACT_PROVIDED", "fact_text": "ROLE_PRIVATE_BODY"}, "observation": {"source": "human_provided", "verification_status": "human_asserted"}}},
+      "required": [],
+      "absent": ["previous_observation", "human_fact_status"],
+      "forbidden_text": "ROLE_PRIVATE_BODY"
+    }
+  ]
+}

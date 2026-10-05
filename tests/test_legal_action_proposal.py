@@ -397,7 +397,8 @@ def test_proposal_schema_rejects_free_query_and_reasoning_fields():
 
 def test_previous_observation_can_change_valid_proposal_selection():
     mixed_claims = [
-        {"claim": "混合声明", "requires_legal_rule": True, "requires_case_fact": True},
+        {"claim": "公司是否已向监管机构报告；法律规定何时需要向监管机构报告",
+         "requires_legal_rule": True, "requires_case_fact": True},
         CLAIMS[1],
     ]
     mixed_relation = {

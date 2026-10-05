@@ -15,6 +15,7 @@ from backend.harness.spec import build_default_harness_spec, spec_hash
 
 def _approved_candidate(tmp_path, monkeypatch, version="2.0.0"):
     monkeypatch.setenv("HARNESS_SPEC_STORE_PATH", str(tmp_path / "harnesses.json"))
+    monkeypatch.setenv("HARNESS_COMPARISON_STORE_PATH", str(tmp_path / "comparisons.json"))
     candidate = copy_harness_version("crisisagent-default", "1.0.0", version)
     candidate_id = candidate["metadata"]["harness_id"]
     candidate = update_candidate_harness(
@@ -25,6 +26,14 @@ def _approved_candidate(tmp_path, monkeypatch, version="2.0.0"):
     )
     gate = {"passed": True, "checks": {}, "failure_reasons": []}
     mark_harness_evaluated(candidate_id, version, f"comparison-{version}", gate)
+    from backend.evaluation.harness_comparison_store import get_harness_comparison_store
+    get_harness_comparison_store().save({
+        "comparison_id": f"comparison-{version}",
+        "mode": "main_workflow_replay",
+        "baseline": {"harness_id": "crisisagent-default", "version": "1.0.0", "metrics": {}, "cases": []},
+        "candidate": {"harness_id": candidate_id, "version": version, "metrics": {}, "cases": []},
+        "policy_diff": {},
+    })
     approved = approve_harness_version(candidate_id, version, f"comparison-{version}", "admin", gate)
     return approved, candidate_id
 

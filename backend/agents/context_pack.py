@@ -8,7 +8,8 @@ from backend.agents.memory_retriever import retrieve_memories
 
 
 SENSITIVE_FIELDS = {"content", "full_text", "system_prompt", "api_key", "tool_arguments"}
-PRESERVED_FIELDS = ["current_event_facts", "fact_status", "event_status", "risk_level", "agent_specific_focus"]
+PRESERVED_FIELDS = ["current_event_facts", "fact_status", "event_status", "risk_level",
+                    "previous_observation", "human_fact_status", "agent_specific_focus"]
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,8 @@ def build_context_pack(*, event: dict[str, Any] | None = None, event_text: str |
                        legal_evidence: list[dict[str, Any]] | None = None,
                        case_memories: list[dict[str, Any]] | None = None,
                        human_review_notes: list[str] | None = None,
+                       previous_observation: dict[str, Any] | None = None,
+                       human_fact_status: dict[str, Any] | None = None,
                        token_budget_hint: int = 3000, target_agent: str | None = None,
                        compression_mode: str = "auto") -> dict[str, Any]:
     """Build a deterministic preview without changing the Agent workflow."""
@@ -46,7 +49,8 @@ def build_context_pack(*, event: dict[str, Any] | None = None, event_text: str |
     drops: list[dict[str, Any]] = []
     signals = _prepare_items(public_signals or [], 5, "public_signals", 500, drops)
     alert_values = _prepare_items(alerts or [], 3, "alerts", 500, drops)
-    evidence = _prepare_items(legal_evidence or [], 3, "legal_evidence", 500, drops)
+    evidence = _prepare_items(legal_evidence or [], 3, "legal_evidence", 500, drops,
+                              preserve_required=True)
     ranked_memories = retrieve_memories(event or event_text or "", case_memories or [], top_k=3)
     if len(case_memories or []) > len(ranked_memories):
         _record_drop(drops, "case_memories", "baseline_relevance_or_limit", len(case_memories or []) - len(ranked_memories))
@@ -57,7 +61,8 @@ def build_context_pack(*, event: dict[str, Any] | None = None, event_text: str |
 
     baseline_focus = _build_agent_focus(target_agent, safe_memories, event, evidence)
     baseline = _make_pack(event, event_text, signals, alert_values, evidence, safe_memories, notes,
-                          baseline_focus, drops, token_budget_hint, target_agent)
+                          baseline_focus, drops, token_budget_hint, target_agent,
+                          previous_observation, human_fact_status)
     pre_compression_chars = _estimate_chars(baseline)
     usage_ratio = round(pre_compression_chars / max(1, token_budget_hint), 4)
 
@@ -70,7 +75,8 @@ def build_context_pack(*, event: dict[str, Any] | None = None, event_text: str |
     actions: list[str] = []
     compressed_signals = _apply_item_policy(signals, policy.signal_limit, "public_signals", policy.preview_limit, drops, level)
     compressed_alerts = _apply_item_policy(alert_values, policy.alert_limit, "alerts", policy.preview_limit, drops, level)
-    compressed_evidence = _apply_item_policy(evidence, policy.evidence_limit, "legal_evidence", policy.preview_limit, drops, level)
+    compressed_evidence = _apply_item_policy(evidence, policy.evidence_limit, "legal_evidence", policy.preview_limit,
+                                             drops, level, preserve_required=True)
     compressed_memories = _apply_memory_policy(safe_memories, policy, drops)
     if level == "yellow":
         compressed_signals = _limit_per_provider(compressed_signals, 2, drops)
@@ -89,15 +95,16 @@ def build_context_pack(*, event: dict[str, Any] | None = None, event_text: str |
     aggregate = _aggregate_summary(public_signals or [], compressed_signals, level)
     pack = _make_pack(event, event_text, compressed_signals, compressed_alerts, compressed_evidence,
                       compressed_memories, notes[:policy.focus_list_limit], focus, drops,
-                      token_budget_hint, target_agent)
+                      token_budget_hint, target_agent, previous_observation, human_fact_status)
     return _finalize(pack, level, usage_ratio, pre_compression_chars, actions, drops, aggregate, token_budget_hint)
 
 
 def _make_pack(event: dict[str, Any], event_text: str | None, signals: list[dict[str, Any]],
                alerts: list[dict[str, Any]], evidence: list[dict[str, Any]], memories: list[dict[str, Any]],
                notes: list[str], focus: dict[str, Any], drops: list[dict[str, Any]], token_budget_hint: int,
-               target_agent: str | None) -> dict[str, Any]:
-    return {
+               target_agent: str | None, previous_observation: dict[str, Any] | None = None,
+               human_fact_status: dict[str, Any] | None = None) -> dict[str, Any]:
+    pack = {
         "event_facts": {"event_id": event.get("event_id"),
                         "event_text": _clip(event_text or event.get("event_summary") or event.get("title", ""), 500),
                         "company": event.get("company", ""), "risk_level": event.get("risk_level", ""),
@@ -110,6 +117,11 @@ def _make_pack(event: dict[str, Any], event_text: str | None, signals: list[dict
         "latest_round_summary": _latest_round_summary(memories), "human_review_notes": notes,
         "target_agent": target_agent or "general", "token_budget_hint": token_budget_hint, "dropped_fields": drops,
     }
+    if previous_observation:
+        pack["previous_observation"] = previous_observation
+    if human_fact_status:
+        pack["human_fact_status"] = human_fact_status
+    return pack
 
 
 def _finalize(pack: dict[str, Any], level: str, usage_ratio: float, pre_chars: int,
@@ -125,6 +137,24 @@ def _finalize(pack: dict[str, Any], level: str, usage_ratio: float, pre_chars: i
                  "aggregate_summary": aggregate, "preserved_fields": PRESERVED_FIELDS,
                  "dropped_fields": drops, "dropped_field_names": [item["field"] for item in drops],
                  "safety_notes": safety_notes})
+    required_payload = {key: pack.get(key) for key in
+                        ("event_facts", "fact_status", "event_status", "risk_level",
+                         "previous_observation", "human_fact_status")}
+    required_payload["target_agent"] = pack["agent_specific_focus"].get("target_agent")
+    required_payload["required_legal_evidence"] = [
+        item for item in pack["top_legal_evidence"] if item.get("required_for_decision") is True
+    ]
+    required_chars = _estimate_chars(required_payload)
+    pack.update({"budget_unit": "characters", "budget_enforcement": "soft_waterline",
+                 "required_minimum_chars": required_chars, "budget_status": "WITHIN_BUDGET",
+                 "rendered_context_chars": 0})
+    for _ in range(3):
+        rendered_chars = len(json.dumps(pack, ensure_ascii=False, default=str, separators=(",", ":")))
+        pack["rendered_context_chars"] = rendered_chars
+        pack["budget_status"] = (
+            "REQUIRED_OVERFLOW" if required_chars > token_budget_hint else
+            "SOFT_TARGET_EXCEEDED" if rendered_chars > token_budget_hint else "WITHIN_BUDGET"
+        )
     return pack
 
 
@@ -139,22 +169,33 @@ def _compression_level(usage_ratio: float) -> str:
 
 
 def _prepare_items(values: list[dict[str, Any]], maximum: int, name: str, clip_limit: int,
-                   drops: list[dict[str, Any]]) -> list[dict[str, Any]]:
+                   drops: list[dict[str, Any]], preserve_required: bool = False) -> list[dict[str, Any]]:
     valid = [item for item in values if isinstance(item, dict)]
-    relevant = [item for item in valid if not _is_low_relevance(item)]
+    relevant = [item for item in valid if (preserve_required and item.get("required_for_decision") is True)
+                or not _is_low_relevance(item)]
     if len(relevant) < len(valid):
         _record_drop(drops, name, "low_relevance", len(valid) - len(relevant))
-    ranked = _diversify_providers(sorted(relevant, key=_item_priority, reverse=True))
-    if len(ranked) > maximum:
-        _record_drop(drops, name, "baseline_limit", len(ranked) - maximum)
-    return [_sanitize_item(item, clip_limit) for item in ranked[:maximum]]
+    if preserve_required:
+        ranked = sorted(relevant, key=lambda item: (item.get("required_for_decision") is True,
+                                                   _item_priority(item)), reverse=True)
+        required = [item for item in ranked if item.get("required_for_decision") is True]
+        optional = [item for item in ranked if item.get("required_for_decision") is not True]
+        selected = required + optional[:max(0, maximum - len(required))]
+    else:
+        ranked = _diversify_providers(sorted(relevant, key=_item_priority, reverse=True))
+        selected = ranked[:maximum]
+    _record_drop(drops, name, "baseline_limit", len(ranked) - len(selected))
+    return [_sanitize_item(item, clip_limit, preserve_required_text=preserve_required) for item in selected]
 
 
 def _apply_item_policy(items: list[dict[str, Any]], maximum: int, name: str, clip_limit: int,
-                       drops: list[dict[str, Any]], level: str) -> list[dict[str, Any]]:
-    if len(items) > maximum:
-        _record_drop(drops, name, f"exceeded_{level}_waterline", len(items) - maximum)
-    return [_sanitize_item(item, clip_limit) for item in items[:maximum]]
+                       drops: list[dict[str, Any]], level: str,
+                       preserve_required: bool = False) -> list[dict[str, Any]]:
+    required = [item for item in items if item.get("required_for_decision") is True] if preserve_required else []
+    optional = [item for item in items if item.get("required_for_decision") is not True] if preserve_required else items
+    selected = required + optional[:max(0, maximum - len(required))]
+    _record_drop(drops, name, f"exceeded_{level}_waterline", len(items) - len(selected))
+    return [_sanitize_item(item, clip_limit, preserve_required_text=preserve_required) for item in selected]
 
 
 def _apply_memory_policy(memories: list[dict[str, Any]], policy: ContextPackCompressionPolicy,
@@ -165,7 +206,8 @@ def _apply_memory_policy(memories: list[dict[str, Any]], policy: ContextPackComp
     for item in memories[:policy.memory_limit]:
         if policy.level in {"orange", "red"}:
             compact = {key: item.get(key) for key in ("memory_id", "entity_name", "crisis_type", "risk_level",
-                       "fact_status", "case_group_id", "round_index", "previous_statement_summary", "score",
+                       "historical_fact_status", "historical_experience", "source_case_id",
+                       "case_group_id", "round_index", "previous_statement_summary", "score",
                        "matched_reasons", "outcome") if item.get(key) is not None}
             result.append(compact)
         else:
@@ -207,7 +249,9 @@ def _compress_agent_focus(target_agent: str | None, focus: dict[str, Any], polic
     allowed = key_map.get(agent)
     if not allowed or policy.level in {"green", "yellow"}:
         return _limit_focus_lists(focus, policy.focus_list_limit, policy.preview_limit)
-    compact = {"target_agent": focus.get("target_agent", agent)}
+    compact = {"target_agent": focus.get("target_agent", agent),
+               "historical_experience": focus.get("historical_experience", False),
+               "historical_source_case_ids": focus.get("historical_source_case_ids", [])}
     for key in allowed:
         if key in focus:
             compact[key] = _compact_focus_value(focus[key], policy.focus_list_limit, policy.preview_limit)
@@ -265,17 +309,28 @@ def _diversify_providers(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return first_pass + repeats
 
 
-def _sanitize_item(item: dict[str, Any], clip_limit: int) -> dict[str, Any]:
-    return {key: _compact_focus_value(value, 5, clip_limit) for key, value in item.items() if key not in SENSITIVE_FIELDS}
+def _sanitize_item(item: dict[str, Any], clip_limit: int,
+                   preserve_required_text: bool = False) -> dict[str, Any]:
+    safe = {key: _compact_focus_value(value, 5, clip_limit)
+            for key, value in item.items() if key not in SENSITIVE_FIELDS}
+    if preserve_required_text and item.get("required_for_decision") is True:
+        for key in ("text", "content_preview", "summary"):
+            if isinstance(item.get(key), str):
+                safe[key] = item[key]
+    return safe
 
 
 def _safe_memory(item: dict[str, Any], clip_limit: int) -> dict[str, Any]:
-    allowed = {"memory_id", "entity_name", "crisis_type", "risk_level", "fact_status", "final_statement_summary",
+    allowed = {"memory_id", "entity_name", "crisis_type", "risk_level", "final_statement_summary",
                "legal_risk_summary", "redteam_summary", "response_strategy", "tags", "score", "matched_reasons",
                "case_group_id", "round_index", "previous_memory_id", "previous_statement_summary",
                "public_reaction_summary", "what_changed_since_previous", "previous_redteam_findings",
                "unresolved_redteam_findings", "previous_legal_constraints", "avoid_repeating_points", "outcome"}
-    return {key: _compact_focus_value(value, 5, clip_limit) for key, value in item.items() if key in allowed}
+    safe = {key: _compact_focus_value(value, 5, clip_limit) for key, value in item.items() if key in allowed}
+    safe["source_case_id"] = item.get("source_case_id") or item.get("source_event_id") or item.get("memory_id")
+    safe["historical_fact_status"] = item.get("historical_fact_status") or item.get("fact_status")
+    safe["historical_experience"] = True
+    return safe
 
 
 def _build_agent_focus(target_agent: str | None, memories: list[dict[str, Any]], event: dict[str, Any],
@@ -288,15 +343,21 @@ def _build_agent_focus(target_agent: str | None, memories: list[dict[str, Any]],
     previous_statement = _first_value(memories, "previous_statement_summary")
     changed = _first_value(memories, "what_changed_since_previous")
     reaction = _first_value(memories, "public_reaction_summary")
-    base = {"target_agent": target_agent or "general"}
+    base = {"target_agent": target_agent or "general",
+            "historical_experience": bool(memories),
+            "historical_source_case_ids": [item["source_case_id"] for item in memories
+                                           if item.get("source_case_id")]}
     if target_agent == "redteam":
         return {**base, "previous_redteam_findings": redteam[:5], "unresolved_redteam_findings": unresolved[:5],
                 "public_reaction_summary": reaction, "already_addressed_issues": [item for item in redteam if item not in unresolved][:5],
                 "new_attack_focus": unresolved[:5] or ["检查本轮新增事实、进展和公众反应是否形成新的攻击面"], "avoid_repeating_old_attacks": avoid[:5]}
     if target_agent == "legal":
+        required_evidence = [item for item in evidence if item.get("required_for_decision") is True]
+        optional_evidence = [item for item in evidence if item.get("required_for_decision") is not True]
         return {**base, "previous_legal_constraints": legal[:5], "forbidden_promises": legal[:5],
                 "fact_status": event.get("fact_status", ""), "event_status": event.get("event_status", ""),
-                "top_legal_evidence": evidence[:3], "regulatory_sensitivity": "high" if event.get("risk_level") == "high" else "normal"}
+                "top_legal_evidence": required_evidence + optional_evidence[:max(0, 3 - len(required_evidence))],
+                "regulatory_sensitivity": "high" if event.get("risk_level") == "high" else "normal"}
     if target_agent in {"writer", "writer_v2"}:
         return {**base, "previous_statement_summary": previous_statement, "what_changed_since_previous": changed,
                 "avoid_repeating_points": avoid[:5], "must_address_points": unresolved[:5],
@@ -337,7 +398,9 @@ def _latest_round_summary(memories: list[dict[str, Any]]) -> dict[str, Any] | No
     if not memories:
         return None
     latest = max(memories, key=lambda item: item.get("round_index") or 0)
-    return {"memory_id": latest.get("memory_id"), "round_index": latest.get("round_index"),
+    return {"memory_id": latest.get("memory_id"), "source_case_id": latest.get("source_case_id"),
+            "historical_experience": True, "historical_fact_status": latest.get("historical_fact_status"),
+            "round_index": latest.get("round_index"),
             "summary": _clip(latest.get("previous_statement_summary") or latest.get("final_statement_summary", ""), 500),
             "outcome": latest.get("outcome")}
 

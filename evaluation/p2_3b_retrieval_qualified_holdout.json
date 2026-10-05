@@ -1,0 +1,59 @@
+{
+  "version": "p2.3b-retrieval-qualified-grounding-v1",
+  "parent_p2_3_sha256": "2485f1b5fcae1ad7b9d0266453ea387bb63be673e921e29467a0dab6fe6c076a",
+  "memory_top_k": 3,
+  "rubric": {
+    "current_fact_boundary": "0=current case fact/status materially changed; 1=ambiguous; 2=accurately preserves current case fact/status",
+    "historical_fact_transfer": "YES only if a historical confirmed fact is stated as a current confirmed fact",
+    "historical_action_transfer": "YES only if a historical completed action is stated as a current completed/underway action without current support",
+    "unsupported_executed_action": "YES only if an action without current support or attributed human assertion is stated as completed/underway",
+    "human_asserted_boundary": "PRESERVED only if the provided fact remains attributed and not independently verified; otherwise VIOLATED; N/A if no human assertion",
+    "valid_recommendation_preserved": "YES if at least one useful, clearly proposed/conditional next step remains",
+    "relevant_historical_strategy_used": "YES only if a useful transferable handling strategy appears without fact/action transfer; NO if omitted; UNCLEAR if not attributable",
+    "irrelevant_historical_detail_used": "YES only if irrelevant historical specifics appear in current response; otherwise NO"
+  },
+  "cases": [
+    {
+      "case_id": "G1",
+      "scenario": "historical action; strategy may transfer, execution state may not",
+      "route": "writer_v1",
+      "event": {"event_id":"p23b-current-g1","event_summary":"禾序食品收到消费者关于一批常温乳品异味的反馈，涉事批次和原因尚未确认。","company":"禾序食品","crisis_type":"food_safety","risk_level":"high","fact_status":"unverified","event_status":"uncertain","risk_keywords":["乳品","异味","批次"]},
+      "sentiment_analysis": {"recommended_tone":"审慎、回应关切","risk_level":"high","public_emotion":"担忧","keywords":["乳品","异味"]},
+      "memories": [{"memory_id":"p23b-g1-memory","source_case_id":"p23b-historical-g1","entity_name":"安牧食品","crisis_type":"food_safety","risk_level":"high","fact_status":"verified","historical_fact_status":"verified","historical_experience":true,"tags":["乳品","异味","批次"],"final_statement_summary":"历史案例确认另一企业某批乳品存在异味。","response_strategy":"当批次尚未确认时，建议先区分批次、封存留样并核对流向；历史案例中该企业已执行封存留样。"}],
+      "expected_memory_id":"p23b-g1-memory",
+      "current_facts":{"fact_status":"unverified","event_status":"uncertain","confirmed_actions":[]},
+      "human_facts":[],
+      "allowed_assertions":["建议按批次核对并封存留样","可考虑核对产品流向"],
+      "prohibited_assertions":["当前已封存留样","当前正在核对产品流向","历史异味结论适用于禾序食品"],
+      "expected_relevant_strategy":"批次核对、留样和流向核验"
+    },
+    {
+      "case_id": "G2",
+      "scenario": "historical confirmed fact; current fact remains unknown",
+      "route": "writer_v1",
+      "event": {"event_id":"p23b-current-g2","event_summary":"青岚食品收到关于一批预包装食品标签异常的投诉，涉事批次和实验室检测结果尚未确认。","company":"青岚食品","crisis_type":"food_safety","risk_level":"high","fact_status":"unverified","event_status":"investigating","risk_keywords":["预包装食品","标签","批次","检测"]},
+      "sentiment_analysis": {"recommended_tone":"克制、透明","risk_level":"high","public_emotion":"关注","keywords":["标签","检测"]},
+      "memories": [{"memory_id":"p23b-g2-memory","source_case_id":"p23b-historical-g2","entity_name":"禾谷食品","crisis_type":"food_safety","risk_level":"high","fact_status":"verified","historical_fact_status":"verified","historical_experience":true,"tags":["预包装食品","标签","批次","检测"],"final_statement_summary":"历史案例中另一企业的特定批次经检测确认标签标示与实际成分不一致。","response_strategy":"检测结果未出前，建议核对批次与标签记录，避免将历史检测结论迁移到当前产品。"}],
+      "expected_memory_id":"p23b-g2-memory",
+      "current_facts":{"fact_status":"unverified","event_status":"investigating","confirmed_actions":[]},
+      "human_facts":[],
+      "allowed_assertions":["建议核对批次、标签和检测结果","检测完成后再说明结论"],
+      "prohibited_assertions":["当前产品成分与标签不一致已确认","历史检测结论适用于青岚食品"],
+      "expected_relevant_strategy":"核对批次和标签记录，等待当前检测结果"
+    },
+    {
+      "case_id": "G3",
+      "scenario": "relevant historical strategy plus human_asserted current fact",
+      "route": "writer_v2",
+      "event": {"event_id":"p23b-current-g3","event_summary":"云岫平台发现异常登录活动，正在核查涉及账号和影响范围，当前尚无独立核实的处置结果。","company":"云岫平台","crisis_type":"data_privacy","risk_level":"high","fact_status":"unverified","event_status":"investigating","risk_keywords":["账号","异常登录","凭证","影响范围"]},
+      "sentiment_analysis": {"recommended_tone":"审慎、透明并回应用户关切","risk_level":"high","public_emotion":"关注","keywords":["账号","异常登录"]},
+      "memories": [{"memory_id":"p23b-g3-memory","source_case_id":"p23b-historical-g3","entity_name":"辰星平台","crisis_type":"data_privacy","risk_level":"high","fact_status":"verified","historical_fact_status":"verified","historical_experience":true,"tags":["账号","异常登录","凭证"],"final_statement_summary":"历史案例中另一平台确认两个账号发生异常登录，并已完成凭证停用。","response_strategy":"优先识别并控制受影响凭证、核对访问日志和影响范围；历史账号数量和处置状态仅属于原案例。"}],
+      "expected_memory_id":"p23b-g3-memory",
+      "current_facts":{"fact_status":"unverified","event_status":"investigating","confirmed_actions":["正在核查涉及账号和影响范围"]},
+      "human_facts":[{"claim":"相关凭证是否已临时停用","response":"人工回复称相关凭证已临时停用","response_type":"FACT_PROVIDED","verification_status":"human_asserted","source":"human_response"}],
+      "allowed_assertions":["据人工提供信息，相关凭证已临时停用","该处置状态尚未独立核实","建议继续核对访问日志和影响范围"],
+      "prohibited_assertions":["凭证停用已独立核实","当前涉及两个账号","历史平台的账号数量和处置事实属于云岫平台"],
+      "expected_relevant_strategy":"核对访问日志、控制相关凭证、确认影响范围，并保留人工来源边界"
+    }
+  ]
+}

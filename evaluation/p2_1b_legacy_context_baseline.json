@@ -1,0 +1,9 @@
+{
+  "fixture_id": "p2.1b-legacy-context-baseline-v1",
+  "dataset_sha256": "9f61a24c2ae4a47bef44cb5320090fdb78e19f48c94939a75e817b5137393370",
+  "measurement_boundary": "Frozen pre-change measurement values; no runtime or provider access.",
+  "context_pack": {
+    "previous_observation_retained": 0,
+    "human_fact_status_retained": 0
+  }
+}

@@ -1,7 +1,8 @@
 import os
 from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from threading import Lock
+from threading import Event, Lock, Thread
 
 from backend.core.checkpoint import list_checkpoints, load_checkpoint, save_checkpoint
 from backend.core.dynamic_runtime import execute_dynamic_state, initialize_dynamic_state
@@ -143,7 +144,7 @@ def run_dynamic_session_task(session_id: str) -> dict:
     if is_database_checkpoint_enabled():
         if lease is None:
             return {"session_id": session_id, "status": "skipped", "reason": "execution_not_claimed"}
-        with use_execution_lease(lease):
+        with use_execution_lease(lease), _heartbeat_execution(lease):
             return _run_claimed_dynamic_session(session_id)
     return _run_claimed_dynamic_session(session_id)
 
@@ -159,9 +160,18 @@ def _run_claimed_dynamic_session(session_id: str) -> dict:
     try:
         state.set_status(RUNNING)
         save_checkpoint(state)
-        result = execute_dynamic_state(state)
+        terminal_checkpointed = False
+
+        def persist_safe_step(saved_state: AgentState) -> None:
+            nonlocal terminal_checkpointed
+            save_checkpoint(saved_state)
+            terminal_checkpointed = saved_state.status == WAITING_HUMAN
+
+        result = (execute_dynamic_state(state, checkpoint=persist_safe_step)
+                  if is_database_checkpoint_enabled() else execute_dynamic_state(state))
         if state.status == WAITING_HUMAN and state.metadata.get("human_fact"):
-            save_checkpoint(state)
+            if not terminal_checkpointed:
+                save_checkpoint(state)
             return {**result, "status": "waiting_human", "state_status": state.status,
                     "human_fact_request": state.metadata["human_fact"]["request"]}
         evaluation = evaluate_runtime_state(state)
@@ -213,7 +223,7 @@ def run_resume_session_task(session_id: str) -> dict:
     if is_database_checkpoint_enabled():
         if lease is None:
             return {"session_id": session_id, "status": "skipped", "reason": "execution_not_claimed"}
-        with use_execution_lease(lease):
+        with use_execution_lease(lease), _heartbeat_execution(lease):
             return _run_claimed_resume_session(session_id)
     return _run_claimed_resume_session(session_id)
 
@@ -318,8 +328,53 @@ def _now_iso() -> str:
 def _claim_db_execution(session_id: str, kind: str):
     if not is_database_checkpoint_enabled():
         return None
-    seconds = max(1, int(os.getenv("RUNTIME_EXECUTION_LEASE_SECONDS", "3600")))
-    return SQLAlchemyCheckpointRepository().claim_execution(session_id, kind, lease_seconds=seconds)
+    return SQLAlchemyCheckpointRepository().claim_execution(session_id, kind, lease_seconds=_lease_seconds())
+
+
+def recover_stale_executions(*, limit: int = 100) -> list[dict]:
+    """Manually redispatch orphaned or expired DB work; claim stays atomic in each worker."""
+    if not is_database_checkpoint_enabled():
+        raise NotImplementedError("Recovery scan requires DB-backed checkpoints.")
+    dispatched = []
+    for item in SQLAlchemyCheckpointRepository().find_stale_executions(limit=limit):
+        session_id = item["session_id"]
+        kind = item["kind"]
+        if kind == "dynamic":
+            submit_dynamic_session(session_id)
+        elif kind == "resume":
+            submit_resume_session(session_id)
+        else:
+            continue
+        dispatched.append({"session_id": session_id, "kind": kind})
+    return dispatched
+
+
+def _lease_seconds() -> int:
+    return max(1, int(os.getenv("RUNTIME_EXECUTION_LEASE_SECONDS", "3600")))
+
+
+@contextmanager
+def _heartbeat_execution(lease):
+    stop = Event()
+    interval = max(0.1, min(30.0, _lease_seconds() / 3))
+
+    def renew_until_stopped() -> None:
+        repository = SQLAlchemyCheckpointRepository()
+        while not stop.wait(interval):
+            try:
+                if repository.renew_execution(lease, lease_seconds=_lease_seconds()) is None:
+                    break
+            except Exception:
+                # A transient DB error cannot grant ownership; guarded writes still fail closed.
+                continue
+
+    thread = Thread(target=renew_until_stopped, name="runtime-lease-heartbeat", daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        thread.join(timeout=5)
 
 
 def _enqueue_rq_task(func_path: str, session_id: str, job_prefix: str):

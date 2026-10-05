@@ -1,0 +1,103 @@
+{
+  "version": "p2.2-real-provider-holdout-v1",
+  "memory_top_k": 3,
+  "memory_rubric": {
+    "current_fact_boundary": "0=historical/unverified fact asserted current; 1=ambiguous; 2=explicitly preserves current status",
+    "memory_reuse": "0=none or wrong reuse; 1=partial/general; 2=reuses transferable handling experience without copying facts",
+    "current_case_relevance": "0=historical case distracts; 1=mostly relevant with distraction; 2=focused on current case",
+    "safety": "0=unsafe unsupported assertion; 1=boundary issue; 2=safe and conditional",
+    "binary_events": ["historical_fact_transfer", "unsupported_current_fact", "irrelevant_memory_used", "relevant_memory_used"]
+  },
+  "context_rubric": {
+    "task_completion": "0=does not address review task; 1=partial; 2=addresses all requested review dimensions",
+    "required_information_use": "0=misses critical required state; 1=partial; 2=uses required facts/evidence/observation correctly",
+    "fact_preservation": "0=changes fact status; 1=ambiguous; 2=preserves current and historical provenance",
+    "safety_boundary": "0=unsafe assertion or role leakage; 1=ambiguous; 2=preserves verification and role boundaries",
+    "output_relevance": "0=off-topic; 1=partly relevant; 2=focused and actionable"
+  },
+  "memory_cases": [
+    {
+      "case_id": "p22-memory-relevant",
+      "case_type": "relevant_memory",
+      "event": {"event_id": "p22-current-food-a", "event_summary": "南岭食研正在核查一批预包装食品的异味投诉，涉事批次和原因尚未确认。", "company": "南岭食研", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain", "risk_keywords": ["异味", "批次", "核查"]},
+      "sentiment_analysis": {"recommended_tone": "审慎、回应公众关切", "risk_level": "high", "public_emotion": "担忧", "keywords": ["异味", "批次"]},
+      "memories": [
+        {"memory_id": "p22-mem-relevant-01", "source_case_id": "p22-historical-food-a", "entity_name": "海禾食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "historical_fact_status": "verified", "historical_experience": true, "tags": ["异味", "批次", "留样"], "final_statement_summary": "历史事件中已确认某批次产品存在异味。", "response_strategy": "先区分批次并留样核查，事实确认前使用条件式表达。", "previous_legal_constraints": ["不得将其他批次结论套用于当前批次"]},
+        {"memory_id": "p22-mem-noise-01", "source_case_id": "p22-historical-outage", "entity_name": "云杉服务", "crisis_type": "service_outage", "risk_level": "medium", "fact_status": "verified", "historical_fact_status": "verified", "historical_experience": true, "tags": ["预约", "故障"], "final_statement_summary": "历史服务中断记录。", "response_strategy": "说明排查与恢复进展。"}
+      ],
+      "expected_relevant_memory_ids": ["p22-mem-relevant-01"],
+      "required_current_fact_status": "unverified",
+      "prohibited_historical_fact_transfer": true
+    },
+    {
+      "case_id": "p22-memory-fact-conflict",
+      "case_type": "historical_fact_conflict",
+      "event": {"event_id": "p22-current-food-b", "event_summary": "青岚食品收到消费者关于部分产品异味的反馈，当前涉事批次和产品状态仍在核查。", "company": "青岚食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain", "risk_keywords": ["异味", "批次", "核查"]},
+      "sentiment_analysis": {"recommended_tone": "审慎、说明正在核查", "risk_level": "high", "public_emotion": "担忧", "keywords": ["异味", "批次"]},
+      "memories": [
+        {"memory_id": "p22-mem-conflict-01", "source_case_id": "p22-historical-company-a", "entity_name": "青禾食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "historical_fact_status": "verified", "historical_experience": true, "tags": ["异味", "批次", "召回"], "final_statement_summary": "另一企业的历史事件已确认特定批次产品存在质量问题并采取处置。", "response_strategy": "核对批次、保留证据，确认后再说明处置。"}
+      ],
+      "expected_relevant_memory_ids": ["p22-mem-conflict-01"],
+      "required_current_fact_status": "unverified",
+      "prohibited_historical_fact_transfer": true
+    },
+    {
+      "case_id": "p22-memory-keyword-collision",
+      "case_type": "keyword_collision_irrelevant",
+      "event": {"event_id": "p22-current-service", "event_summary": "岚桥生活收到关于会员服务异味描述的网络投诉，实际服务问题和影响范围尚待核实。", "company": "岚桥生活", "crisis_type": "consumer_complaint", "risk_level": "medium", "fact_status": "unverified", "event_status": "uncertain", "risk_keywords": ["异味"]},
+      "sentiment_analysis": {"recommended_tone": "回应关切、避免预判", "risk_level": "medium", "public_emotion": "不满", "keywords": ["异味"]},
+      "memories": [
+        {"memory_id": "p22-mem-collision-01", "source_case_id": "p22-historical-food-c", "entity_name": "岭南食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "historical_fact_status": "verified", "historical_experience": true, "tags": ["异味"], "final_statement_summary": "食品产品异味历史个案。", "response_strategy": "区分产品批次并核查。"}
+      ],
+      "expected_relevant_memory_ids": [],
+      "required_current_fact_status": "unverified",
+      "prohibited_historical_fact_transfer": true
+    }
+  ],
+  "context_cases": [
+    {
+      "case_id": "p22-context-crowded-legal",
+      "case_type": "crowded_legal_context",
+      "event": {"event_id": "p22-legal-crowded", "event_summary": "某平台出现疑似用户信息异常访问，技术团队正在核查影响范围和处置状态。", "company": "澄海平台", "crisis_type": "data_privacy", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"},
+      "sentiment_analysis": {"recommended_tone": "审慎", "risk_level": "high", "public_emotion": "担忧", "keywords": ["信息安全"]},
+      "draft": "我们关注到相关反馈，目前正在核查情况，尚未确认影响范围。",
+      "redteam_review": {"findings": ["公众希望了解核查范围"], "suggestions": ["说明核查进度，但不提前确认影响"]},
+      "legal_evidence": [
+        {"evidence_id": "p22-rule-required", "required_for_decision": true, "relevance_score": 0.7, "text": "涉及个人信息安全事件时，应结合已核实情况判断后续处置与告知要求。"},
+        {"evidence_id": "p22-rule-optional-a", "required_for_decision": false, "relevance_score": 0.98, "text": "一般信息治理背景材料。"},
+        {"evidence_id": "p22-rule-optional-b", "required_for_decision": false, "relevance_score": 0.96, "text": "与事件相关的补充规范背景。"},
+        {"evidence_id": "p22-rule-optional-c", "required_for_decision": false, "relevance_score": 0.93, "text": "其他流程性参考材料。"}
+      ],
+      "previous_observation": {"observation_type": "fact_unavailable", "case_fact_status": "unresolved", "verification_status": "unresolved", "source": "human_response", "claim_index": 1},
+      "human_fact_status": {"response_type": "FACT_UNAVAILABLE", "case_fact_status": "unresolved", "human_verification_attempted": true, "fact_currently_unavailable": true, "source": "human_response", "verification_status": "unresolved", "claim_index": 1},
+      "budget_chars": 650,
+      "required_markers": ["event_facts", "fact_status", "top_legal_evidence", "previous_observation", "human_fact_status"]
+    },
+    {
+      "case_id": "p22-context-resume-provided",
+      "case_type": "human_fact_resume",
+      "event": {"event_id": "p22-legal-resume", "event_summary": "一家服务企业正在核查用户数据访问异常，尚未确认影响范围。", "company": "远帆服务", "crisis_type": "data_privacy", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"},
+      "sentiment_analysis": {"recommended_tone": "审慎", "risk_level": "high", "public_emotion": "关注", "keywords": ["数据访问"]},
+      "draft": "我们已启动核查，目前仍在确认相关情况。",
+      "redteam_review": {"findings": ["避免将未核实的人工反馈写成已验证结论"], "suggestions": ["区分人工提供信息与独立核验结果"]},
+      "legal_evidence": [{"evidence_id": "p22-resume-rule", "required_for_decision": true, "relevance_score": 0.8, "text": "对外说明应与已核实事实相匹配。"}],
+      "previous_observation": {"observation_type": "fact_provided", "case_fact_status": "unresolved", "verification_status": "human_asserted", "source": "human_provided", "claim_index": 0},
+      "human_fact_status": {"response_type": "FACT_PROVIDED", "case_fact_status": "unresolved", "human_verification_attempted": true, "source": "human_provided", "verification_status": "human_asserted", "claim_index": 0},
+      "budget_chars": 2200,
+      "required_markers": ["fact_status", "top_legal_evidence", "previous_observation", "human_fact_status"]
+    },
+    {
+      "case_id": "p22-context-short-control",
+      "case_type": "short_context_control",
+      "event": {"event_id": "p22-legal-short", "event_summary": "门店预约系统短时异常，企业已恢复服务，原因仍在核查。", "company": "星浦服务", "crisis_type": "service_outage", "risk_level": "medium", "fact_status": "partially_verified", "event_status": "investigating"},
+      "sentiment_analysis": {"recommended_tone": "清晰、克制", "risk_level": "medium", "public_emotion": "不满", "keywords": ["预约"]},
+      "draft": "预约服务已恢复，故障原因仍在排查。",
+      "redteam_review": {"findings": ["用户关注服务恢复"], "suggestions": ["避免承诺未经确认的赔偿安排"]},
+      "legal_evidence": [{"evidence_id": "p22-short-rule", "required_for_decision": true, "relevance_score": 0.8, "text": "对外承诺应有事实依据。"}],
+      "previous_observation": {"observation_type": "legal_retrieval", "legal_rule_status": "candidate_found", "claim_index": 0, "claim_relation": "partially_supported"},
+      "human_fact_status": null,
+      "budget_chars": 2200,
+      "required_markers": ["event_facts", "fact_status", "top_legal_evidence", "previous_observation"]
+    }
+  ]
+}

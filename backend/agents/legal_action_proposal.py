@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 from backend.llm.client import classify_failure_from_exception
 from backend.llm.parser import parse_json_response
+from backend.agents.legal_action_policy import classify_legal_query_dependency
 
 
 ACTION_PROPOSAL_REASON_CODES = frozenset({
@@ -45,6 +46,7 @@ def build_legal_decision_context(
                 "claim_index": index,
                 "requires_legal_rule": claim.get("requires_legal_rule") is True,
                 "requires_case_fact": claim.get("requires_case_fact") is True,
+                "dependency_type": classify_legal_query_dependency(claim)["dependency_type"],
                 "claim_origin": (claim.get("claim_origin")
                                  if claim.get("claim_origin") in {"writer_draft", "event_fact_gap"}
                                  else "unknown"),
