@@ -1,0 +1,87 @@
+{
+  "report_type": "p5_2_4_ce_retry_controlled_evaluation",
+  "generated_at_utc": "2026-10-05T11:28:00Z",
+  "stage_a_status": "BLOCKED_NOT_RUN",
+  "stop_reason": "FROZEN_CLAIM_EXTRACTION_INPUT_NOT_RECONSTRUCTABLE_EQUIVALENTLY",
+  "repository": {
+    "branch": "feat/agent-observability",
+    "head": "15a665230053d218b469750340df28641f4dcd60",
+    "expected_checkpoint_match": true
+  },
+  "experiment_registration": {
+    "baseline_arm": "CE-RETRY-1",
+    "candidate_arm": "CE-RETRY-0",
+    "frozen_case_ids": ["food-02", "privacy-03"],
+    "planned_repetitions_per_case_per_arm": 3,
+    "planned_logical_invocations": 12,
+    "pre_registered_execution_order": null,
+    "execution_order_status": "NOT_REGISTERED; stopped before Provider requests because input-equivalence gate failed"
+  },
+  "input_equivalence_audit": {
+    "frozen_dataset": "evaluation/dynamic_real_case_v1.json",
+    "frozen_dataset_sha256": "8d5b0f979350db7f0d1ba2bbd23f1dd308d5f618f5333a2b73b336ce29d4aa40",
+    "frozen_case_fields": [
+      "case_id",
+      "category",
+      "event",
+      "expected_fact_gap",
+      "expected_gap_note",
+      "human_response"
+    ],
+    "required_claim_extraction_inputs": ["event", "draft", "risk_level"],
+    "draft_source_in_real_workflow": "Writer output passed to backend/agents/legal_agent.py:run as payload.draft",
+    "frozen_draft_available": false,
+    "historical_draft_recoverable_from_p5_2_2_safe_artifacts": false,
+    "risk_level_recoverable_as_exact_historical_input": false,
+    "why_artifacts_are_insufficient": "P5.2.2 artifacts retain operation/attempt status, latency, usage and aggregate Claim counts, but do not retain prompt, draft, Claim text or exact input payload. Existing P5.2.3 character measurements used synthetic fixtures and are not the historical inputs.",
+    "equivalent_ce_only_invocation_possible_from_frozen_inputs": false,
+    "would_empty_or_synthetic_draft_change_the_input": true,
+    "decision": "STOP as instructed; do not substitute an empty or newly fabricated draft, and do not run full Workflow cases."
+  },
+  "execution": {
+    "actual_logical_calls": 0,
+    "actual_http_attempts": 0,
+    "baseline_invocations": 0,
+    "candidate_invocations": 0,
+    "provider_requests": 0,
+    "full_workflow_runs": 0,
+    "additional_runs_after_failure": 0
+  },
+  "results": {
+    "baseline_success_count": null,
+    "baseline_fallback_count": null,
+    "baseline_timeout_affected_count": null,
+    "candidate_success_count": null,
+    "candidate_fallback_count": null,
+    "candidate_timeout_affected_count": null,
+    "baseline_median_latency_ms": null,
+    "candidate_median_latency_ms": null,
+    "baseline_retry_recovery_count": null,
+    "baseline_double_timeout_count": null,
+    "baseline_accepted_claims": null,
+    "candidate_accepted_claims": null,
+    "parse_schema_regression": "NOT_EVALUATED",
+    "stage_a_result": "NOT_RUN_BLOCKED",
+    "result_reason": "The required CE input cannot be reconstructed equivalently from the frozen cases or persisted safe artifacts. No experimental outcome can be inferred."
+  },
+  "safety": {
+    "trace_safety": "PASS_NOT_APPLICABLE_NO_RUNS",
+    "report_safety": "PASS",
+    "contains_api_key": false,
+    "contains_authorization_or_bearer": false,
+    "contains_prompt_or_claim_body": false,
+    "contains_evidence_or_human_fact_body": false,
+    "contains_provider_raw_response": false,
+    "contains_local_absolute_path": false
+  },
+  "production_and_git": {
+    "evaluation_override_implemented": false,
+    "production_default_changed": false,
+    "production_behavior_changed": false,
+    "code_or_tests_changed": false,
+    "commit": false,
+    "push": false,
+    "existing_reports_modified_or_deleted": false
+  },
+  "next_step": "Do not run Stage A until an authorized frozen CE input fixture can reproduce the actual event/draft/risk inputs without storing sensitive bodies, or the user explicitly approves a new controlled fixture. Stage B is not recommended or authorized."
+}

@@ -1,0 +1,851 @@
+{
+  "version": "p2.1b-deterministic-closure-holdout-v1",
+  "dataset_sha256": "9f61a24c2ae4a47bef44cb5320090fdb78e19f48c94939a75e817b5137393370",
+  "measurement_boundary": "deterministic memory retrieval and ContextPack construction from frozen AgentState fixtures; no Agent or Provider calls",
+  "protection_snapshot": {
+    "path": "backend/core/context_pack_runtime.py",
+    "sha256_before_production_edit": "4861a20f1457d12553ec8da326542bfc2d41e5d8cb850bdf2e857381f2f8674e",
+    "tracked_diff_before_production_edit": "",
+    "working_tree_status": "modified_only_by_lf_to_crlf_eol; index=lf; worktree=crlf"
+  },
+  "memory": {
+    "sample_size": 6,
+    "memory_count": 7,
+    "top_k": 2,
+    "recall_at_k": 1.0,
+    "precision_at_k": 0.5,
+    "mrr": 1.0,
+    "false_positive_count": 3,
+    "missed_relevant_count": 0,
+    "empty_query_count": 4,
+    "correct_empty_count": 2,
+    "queries": [
+      {
+        "query_case_id": "b-same-domain-single-tag",
+        "kind": "same_domain_keyword_neighbor",
+        "results": [
+          {
+            "memory_id": "b-food-single-tag",
+            "rank": 1,
+            "score": 0.45,
+            "matched_reasons": [
+              "crisis_type_match",
+              "risk_level_match",
+              "fact_status_match",
+              "tag_overlap"
+            ],
+            "expected_relevant": false
+          }
+        ],
+        "false_positive_ids": [
+          "b-food-single-tag"
+        ],
+        "missed_relevant_ids": []
+      },
+      {
+        "query_case_id": "b-same-company-different-event",
+        "kind": "same_company_different_event",
+        "results": [
+          {
+            "memory_id": "b-same-company-unrelated",
+            "rank": 1,
+            "score": 0.7,
+            "matched_reasons": [
+              "entity_match",
+              "crisis_type_match",
+              "fact_status_match"
+            ],
+            "expected_relevant": false
+          },
+          {
+            "memory_id": "b-related-cross-company",
+            "rank": 2,
+            "score": 0.45,
+            "matched_reasons": [
+              "crisis_type_match",
+              "risk_level_match",
+              "fact_status_match",
+              "tag_overlap"
+            ],
+            "expected_relevant": false
+          }
+        ],
+        "false_positive_ids": [
+          "b-related-cross-company",
+          "b-same-company-unrelated"
+        ],
+        "missed_relevant_ids": []
+      },
+      {
+        "query_case_id": "b-different-company-similar-risk",
+        "kind": "different_company_similar_risk",
+        "results": [],
+        "false_positive_ids": [],
+        "missed_relevant_ids": []
+      },
+      {
+        "query_case_id": "b-truly-related-cross-company",
+        "kind": "truly_related_cross_company",
+        "results": [
+          {
+            "memory_id": "b-related-cross-company",
+            "rank": 1,
+            "score": 0.45,
+            "matched_reasons": [
+              "crisis_type_match",
+              "risk_level_match",
+              "tag_overlap"
+            ],
+            "expected_relevant": true
+          }
+        ],
+        "false_positive_ids": [],
+        "missed_relevant_ids": []
+      },
+      {
+        "query_case_id": "b-no-related-memory",
+        "kind": "no_related_memory",
+        "results": [],
+        "false_positive_ids": [],
+        "missed_relevant_ids": []
+      },
+      {
+        "query_case_id": "b-multiple-related",
+        "kind": "multiple_related_memories",
+        "results": [
+          {
+            "memory_id": "b-related-group-one",
+            "rank": 1,
+            "score": 1.25,
+            "matched_reasons": [
+              "entity_match",
+              "crisis_type_match",
+              "risk_level_match",
+              "fact_status_match",
+              "tag_overlap",
+              "case_group_match"
+            ],
+            "expected_relevant": true
+          },
+          {
+            "memory_id": "b-related-group-two",
+            "rank": 2,
+            "score": 1.25,
+            "matched_reasons": [
+              "entity_match",
+              "crisis_type_match",
+              "risk_level_match",
+              "fact_status_match",
+              "tag_overlap",
+              "case_group_match"
+            ],
+            "expected_relevant": true
+          }
+        ],
+        "false_positive_ids": [],
+        "missed_relevant_ids": []
+      }
+    ]
+  },
+  "context_pack": {
+    "sample_size": 7,
+    "required_information_count": 17,
+    "required_information_retained": 2,
+    "required_information_retention": 0.1176,
+    "previous_observation_count": 8,
+    "previous_observation_retained": 0,
+    "human_fact_status_count": 7,
+    "human_fact_status_retained": 0,
+    "legal_evidence_count": 2,
+    "legal_evidence_retained": 2,
+    "budget_overflow_count": 1,
+    "required_overflow_count": 1,
+    "human_asserted_boundary_preserved": false,
+    "role_boundary_preserved": true,
+    "forbidden_text_leaks": 0,
+    "cases": [
+      {
+        "case_id": "b-previous-observation-legal",
+        "agent_name": "legal",
+        "required_count": 3,
+        "required_retained": 0,
+        "required_checks": [
+          {
+            "path": "previous_observation.observation_type",
+            "present": false
+          },
+          {
+            "path": "previous_observation.legal_rule_status",
+            "present": false
+          },
+          {
+            "path": "previous_observation.claim_index",
+            "present": false
+          }
+        ],
+        "absent_checks": [],
+        "forbidden_text_found": false,
+        "current_fact_status": "unverified",
+        "human_verification_status": null,
+        "budget_chars": null,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1389,
+        "content_chars": 1500,
+        "pack": {
+          "event_facts": {
+            "event_id": "current-event-1",
+            "event_text": "平台故障仍在调查。",
+            "company": "星河服务",
+            "risk_level": "high",
+            "fact_status": "unverified",
+            "event_status": "uncertain"
+          },
+          "risk_summary": "平台故障仍在调查。",
+          "fact_status": "unverified",
+          "event_status": "uncertain",
+          "risk_level": "high",
+          "top_public_signals": [],
+          "top_alerts": [],
+          "top_legal_evidence": [],
+          "related_case_memories": [],
+          "agent_specific_focus": {
+            "target_agent": "legal",
+            "historical_experience": false,
+            "historical_source_case_ids": [],
+            "previous_legal_constraints": [],
+            "forbidden_promises": [],
+            "fact_status": "unverified",
+            "event_status": "uncertain",
+            "top_legal_evidence": [],
+            "regulatory_sensitivity": "high"
+          },
+          "selected_case_ids": [],
+          "latest_round_summary": null,
+          "human_review_notes": [],
+          "target_agent": "legal",
+          "token_budget_hint": 3000,
+          "dropped_fields": [],
+          "compression_level": "green",
+          "usage_ratio": 0.2773,
+          "pre_compression_estimated_chars": 832,
+          "estimated_chars": 832,
+          "compression_actions": [
+            "baseline_safety_cleaning_only"
+          ],
+          "aggregate_summary": null,
+          "preserved_fields": [
+            "current_event_facts",
+            "fact_status",
+            "event_status",
+            "risk_level",
+            "agent_specific_focus"
+          ],
+          "dropped_field_names": [],
+          "safety_notes": [
+            "Deterministic preview only; no LLM call.",
+            "Full news text, system prompts, API keys, and tool arguments are excluded."
+          ],
+          "budget_unit": "characters",
+          "budget_enforcement": "soft_waterline",
+          "required_minimum_chars": 310,
+          "budget_status": "WITHIN_BUDGET",
+          "rendered_context_chars": 1389,
+          "degraded": false,
+          "context_pack_hash": "5c96970625261ff4c385c6bf232934ab0e5b3b67bdb2a808f55fe020ef87d93d",
+          "rendered_context": "{\"event_facts\":{\"event_id\":\"current-event-1\",\"event_text\":\"平台故障仍在调查。\",\"company\":\"星河服务\",\"risk_level\":\"high\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\"},\"risk_summary\":\"平台故障仍在调查。\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"risk_level\":\"high\",\"top_public_signals\":[],\"top_alerts\":[],\"top_legal_evidence\":[],\"related_case_memories\":[],\"agent_specific_focus\":{\"target_agent\":\"legal\",\"historical_experience\":false,\"historical_source_case_ids\":[],\"previous_legal_constraints\":[],\"forbidden_promises\":[],\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"top_legal_evidence\":[],\"regulatory_sensitivity\":\"high\"},\"selected_case_ids\":[],\"latest_round_summary\":null,\"human_review_notes\":[],\"target_agent\":\"legal\",\"token_budget_hint\":3000,\"dropped_fields\":[],\"compression_level\":\"green\",\"usage_ratio\":0.2773,\"pre_compression_estimated_chars\":832,\"estimated_chars\":832,\"compression_actions\":[\"baseline_safety_cleaning_only\"],\"aggregate_summary\":null,\"preserved_fields\":[\"current_event_facts\",\"fact_status\",\"event_status\",\"risk_level\",\"agent_specific_focus\"],\"dropped_field_names\":[],\"safety_notes\":[\"Deterministic preview only; no LLM call.\",\"Full news text, system prompts, API keys, and tool arguments are excluded.\"],\"budget_unit\":\"characters\",\"budget_enforcement\":\"soft_waterline\",\"required_minimum_chars\":310,\"budget_status\":\"WITHIN_BUDGET\",\"rendered_context_chars\":1389,\"degraded\":false}"
+        }
+      },
+      {
+        "case_id": "b-fact-provided",
+        "agent_name": "legal",
+        "required_count": 4,
+        "required_retained": 0,
+        "required_checks": [
+          {
+            "path": "human_fact_status.response_type",
+            "present": false
+          },
+          {
+            "path": "human_fact_status.verification_status",
+            "present": false
+          },
+          {
+            "path": "human_fact_status.source",
+            "present": false
+          },
+          {
+            "path": "previous_observation.observation_type",
+            "present": false
+          }
+        ],
+        "absent_checks": [],
+        "forbidden_text_found": false,
+        "current_fact_status": "unverified",
+        "human_verification_status": null,
+        "budget_chars": null,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1395,
+        "content_chars": 1506,
+        "pack": {
+          "event_facts": {
+            "event_id": "current-event-2",
+            "event_text": "企业内部处置状态仍需判断。",
+            "company": "青禾服务",
+            "risk_level": "high",
+            "fact_status": "unverified",
+            "event_status": "uncertain"
+          },
+          "risk_summary": "企业内部处置状态仍需判断。",
+          "fact_status": "unverified",
+          "event_status": "uncertain",
+          "risk_level": "high",
+          "top_public_signals": [],
+          "top_alerts": [],
+          "top_legal_evidence": [],
+          "related_case_memories": [],
+          "agent_specific_focus": {
+            "target_agent": "legal",
+            "historical_experience": false,
+            "historical_source_case_ids": [],
+            "previous_legal_constraints": [],
+            "forbidden_promises": [],
+            "fact_status": "unverified",
+            "event_status": "uncertain",
+            "top_legal_evidence": [],
+            "regulatory_sensitivity": "high"
+          },
+          "selected_case_ids": [],
+          "latest_round_summary": null,
+          "human_review_notes": [],
+          "target_agent": "legal",
+          "token_budget_hint": 3000,
+          "dropped_fields": [],
+          "compression_level": "green",
+          "usage_ratio": 0.28,
+          "pre_compression_estimated_chars": 840,
+          "estimated_chars": 840,
+          "compression_actions": [
+            "baseline_safety_cleaning_only"
+          ],
+          "aggregate_summary": null,
+          "preserved_fields": [
+            "current_event_facts",
+            "fact_status",
+            "event_status",
+            "risk_level",
+            "agent_specific_focus"
+          ],
+          "dropped_field_names": [],
+          "safety_notes": [
+            "Deterministic preview only; no LLM call.",
+            "Full news text, system prompts, API keys, and tool arguments are excluded."
+          ],
+          "budget_unit": "characters",
+          "budget_enforcement": "soft_waterline",
+          "required_minimum_chars": 314,
+          "budget_status": "WITHIN_BUDGET",
+          "rendered_context_chars": 1395,
+          "degraded": false,
+          "context_pack_hash": "1e9e95e50488da9a59afcf9047bf5931e1fd44e359559ed4e76a00878693c891",
+          "rendered_context": "{\"event_facts\":{\"event_id\":\"current-event-2\",\"event_text\":\"企业内部处置状态仍需判断。\",\"company\":\"青禾服务\",\"risk_level\":\"high\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\"},\"risk_summary\":\"企业内部处置状态仍需判断。\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"risk_level\":\"high\",\"top_public_signals\":[],\"top_alerts\":[],\"top_legal_evidence\":[],\"related_case_memories\":[],\"agent_specific_focus\":{\"target_agent\":\"legal\",\"historical_experience\":false,\"historical_source_case_ids\":[],\"previous_legal_constraints\":[],\"forbidden_promises\":[],\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"top_legal_evidence\":[],\"regulatory_sensitivity\":\"high\"},\"selected_case_ids\":[],\"latest_round_summary\":null,\"human_review_notes\":[],\"target_agent\":\"legal\",\"token_budget_hint\":3000,\"dropped_fields\":[],\"compression_level\":\"green\",\"usage_ratio\":0.28,\"pre_compression_estimated_chars\":840,\"estimated_chars\":840,\"compression_actions\":[\"baseline_safety_cleaning_only\"],\"aggregate_summary\":null,\"preserved_fields\":[\"current_event_facts\",\"fact_status\",\"event_status\",\"risk_level\",\"agent_specific_focus\"],\"dropped_field_names\":[],\"safety_notes\":[\"Deterministic preview only; no LLM call.\",\"Full news text, system prompts, API keys, and tool arguments are excluded.\"],\"budget_unit\":\"characters\",\"budget_enforcement\":\"soft_waterline\",\"required_minimum_chars\":314,\"budget_status\":\"WITHIN_BUDGET\",\"rendered_context_chars\":1395,\"degraded\":false}"
+        }
+      },
+      {
+        "case_id": "b-fact-unavailable",
+        "agent_name": "legal",
+        "required_count": 3,
+        "required_retained": 0,
+        "required_checks": [
+          {
+            "path": "human_fact_status.response_type",
+            "present": false
+          },
+          {
+            "path": "human_fact_status.fact_currently_unavailable",
+            "present": false
+          },
+          {
+            "path": "previous_observation.observation_type",
+            "present": false
+          }
+        ],
+        "absent_checks": [],
+        "forbidden_text_found": false,
+        "current_fact_status": "unverified",
+        "human_verification_status": null,
+        "budget_chars": null,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1389,
+        "content_chars": 1500,
+        "pack": {
+          "event_facts": {
+            "event_id": "current-event-3",
+            "event_text": "故障原因尚未确认。",
+            "company": "明川服务",
+            "risk_level": "high",
+            "fact_status": "unverified",
+            "event_status": "uncertain"
+          },
+          "risk_summary": "故障原因尚未确认。",
+          "fact_status": "unverified",
+          "event_status": "uncertain",
+          "risk_level": "high",
+          "top_public_signals": [],
+          "top_alerts": [],
+          "top_legal_evidence": [],
+          "related_case_memories": [],
+          "agent_specific_focus": {
+            "target_agent": "legal",
+            "historical_experience": false,
+            "historical_source_case_ids": [],
+            "previous_legal_constraints": [],
+            "forbidden_promises": [],
+            "fact_status": "unverified",
+            "event_status": "uncertain",
+            "top_legal_evidence": [],
+            "regulatory_sensitivity": "high"
+          },
+          "selected_case_ids": [],
+          "latest_round_summary": null,
+          "human_review_notes": [],
+          "target_agent": "legal",
+          "token_budget_hint": 3000,
+          "dropped_fields": [],
+          "compression_level": "green",
+          "usage_ratio": 0.2773,
+          "pre_compression_estimated_chars": 832,
+          "estimated_chars": 832,
+          "compression_actions": [
+            "baseline_safety_cleaning_only"
+          ],
+          "aggregate_summary": null,
+          "preserved_fields": [
+            "current_event_facts",
+            "fact_status",
+            "event_status",
+            "risk_level",
+            "agent_specific_focus"
+          ],
+          "dropped_field_names": [],
+          "safety_notes": [
+            "Deterministic preview only; no LLM call.",
+            "Full news text, system prompts, API keys, and tool arguments are excluded."
+          ],
+          "budget_unit": "characters",
+          "budget_enforcement": "soft_waterline",
+          "required_minimum_chars": 310,
+          "budget_status": "WITHIN_BUDGET",
+          "rendered_context_chars": 1389,
+          "degraded": false,
+          "context_pack_hash": "438e04da51c6bcac503ee00e2e0b78a21b0a864debeb0f8c6b26d12e53a289b6",
+          "rendered_context": "{\"event_facts\":{\"event_id\":\"current-event-3\",\"event_text\":\"故障原因尚未确认。\",\"company\":\"明川服务\",\"risk_level\":\"high\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\"},\"risk_summary\":\"故障原因尚未确认。\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"risk_level\":\"high\",\"top_public_signals\":[],\"top_alerts\":[],\"top_legal_evidence\":[],\"related_case_memories\":[],\"agent_specific_focus\":{\"target_agent\":\"legal\",\"historical_experience\":false,\"historical_source_case_ids\":[],\"previous_legal_constraints\":[],\"forbidden_promises\":[],\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"top_legal_evidence\":[],\"regulatory_sensitivity\":\"high\"},\"selected_case_ids\":[],\"latest_round_summary\":null,\"human_review_notes\":[],\"target_agent\":\"legal\",\"token_budget_hint\":3000,\"dropped_fields\":[],\"compression_level\":\"green\",\"usage_ratio\":0.2773,\"pre_compression_estimated_chars\":832,\"estimated_chars\":832,\"compression_actions\":[\"baseline_safety_cleaning_only\"],\"aggregate_summary\":null,\"preserved_fields\":[\"current_event_facts\",\"fact_status\",\"event_status\",\"risk_level\",\"agent_specific_focus\"],\"dropped_field_names\":[],\"safety_notes\":[\"Deterministic preview only; no LLM call.\",\"Full news text, system prompts, API keys, and tool arguments are excluded.\"],\"budget_unit\":\"characters\",\"budget_enforcement\":\"soft_waterline\",\"required_minimum_chars\":310,\"budget_status\":\"WITHIN_BUDGET\",\"rendered_context_chars\":1389,\"degraded\":false}"
+        }
+      },
+      {
+        "case_id": "b-observation-human-fact-evidence",
+        "agent_name": "legal",
+        "required_count": 3,
+        "required_retained": 1,
+        "required_checks": [
+          {
+            "path": "previous_observation.observation_type",
+            "present": false
+          },
+          {
+            "path": "human_fact_status.verification_status",
+            "present": false
+          },
+          {
+            "path": "top_legal_evidence",
+            "present": true
+          }
+        ],
+        "absent_checks": [],
+        "forbidden_text_found": false,
+        "current_fact_status": "unverified",
+        "human_verification_status": null,
+        "budget_chars": null,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1612,
+        "content_chars": 1737,
+        "pack": {
+          "event_facts": {
+            "event_id": "current-event-4",
+            "event_text": "用户数据风险正在核查。",
+            "company": "云舟平台",
+            "risk_level": "high",
+            "fact_status": "unverified",
+            "event_status": "uncertain"
+          },
+          "risk_summary": "用户数据风险正在核查。",
+          "fact_status": "unverified",
+          "event_status": "uncertain",
+          "risk_level": "high",
+          "top_public_signals": [],
+          "top_alerts": [],
+          "top_legal_evidence": [
+            {
+              "evidence_id": "b-required-rule",
+              "required_for_decision": true,
+              "relevance_score": 0.9,
+              "text": "仅作为法律规则依据的安全摘要。"
+            }
+          ],
+          "related_case_memories": [],
+          "agent_specific_focus": {
+            "target_agent": "legal",
+            "historical_experience": false,
+            "historical_source_case_ids": [],
+            "previous_legal_constraints": [],
+            "forbidden_promises": [],
+            "fact_status": "unverified",
+            "event_status": "uncertain",
+            "top_legal_evidence": [
+              {
+                "evidence_id": "b-required-rule",
+                "required_for_decision": true,
+                "relevance_score": 0.9,
+                "text": "仅作为法律规则依据的安全摘要。"
+              }
+            ],
+            "regulatory_sensitivity": "high"
+          },
+          "selected_case_ids": [],
+          "latest_round_summary": null,
+          "human_review_notes": [],
+          "target_agent": "legal",
+          "token_budget_hint": 3000,
+          "dropped_fields": [],
+          "compression_level": "green",
+          "usage_ratio": 0.356,
+          "pre_compression_estimated_chars": 1068,
+          "estimated_chars": 1068,
+          "compression_actions": [
+            "baseline_safety_cleaning_only"
+          ],
+          "aggregate_summary": null,
+          "preserved_fields": [
+            "current_event_facts",
+            "fact_status",
+            "event_status",
+            "risk_level",
+            "agent_specific_focus"
+          ],
+          "dropped_field_names": [],
+          "safety_notes": [
+            "Deterministic preview only; no LLM call.",
+            "Full news text, system prompts, API keys, and tool arguments are excluded."
+          ],
+          "budget_unit": "characters",
+          "budget_enforcement": "soft_waterline",
+          "required_minimum_chars": 428,
+          "budget_status": "WITHIN_BUDGET",
+          "rendered_context_chars": 1612,
+          "degraded": false,
+          "context_pack_hash": "8078406c47f1a4fe63e07160a8ad999e1af5915240c67be0f1c2a06925143a1c",
+          "rendered_context": "{\"event_facts\":{\"event_id\":\"current-event-4\",\"event_text\":\"用户数据风险正在核查。\",\"company\":\"云舟平台\",\"risk_level\":\"high\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\"},\"risk_summary\":\"用户数据风险正在核查。\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"risk_level\":\"high\",\"top_public_signals\":[],\"top_alerts\":[],\"top_legal_evidence\":[{\"evidence_id\":\"b-required-rule\",\"required_for_decision\":true,\"relevance_score\":0.9,\"text\":\"仅作为法律规则依据的安全摘要。\"}],\"related_case_memories\":[],\"agent_specific_focus\":{\"target_agent\":\"legal\",\"historical_experience\":false,\"historical_source_case_ids\":[],\"previous_legal_constraints\":[],\"forbidden_promises\":[],\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"top_legal_evidence\":[{\"evidence_id\":\"b-required-rule\",\"required_for_decision\":true,\"relevance_score\":0.9,\"text\":\"仅作为法律规则依据的安全摘要。\"}],\"regulatory_sensitivity\":\"high\"},\"selected_case_ids\":[],\"latest_round_summary\":null,\"human_review_notes\":[],\"target_agent\":\"legal\",\"token_budget_hint\":3000,\"dropped_fields\":[],\"compression_level\":\"green\",\"usage_ratio\":0.356,\"pre_compression_estimated_chars\":1068,\"estimated_chars\":1068,\"compression_actions\":[\"baseline_safety_cleaning_only\"],\"aggregate_summary\":null,\"preserved_fields\":[\"current_event_facts\",\"fact_status\",\"event_status\",\"risk_level\",\"agent_specific_focus\"],\"dropped_field_names\":[],\"safety_notes\":[\"Deterministic preview only; no LLM call.\",\"Full news text, system prompts, API keys, and tool arguments are excluded.\"],\"budget_unit\":\"characters\",\"budget_enforcement\":\"soft_waterline\",\"required_minimum_chars\":428,\"budget_status\":\"WITHIN_BUDGET\",\"rendered_context_chars\":1612,\"degraded\":false}"
+        }
+      },
+      {
+        "case_id": "b-crowded-required-state",
+        "agent_name": "legal",
+        "required_count": 3,
+        "required_retained": 1,
+        "required_checks": [
+          {
+            "path": "previous_observation.observation_type",
+            "present": false
+          },
+          {
+            "path": "human_fact_status.response_type",
+            "present": false
+          },
+          {
+            "path": "top_legal_evidence",
+            "present": true
+          }
+        ],
+        "absent_checks": [],
+        "forbidden_text_found": false,
+        "current_fact_status": "unverified",
+        "human_verification_status": null,
+        "budget_chars": 120,
+        "budget_status": "REQUIRED_OVERFLOW",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1940,
+        "content_chars": 2076,
+        "pack": {
+          "event_facts": {
+            "event_id": "current-event-5",
+            "event_text": "服务恢复情况及影响仍在核查。",
+            "company": "远帆服务",
+            "risk_level": "high",
+            "fact_status": "unverified",
+            "event_status": "uncertain"
+          },
+          "risk_summary": "服务恢复情况及影响仍在核查。",
+          "fact_status": "unverified",
+          "event_status": "uncertain",
+          "risk_level": "high",
+          "top_public_signals": [],
+          "top_alerts": [],
+          "top_legal_evidence": [
+            {
+              "evidence_id": "b-crowded-required",
+              "required_for_decision": true,
+              "relevance_score": 0.5,
+              "text": "必需法律限制摘要。"
+            }
+          ],
+          "related_case_memories": [],
+          "agent_specific_focus": {
+            "target_agent": "legal",
+            "historical_experience": false,
+            "historical_source_case_ids": [],
+            "previous_legal_constraints": [],
+            "forbidden_promises": [],
+            "fact_status": "unverified",
+            "event_status": "uncertain",
+            "top_legal_evidence": [
+              {
+                "evidence_id": "b-crowded-required",
+                "required_for_decision": true,
+                "relevance_score": 0.5,
+                "text": "必需法律限制摘要。"
+              }
+            ],
+            "regulatory_sensitivity": "high"
+          },
+          "selected_case_ids": [],
+          "latest_round_summary": null,
+          "human_review_notes": [],
+          "target_agent": "legal",
+          "token_budget_hint": 120,
+          "dropped_fields": [
+            {
+              "field": "legal_evidence",
+              "reason": "exceeded_red_waterline",
+              "dropped_count": 2
+            }
+          ],
+          "compression_level": "red",
+          "usage_ratio": 11.6917,
+          "pre_compression_estimated_chars": 1403,
+          "estimated_chars": 1150,
+          "compression_actions": [
+            "minimal_safe_context_only",
+            "public_signals_limited_to_1",
+            "alerts_limited_to_1",
+            "legal_evidence_limited_to_1",
+            "case_memories_limited_to_1",
+            "similar_signals_aggregated"
+          ],
+          "aggregate_summary": null,
+          "preserved_fields": [
+            "current_event_facts",
+            "fact_status",
+            "event_status",
+            "risk_level",
+            "agent_specific_focus"
+          ],
+          "dropped_field_names": [
+            "legal_evidence"
+          ],
+          "safety_notes": [
+            "Deterministic preview only; no LLM call.",
+            "Full news text, system prompts, API keys, and tool arguments are excluded.",
+            "ContextPack was aggressively compressed; human review is recommended for high-risk response."
+          ],
+          "budget_unit": "characters",
+          "budget_enforcement": "soft_waterline",
+          "required_minimum_chars": 428,
+          "budget_status": "REQUIRED_OVERFLOW",
+          "rendered_context_chars": 1940,
+          "degraded": false,
+          "context_pack_hash": "3c4780444ecd82fd0670cd5e8e17f195e54b701878c11bda26701091155dc9ab",
+          "rendered_context": "{\"event_facts\":{\"event_id\":\"current-event-5\",\"event_text\":\"服务恢复情况及影响仍在核查。\",\"company\":\"远帆服务\",\"risk_level\":\"high\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\"},\"risk_summary\":\"服务恢复情况及影响仍在核查。\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"risk_level\":\"high\",\"top_public_signals\":[],\"top_alerts\":[],\"top_legal_evidence\":[{\"evidence_id\":\"b-crowded-required\",\"required_for_decision\":true,\"relevance_score\":0.5,\"text\":\"必需法律限制摘要。\"}],\"related_case_memories\":[],\"agent_specific_focus\":{\"target_agent\":\"legal\",\"historical_experience\":false,\"historical_source_case_ids\":[],\"previous_legal_constraints\":[],\"forbidden_promises\":[],\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"top_legal_evidence\":[{\"evidence_id\":\"b-crowded-required\",\"required_for_decision\":true,\"relevance_score\":0.5,\"text\":\"必需法律限制摘要。\"}],\"regulatory_sensitivity\":\"high\"},\"selected_case_ids\":[],\"latest_round_summary\":null,\"human_review_notes\":[],\"target_agent\":\"legal\",\"token_budget_hint\":120,\"dropped_fields\":[{\"field\":\"legal_evidence\",\"reason\":\"exceeded_red_waterline\",\"dropped_count\":2}],\"compression_level\":\"red\",\"usage_ratio\":11.6917,\"pre_compression_estimated_chars\":1403,\"estimated_chars\":1150,\"compression_actions\":[\"minimal_safe_context_only\",\"public_signals_limited_to_1\",\"alerts_limited_to_1\",\"legal_evidence_limited_to_1\",\"case_memories_limited_to_1\",\"similar_signals_aggregated\"],\"aggregate_summary\":null,\"preserved_fields\":[\"current_event_facts\",\"fact_status\",\"event_status\",\"risk_level\",\"agent_specific_focus\"],\"dropped_field_names\":[\"legal_evidence\"],\"safety_notes\":[\"Deterministic preview only; no LLM call.\",\"Full news text, system prompts, API keys, and tool arguments are excluded.\",\"ContextPack was aggressively compressed; human review is recommended for high-risk response.\"],\"budget_unit\":\"characters\",\"budget_enforcement\":\"soft_waterline\",\"required_minimum_chars\":428,\"budget_status\":\"REQUIRED_OVERFLOW\",\"rendered_context_chars\":1940,\"degraded\":false}"
+        }
+      },
+      {
+        "case_id": "b-no-human-fact",
+        "agent_name": "legal",
+        "required_count": 1,
+        "required_retained": 0,
+        "required_checks": [
+          {
+            "path": "previous_observation.observation_type",
+            "present": false
+          }
+        ],
+        "absent_checks": [
+          {
+            "path": "human_fact_status",
+            "absent": true
+          }
+        ],
+        "forbidden_text_found": false,
+        "current_fact_status": "unverified",
+        "human_verification_status": null,
+        "budget_chars": null,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1402,
+        "content_chars": 1513,
+        "pack": {
+          "event_facts": {
+            "event_id": "current-event-6",
+            "event_text": "公开信息显示服务短暂中断。",
+            "company": "海岬服务",
+            "risk_level": "medium",
+            "fact_status": "unverified",
+            "event_status": "uncertain"
+          },
+          "risk_summary": "公开信息显示服务短暂中断。",
+          "fact_status": "unverified",
+          "event_status": "uncertain",
+          "risk_level": "medium",
+          "top_public_signals": [],
+          "top_alerts": [],
+          "top_legal_evidence": [],
+          "related_case_memories": [],
+          "agent_specific_focus": {
+            "target_agent": "legal",
+            "historical_experience": false,
+            "historical_source_case_ids": [],
+            "previous_legal_constraints": [],
+            "forbidden_promises": [],
+            "fact_status": "unverified",
+            "event_status": "uncertain",
+            "top_legal_evidence": [],
+            "regulatory_sensitivity": "normal"
+          },
+          "selected_case_ids": [],
+          "latest_round_summary": null,
+          "human_review_notes": [],
+          "target_agent": "legal",
+          "token_budget_hint": 3000,
+          "dropped_fields": [],
+          "compression_level": "green",
+          "usage_ratio": 0.282,
+          "pre_compression_estimated_chars": 846,
+          "estimated_chars": 846,
+          "compression_actions": [
+            "baseline_safety_cleaning_only"
+          ],
+          "aggregate_summary": null,
+          "preserved_fields": [
+            "current_event_facts",
+            "fact_status",
+            "event_status",
+            "risk_level",
+            "agent_specific_focus"
+          ],
+          "dropped_field_names": [],
+          "safety_notes": [
+            "Deterministic preview only; no LLM call.",
+            "Full news text, system prompts, API keys, and tool arguments are excluded."
+          ],
+          "budget_unit": "characters",
+          "budget_enforcement": "soft_waterline",
+          "required_minimum_chars": 318,
+          "budget_status": "WITHIN_BUDGET",
+          "rendered_context_chars": 1402,
+          "degraded": false,
+          "context_pack_hash": "f82a5fc6c4d1552e0b060a4c9007b8712509704def47cef86511a6f438233812",
+          "rendered_context": "{\"event_facts\":{\"event_id\":\"current-event-6\",\"event_text\":\"公开信息显示服务短暂中断。\",\"company\":\"海岬服务\",\"risk_level\":\"medium\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\"},\"risk_summary\":\"公开信息显示服务短暂中断。\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"risk_level\":\"medium\",\"top_public_signals\":[],\"top_alerts\":[],\"top_legal_evidence\":[],\"related_case_memories\":[],\"agent_specific_focus\":{\"target_agent\":\"legal\",\"historical_experience\":false,\"historical_source_case_ids\":[],\"previous_legal_constraints\":[],\"forbidden_promises\":[],\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"top_legal_evidence\":[],\"regulatory_sensitivity\":\"normal\"},\"selected_case_ids\":[],\"latest_round_summary\":null,\"human_review_notes\":[],\"target_agent\":\"legal\",\"token_budget_hint\":3000,\"dropped_fields\":[],\"compression_level\":\"green\",\"usage_ratio\":0.282,\"pre_compression_estimated_chars\":846,\"estimated_chars\":846,\"compression_actions\":[\"baseline_safety_cleaning_only\"],\"aggregate_summary\":null,\"preserved_fields\":[\"current_event_facts\",\"fact_status\",\"event_status\",\"risk_level\",\"agent_specific_focus\"],\"dropped_field_names\":[],\"safety_notes\":[\"Deterministic preview only; no LLM call.\",\"Full news text, system prompts, API keys, and tool arguments are excluded.\"],\"budget_unit\":\"characters\",\"budget_enforcement\":\"soft_waterline\",\"required_minimum_chars\":318,\"budget_status\":\"WITHIN_BUDGET\",\"rendered_context_chars\":1402,\"degraded\":false}"
+        }
+      },
+      {
+        "case_id": "b-writer-role-boundary",
+        "agent_name": "writer",
+        "required_count": 0,
+        "required_retained": 0,
+        "required_checks": [],
+        "absent_checks": [
+          {
+            "path": "previous_observation",
+            "absent": true
+          },
+          {
+            "path": "human_fact_status",
+            "absent": true
+          }
+        ],
+        "forbidden_text_found": false,
+        "current_fact_status": "unverified",
+        "human_verification_status": null,
+        "budget_chars": null,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1394,
+        "content_chars": 1503,
+        "pack": {
+          "event_facts": {
+            "event_id": "current-event-7",
+            "event_text": "企业正在核查相关事实。",
+            "company": "晨曦服务",
+            "risk_level": "medium",
+            "fact_status": "unverified",
+            "event_status": "uncertain"
+          },
+          "risk_summary": "企业正在核查相关事实。",
+          "fact_status": "unverified",
+          "event_status": "uncertain",
+          "risk_level": "medium",
+          "top_public_signals": [],
+          "top_alerts": [],
+          "top_legal_evidence": [],
+          "related_case_memories": [],
+          "agent_specific_focus": {
+            "target_agent": "writer",
+            "historical_experience": false,
+            "historical_source_case_ids": [],
+            "previous_statement_summary": null,
+            "what_changed_since_previous": null,
+            "avoid_repeating_points": [],
+            "must_address_points": [],
+            "tone_guidance": "说明已确认进展和下一步，避免空泛重复承诺"
+          },
+          "selected_case_ids": [],
+          "latest_round_summary": null,
+          "human_review_notes": [],
+          "target_agent": "writer",
+          "token_budget_hint": 3000,
+          "dropped_fields": [],
+          "compression_level": "green",
+          "usage_ratio": 0.2783,
+          "pre_compression_estimated_chars": 835,
+          "estimated_chars": 835,
+          "compression_actions": [
+            "baseline_safety_cleaning_only"
+          ],
+          "aggregate_summary": null,
+          "preserved_fields": [
+            "current_event_facts",
+            "fact_status",
+            "event_status",
+            "risk_level",
+            "agent_specific_focus"
+          ],
+          "dropped_field_names": [],
+          "safety_notes": [
+            "Deterministic preview only; no LLM call.",
+            "Full news text, system prompts, API keys, and tool arguments are excluded."
+          ],
+          "budget_unit": "characters",
+          "budget_enforcement": "soft_waterline",
+          "required_minimum_chars": 317,
+          "budget_status": "WITHIN_BUDGET",
+          "rendered_context_chars": 1394,
+          "degraded": false,
+          "context_pack_hash": "984757f69925fbe0bc2285e064b95ed8148242b03e65d3d24a83c3f762ca7968",
+          "rendered_context": "{\"event_facts\":{\"event_id\":\"current-event-7\",\"event_text\":\"企业正在核查相关事实。\",\"company\":\"晨曦服务\",\"risk_level\":\"medium\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\"},\"risk_summary\":\"企业正在核查相关事实。\",\"fact_status\":\"unverified\",\"event_status\":\"uncertain\",\"risk_level\":\"medium\",\"top_public_signals\":[],\"top_alerts\":[],\"top_legal_evidence\":[],\"related_case_memories\":[],\"agent_specific_focus\":{\"target_agent\":\"writer\",\"historical_experience\":false,\"historical_source_case_ids\":[],\"previous_statement_summary\":null,\"what_changed_since_previous\":null,\"avoid_repeating_points\":[],\"must_address_points\":[],\"tone_guidance\":\"说明已确认进展和下一步，避免空泛重复承诺\"},\"selected_case_ids\":[],\"latest_round_summary\":null,\"human_review_notes\":[],\"target_agent\":\"writer\",\"token_budget_hint\":3000,\"dropped_fields\":[],\"compression_level\":\"green\",\"usage_ratio\":0.2783,\"pre_compression_estimated_chars\":835,\"estimated_chars\":835,\"compression_actions\":[\"baseline_safety_cleaning_only\"],\"aggregate_summary\":null,\"preserved_fields\":[\"current_event_facts\",\"fact_status\",\"event_status\",\"risk_level\",\"agent_specific_focus\"],\"dropped_field_names\":[],\"safety_notes\":[\"Deterministic preview only; no LLM call.\",\"Full news text, system prompts, API keys, and tool arguments are excluded.\"],\"budget_unit\":\"characters\",\"budget_enforcement\":\"soft_waterline\",\"required_minimum_chars\":317,\"budget_status\":\"WITHIN_BUDGET\",\"rendered_context_chars\":1394,\"degraded\":false}"
+        }
+      }
+    ]
+  }
+}

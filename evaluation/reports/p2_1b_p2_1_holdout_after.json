@@ -1,0 +1,434 @@
+{
+  "version": "p2.1-holdout-v1",
+  "dataset_sha256": "37c98aaa9ec1d3ffe0b8f66950decfd8005becbb00b2383a9fb8e7eab9c66083",
+  "measurement_boundary": "synthetic offline retrieval, content sections, and Writer prompt construction; no Agent output",
+  "memory": {
+    "sample_size": 8,
+    "memory_count": 8,
+    "top_k": 2,
+    "recall_at_k": 1.0,
+    "precision_at_k": 1.0,
+    "mrr": 1.0,
+    "empty_query_count": 3,
+    "correct_empty_count": 3,
+    "false_positive_count": 0,
+    "missed_relevant_count": 0,
+    "queries": [
+      {
+        "query_case_id": "h-clear",
+        "kind": "obviously_relevant",
+        "top_k": 2,
+        "judged_relevant_count": 1,
+        "results": [
+          {
+            "memory_id": "h-food-unverified",
+            "rank": 1,
+            "score": 0.9,
+            "expected_relevant": true
+          }
+        ],
+        "false_positive_ids": [],
+        "missed_relevant_ids": [],
+        "historical_fact_exposed": null
+      },
+      {
+        "query_case_id": "h-multiple",
+        "kind": "multiple_relevant",
+        "top_k": 2,
+        "judged_relevant_count": 2,
+        "results": [
+          {
+            "memory_id": "h-food-followup",
+            "rank": 1,
+            "score": 1.43,
+            "expected_relevant": true
+          },
+          {
+            "memory_id": "h-food-main",
+            "rank": 2,
+            "score": 1.43,
+            "expected_relevant": true
+          }
+        ],
+        "false_positive_ids": [],
+        "missed_relevant_ids": [],
+        "historical_fact_exposed": null
+      },
+      {
+        "query_case_id": "h-empty",
+        "kind": "no_relevant",
+        "top_k": 2,
+        "judged_relevant_count": 0,
+        "results": [],
+        "false_positive_ids": [],
+        "missed_relevant_ids": [],
+        "historical_fact_exposed": null
+      },
+      {
+        "query_case_id": "h-keyword",
+        "kind": "keyword_collision",
+        "top_k": 2,
+        "judged_relevant_count": 0,
+        "results": [],
+        "false_positive_ids": [],
+        "missed_relevant_ids": [],
+        "historical_fact_exposed": null
+      },
+      {
+        "query_case_id": "h-conflict",
+        "kind": "historical_fact_conflict",
+        "top_k": 2,
+        "judged_relevant_count": 1,
+        "results": [
+          {
+            "memory_id": "h-food-other",
+            "rank": 1,
+            "score": 0.45,
+            "expected_relevant": true
+          }
+        ],
+        "false_positive_ids": [],
+        "missed_relevant_ids": [],
+        "historical_fact_exposed": true
+      },
+      {
+        "query_case_id": "h-same-company-other-event",
+        "kind": "same_company_other_event",
+        "top_k": 2,
+        "judged_relevant_count": 0,
+        "results": [],
+        "false_positive_ids": [],
+        "missed_relevant_ids": [],
+        "historical_fact_exposed": null
+      },
+      {
+        "query_case_id": "h-fact-status",
+        "kind": "different_fact_status",
+        "top_k": 2,
+        "judged_relevant_count": 1,
+        "results": [
+          {
+            "memory_id": "h-food-unverified",
+            "rank": 1,
+            "score": 0.85,
+            "expected_relevant": true
+          }
+        ],
+        "false_positive_ids": [],
+        "missed_relevant_ids": [],
+        "historical_fact_exposed": null
+      },
+      {
+        "query_case_id": "h-ranking",
+        "kind": "rank_competition",
+        "top_k": 2,
+        "judged_relevant_count": 2,
+        "results": [
+          {
+            "memory_id": "h-food-followup",
+            "rank": 1,
+            "score": 1.43,
+            "expected_relevant": true
+          },
+          {
+            "memory_id": "h-food-main",
+            "rank": 2,
+            "score": 1.43,
+            "expected_relevant": true
+          }
+        ],
+        "false_positive_ids": [],
+        "missed_relevant_ids": [],
+        "historical_fact_exposed": null
+      }
+    ],
+    "injection_probe": {
+      "mode": "EVALUATION_ONLY_INPUT_ABLATION_NOT_DOWNSTREAM_AB",
+      "case_id": "h-conflict",
+      "memory_on_ids": [
+        "h-food-other"
+      ],
+      "memory_off_ids": [],
+      "memory_on_characters": 1125,
+      "memory_off_characters": 715,
+      "historical_confirmed_statement_visible_on": true,
+      "historical_confirmed_statement_visible_off": false,
+      "current_fact_status_on": "unverified",
+      "current_fact_status_off": "unverified",
+      "historical_provenance_preserved": true,
+      "agent_output_evaluated": false
+    },
+    "historical_fact_transfer": "NOT_EVALUATED_NO_GENERATED_OUTPUT",
+    "unsupported_current_fact": "NOT_EVALUATED_NO_GENERATED_OUTPUT"
+  },
+  "context_pack": {
+    "sample_size": 8,
+    "safe_reference_characters": 8316,
+    "current_characters": 7531,
+    "character_reduction_ratio": 0.0944,
+    "required_count": 18,
+    "required_retained": 16,
+    "required_field_recall": 0.8889,
+    "budget_overflow_count": 5,
+    "required_overflow_count": 4,
+    "cases": [
+      {
+        "case_id": "h-short",
+        "target_agent": "legal",
+        "budget_unit": "characters",
+        "budget": 5000,
+        "safe_reference_characters": 727,
+        "current_characters": 727,
+        "character_reduction_ratio": 0.0,
+        "available_field_count": 14,
+        "included_field_count": 14,
+        "required_count": 2,
+        "required_retained": 2,
+        "required_field_recall": 1.0,
+        "compression_level": "green",
+        "over_budget": false,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1429,
+        "truncated": false,
+        "optional_dropped": [],
+        "selected_memory_ids": []
+      },
+      {
+        "case_id": "h-legal-required",
+        "target_agent": "legal",
+        "budget_unit": "characters",
+        "budget": 350,
+        "safe_reference_characters": 1263,
+        "current_characters": 951,
+        "character_reduction_ratio": 0.247,
+        "available_field_count": 34,
+        "included_field_count": 22,
+        "required_count": 2,
+        "required_retained": 2,
+        "required_field_recall": 1.0,
+        "compression_level": "red",
+        "over_budget": true,
+        "budget_status": "REQUIRED_OVERFLOW",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1967,
+        "truncated": true,
+        "optional_dropped": [
+          {
+            "field": "legal_evidence",
+            "reason": "exceeded_red_waterline",
+            "dropped_count": 2
+          }
+        ],
+        "selected_memory_ids": []
+      },
+      {
+        "case_id": "h-writer-crowded",
+        "target_agent": "writer",
+        "budget_unit": "characters",
+        "budget": 450,
+        "safe_reference_characters": 971,
+        "current_characters": 864,
+        "character_reduction_ratio": 0.1102,
+        "available_field_count": 21,
+        "included_field_count": 16,
+        "required_count": 2,
+        "required_retained": 2,
+        "required_field_recall": 1.0,
+        "compression_level": "red",
+        "over_budget": true,
+        "budget_status": "SOFT_TARGET_EXCEEDED",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1994,
+        "truncated": true,
+        "optional_dropped": [
+          {
+            "field": "case_memories",
+            "reason": "baseline_relevance_or_limit",
+            "dropped_count": 1
+          },
+          {
+            "field": "public_signals",
+            "reason": "exceeded_red_waterline",
+            "dropped_count": 2
+          }
+        ],
+        "selected_memory_ids": [],
+        "safe_reference_writer_prompt_characters": 2232,
+        "current_writer_prompt_characters": 2473,
+        "writer_prompt_character_reduction_ratio": -0.108,
+        "safe_reference_prompt_breakdown": {
+          "prompt_characters": 2232,
+          "instructions_and_labels_characters": 437,
+          "current_case_characters": 42,
+          "context_pack_characters_per_copy": 1753,
+          "context_pack_occurrences": 1,
+          "context_pack_embedded_characters": 1753,
+          "legacy_context_characters": 0,
+          "other_characters": 0
+        },
+        "current_prompt_breakdown": {
+          "prompt_characters": 2473,
+          "instructions_and_labels_characters": 437,
+          "current_case_characters": 42,
+          "context_pack_characters_per_copy": 1994,
+          "context_pack_occurrences": 1,
+          "context_pack_embedded_characters": 1994,
+          "legacy_context_characters": 0,
+          "other_characters": 0
+        }
+      },
+      {
+        "case_id": "h-multi-required-evidence",
+        "target_agent": "legal",
+        "budget_unit": "characters",
+        "budget": 250,
+        "safe_reference_characters": 1239,
+        "current_characters": 1007,
+        "character_reduction_ratio": 0.1872,
+        "available_field_count": 36,
+        "included_field_count": 26,
+        "required_count": 2,
+        "required_retained": 2,
+        "required_field_recall": 1.0,
+        "compression_level": "red",
+        "over_budget": true,
+        "budget_status": "REQUIRED_OVERFLOW",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 2013,
+        "truncated": true,
+        "optional_dropped": [
+          {
+            "field": "legal_evidence",
+            "reason": "exceeded_red_waterline",
+            "dropped_count": 1
+          }
+        ],
+        "selected_memory_ids": []
+      },
+      {
+        "case_id": "h-required-optional-competition",
+        "target_agent": "legal",
+        "budget_unit": "characters",
+        "budget": 300,
+        "safe_reference_characters": 1059,
+        "current_characters": 925,
+        "character_reduction_ratio": 0.1265,
+        "available_field_count": 28,
+        "included_field_count": 22,
+        "required_count": 2,
+        "required_retained": 2,
+        "required_field_recall": 1.0,
+        "compression_level": "red",
+        "over_budget": true,
+        "budget_status": "REQUIRED_OVERFLOW",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1941,
+        "truncated": true,
+        "optional_dropped": [
+          {
+            "field": "legal_evidence",
+            "reason": "exceeded_red_waterline",
+            "dropped_count": 1
+          }
+        ],
+        "selected_memory_ids": []
+      },
+      {
+        "case_id": "h-tiny-budget",
+        "target_agent": "legal",
+        "budget_unit": "characters",
+        "budget": 40,
+        "safe_reference_characters": 949,
+        "current_characters": 949,
+        "character_reduction_ratio": 0.0,
+        "available_field_count": 22,
+        "included_field_count": 22,
+        "required_count": 2,
+        "required_retained": 2,
+        "required_field_recall": 1.0,
+        "compression_level": "red",
+        "over_budget": true,
+        "budget_status": "REQUIRED_OVERFLOW",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1870,
+        "truncated": true,
+        "optional_dropped": [],
+        "selected_memory_ids": []
+      },
+      {
+        "case_id": "h-memory-current-fact",
+        "target_agent": "writer",
+        "budget_unit": "characters",
+        "budget": 3000,
+        "safe_reference_characters": 1145,
+        "current_characters": 1145,
+        "character_reduction_ratio": 0.0,
+        "available_field_count": 28,
+        "included_field_count": 28,
+        "required_count": 2,
+        "required_retained": 2,
+        "required_field_recall": 1.0,
+        "compression_level": "green",
+        "over_budget": false,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 2029,
+        "truncated": false,
+        "optional_dropped": [],
+        "selected_memory_ids": [
+          "h-food-other"
+        ],
+        "safe_reference_writer_prompt_characters": 2502,
+        "current_writer_prompt_characters": 2513,
+        "writer_prompt_character_reduction_ratio": -0.0044,
+        "safe_reference_prompt_breakdown": {
+          "prompt_characters": 2502,
+          "instructions_and_labels_characters": 437,
+          "current_case_characters": 47,
+          "context_pack_characters_per_copy": 2018,
+          "context_pack_occurrences": 1,
+          "context_pack_embedded_characters": 2018,
+          "legacy_context_characters": 0,
+          "other_characters": 0
+        },
+        "current_prompt_breakdown": {
+          "prompt_characters": 2513,
+          "instructions_and_labels_characters": 437,
+          "current_case_characters": 47,
+          "context_pack_characters_per_copy": 2029,
+          "context_pack_occurrences": 1,
+          "context_pack_embedded_characters": 2029,
+          "legacy_context_characters": 0,
+          "other_characters": 0
+        }
+      },
+      {
+        "case_id": "h-observation-human-evidence",
+        "target_agent": "legal",
+        "budget_unit": "characters",
+        "budget": 3000,
+        "safe_reference_characters": 963,
+        "current_characters": 963,
+        "character_reduction_ratio": 0.0,
+        "available_field_count": 22,
+        "included_field_count": 22,
+        "required_count": 4,
+        "required_retained": 2,
+        "required_field_recall": 0.5,
+        "compression_level": "green",
+        "over_budget": false,
+        "budget_status": "WITHIN_BUDGET",
+        "budget_enforcement": "soft_waterline",
+        "rendered_context_chars": 1652,
+        "truncated": false,
+        "optional_dropped": [],
+        "selected_memory_ids": []
+      }
+    ],
+    "provider_input_tokens": null,
+    "provider_output_tokens": null,
+    "downstream_quality": "NOT_EVALUATED",
+    "cost": "NOT_AVAILABLE"
+  }
+}

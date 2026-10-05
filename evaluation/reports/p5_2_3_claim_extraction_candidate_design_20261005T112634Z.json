@@ -1,0 +1,224 @@
+{
+  "report_type": "p5_2_3_claim_extraction_timeout_fallback_candidate_design",
+  "generated_at_utc": "2026-10-05T11:26:34Z",
+  "stage": "P5.2.3 mechanism audit and candidate design only",
+  "repository": {
+    "branch": "feat/agent-observability",
+    "head": "15a665230053d218b469750340df28641f4dcd60",
+    "baseline_commit": "15a665230053d218b469750340df28641f4dcd60",
+    "tracked_worktree_changes_before_report": false,
+    "existing_evaluation_reports_preserved": true,
+    "git_diff_check_before_report": "PASS"
+  },
+  "safety": {
+    "production_code_changed": false,
+    "tests_changed": false,
+    "provider_calls": 0,
+    "prompt_or_policy_changed": false,
+    "timeout_retry_or_model_config_changed": false,
+    "existing_reports_modified_or_deleted": false,
+    "new_report_contains_prompt_or_case_body": false,
+    "new_report_contains_credentials_or_provider_body": false
+  },
+  "baseline": {
+    "source": "evaluation/reports/p5_2_2_operation_level_real_provider_20261005T111410Z.json and its two referenced P5.2.2 run artifacts",
+    "cases": ["food-02", "privacy-03"],
+    "provider_model": "OpenAI-compatible DeepSeek / deepseek-v4-flash",
+    "sample_interpretation": "two exploratory frozen-case runs; not production traffic, not a controlled A/B, and not a stable latency distribution",
+    "historical_effective_timeout_config": "NOT_PERSISTED; current local configuration was audited separately and must not be retroactively assumed for the earlier runs",
+    "claim_extraction": {
+      "logical_calls": 2,
+      "http_attempts": 3,
+      "technical_retries": 1,
+      "successes": 1,
+      "failures": 1,
+      "fallbacks": 1,
+      "operation_latency_ms": 89343,
+      "provider_usage_calls": 1,
+      "calls_without_provider_usage": 1,
+      "observed_usage_on_successful_call": {
+        "input_tokens": 484,
+        "output_tokens": 6718,
+        "total_tokens": 7202,
+        "usage_source": "provider",
+        "output_token_reasoning_semantics": "UNKNOWN"
+      },
+      "failed_call_usage": "UNAVAILABLE"
+    },
+    "per_case_claim_extraction": [
+      {
+        "case_id": "food-02",
+        "attempts": [
+          {"index": 0, "status": "SUCCESS", "latency_ms": 28362}
+        ],
+        "logical_call_latency_ms": 28362,
+        "fallback_used": false,
+        "provider_usage": {"input_tokens": 484, "output_tokens": 6718, "total_tokens": 7202}
+      },
+      {
+        "case_id": "privacy-03",
+        "attempts": [
+          {"index": 0, "status": "TIMEOUT", "latency_ms": 30201},
+          {"index": 1, "status": "TIMEOUT", "latency_ms": 30279}
+        ],
+        "logical_call_latency_ms": 60981,
+        "fallback_used": true,
+        "provider_usage": null
+      }
+    ],
+    "comparison_operation_evidence": {
+      "legal_review": {
+        "food_02": {
+          "attempts": [
+            {"index": 0, "status": "TIMEOUT", "latency_ms": 30227},
+            {"index": 1, "status": "SUCCESS", "latency_ms": 21699}
+          ],
+          "logical_call_latency_ms": 52428,
+          "successful_call_usage": {"input_tokens": 2090, "output_tokens": 4314, "total_tokens": 6404}
+        },
+        "privacy_03": {
+          "attempts": [{"index": 0, "status": "SUCCESS", "latency_ms": 26585}],
+          "logical_call_latency_ms": 26585,
+          "successful_call_usage": {"input_tokens": 2085, "output_tokens": 5532, "total_tokens": 7617}
+        }
+      },
+      "legal_action_proposal": {
+        "food_02": {
+          "logical_calls": 2,
+          "attempts": 2,
+          "latency_ms": 4621,
+          "usage": {"input_tokens": 1965, "output_tokens": 651, "total_tokens": 2616}
+        },
+        "privacy_03": "NOT_OBSERVED"
+      }
+    },
+    "exact_scope_note": "food-02 Claim Extraction succeeded on its first HTTP attempt. privacy-03 Claim Extraction timed out on both attempts and fell back. Separately, food-02 Legal review recovered on its retry. This supports a shared provider-timeout signal, but only one Claim Extraction retry event exists."
+  },
+  "current_runtime_config_audit": {
+    "source": "loaded project environment in a local read-only inspection; secret values were not printed",
+    "provider": "openai_compatible",
+    "model": "deepseek-v4-flash",
+    "mock_enabled": false,
+    "api_key_presence_only": true,
+    "timeout_seconds": 30.0,
+    "timeout_semantics": "httpx.Client(timeout=30.0) phase timeout, not a single hard total logical-call deadline",
+    "max_retries": 1,
+    "max_http_attempts_per_logical_call": 2,
+    "retry_backoff_seconds_base": 0.5,
+    "observed_retry_backoff_for_first_retry_seconds": 0.5,
+    "hard_maximum_logical_wall_time": "UNKNOWN; phase/read timeout semantics do not establish one total wall-clock cap",
+    "retry_payload": "same URL, model, messages, temperature, and payload are reused; timeout and retry count do not change between attempts",
+    "max_tokens": "NOT_SENT",
+    "response_schema_enforced_by_provider": "NO; response is parsed and validated after HTTP success",
+    "operation_specific_timeout_or_retry_override_in_current_default_path": "NOT_PRESENT"
+  },
+  "legal_call_path_audit": {
+    "claim_extraction_entry": "backend/agents/legal_agent.py:run -> legal.claim_extraction scope -> extract_claims",
+    "claim_extraction_prompt_builder": "backend/agents/legal_claim_extractor.py:_build_prompt",
+    "claim_extraction_parse_and_validation": "extract_claims parses JSON, requires claims list, validates required Claim fields/source boundaries, then can fall back to deterministic _combine_claims on provider/parse/schema/validation error",
+    "review_entry": "backend/agents/legal_agent.py:_run_llm -> legal.review scope -> call_llm",
+    "proposal_entry": "backend/agents/legal_targeted_search.py proposal branch -> request_legal_action_proposal -> legal_agent.call_llm",
+    "temperature": 0.2,
+    "model_and_provider_for_all_three": "shared LLMClient runtime configuration; current runtime inspection and P5.2.2 artifact report openai_compatible / deepseek-v4-flash",
+    "max_tokens_by_operation": {
+      "legal.claim_extraction": "NOT_SENT",
+      "legal.review": "NOT_SENT",
+      "legal.action_proposal": "NOT_SENT"
+    },
+    "provider_response_schema_or_output_cap_by_operation": "NONE_CONFIGURED",
+    "loop_repeats_claim_extraction_after_observation": "NO; Human Fact resume calls run_legal_action_loop with stored extraction/cursor and does not re-enter legal_agent.run/extract_claims",
+    "claim_extraction_call_frequency": "once per fresh Legal Agent run; transport retries are internal attempts of that logical call"
+  },
+  "prompt_character_measurement": {
+    "method": "Character counts produced from the current prompt builder functions using frozen event strings plus fixed synthetic draft/red-team fixtures; system message included in total_messages_chars. Historical P5.2.2 reports do not persist prompt text or per-call input character counts.",
+    "system_message_chars": 52,
+    "fixture_disclaimer": "These are reproducible fixture sizes, not historical prompt sizes and not token counts. Draft, red-team, retrieved-context, and ContextPack fields are synthetic/empty fixtures; no prompt content is persisted in this report.",
+    "claim_extraction": [
+      {"case_id": "food-02", "event_chars": 82, "user_prompt_chars": 581, "total_messages_chars": 633},
+      {"case_id": "privacy-03", "event_chars": 88, "user_prompt_chars": 587, "total_messages_chars": 639}
+    ],
+    "legal_review": [
+      {"case_id": "food-02", "event_chars": 82, "user_prompt_chars": 1153, "total_messages_chars": 1205},
+      {"case_id": "privacy-03", "event_chars": 88, "user_prompt_chars": 1159, "total_messages_chars": 1211}
+    ],
+    "legal_action_proposal": {
+      "fixture": "one structured Claim with two eligible actions, no raw Claim text in serialized decision context",
+      "user_prompt_chars": 1250,
+      "total_messages_chars": 1302
+    },
+    "relative_prompt_size_conclusion": "On these fixed fixtures, Claim Extraction prompt is shorter than Legal review and proposal. Historical call-specific prompt sizes are unavailable, so prompt size is not supported as the timeout cause."
+  },
+  "mechanism_hypotheses": {
+    "claim_extraction_specific_timeout": {
+      "signal": "WEAK",
+      "evidence": "One of two Claim Extraction calls had two timeouts; one succeeded first try. A Legal review call also timed out under the shared client settings.",
+      "not_proven": "An extraction-only latency or prompt-size cause"
+    },
+    "general_provider_timeout": {
+      "signal": "MODERATE",
+      "evidence": "Timeout attempts occurred in both Claim Extraction and Legal review and lasted about 30 seconds. This aligns with the currently loaded 30-second setting, but the exact effective timeout configuration was not persisted for the historical runs; two frozen exploratory runs only."
+    },
+    "retry_policy_inefficiency_for_claim_extraction": {
+      "signal": "WEAK",
+      "evidence": "The sole observed Claim Extraction retry also timed out; however, a Legal review retry recovered, so retry value cannot be generalized across operations or inferred from one extraction failure."
+    },
+    "prompt_size_as_timeout_cause": {
+      "signal": "NOT_SUPPORTED_BY_CURRENT_EVIDENCE",
+      "evidence": "No per-call prompt character counts are persisted; safe fixture sizes are short, but do not reconstruct actual past prompts or prove latency causality."
+    },
+    "schema_or_parse_failure_as_timeout_cause": {
+      "signal": "NOT_SUPPORTED_BY_CURRENT_EVIDENCE",
+      "evidence": "P5.2.2 recorded zero parse failures and zero schema failures; the affected Claim Extraction call failed at provider transport timeout before parsing."
+    },
+    "generation_budget_as_timeout_cause": {
+      "signal": "UNKNOWN",
+      "evidence": "No max_tokens is sent. One successful Claim Extraction returned 6,718 observed output tokens, but output-token semantics are UNKNOWN and the timeout attempts supplied no usage."
+    },
+    "duplicate_claim_extraction_due_to_legal_loop": {
+      "signal": "NOT_OBSERVED",
+      "evidence": "The Human Fact continuation uses persisted extraction plus cursor to resume the bounded loop; the two-run artifact records two extraction logical calls total, one per fresh case run."
+    }
+  },
+  "candidate_selection": {
+    "primary_candidate_id": "CE-RETRY-0",
+    "primary_candidate": "For evaluation only, set max_retries=0 for legal.claim_extraction while preserving the existing one-retry default for every other operation. Preserve the same prompt, model, temperature, timeout, parsing, validation, deterministic fallback, Legal policy, and workflow.",
+    "candidate_status": "DESIGN_ONLY_NOT_IMPLEMENTED",
+    "why_this_candidate": "It isolates the one observed extraction path where the sole retry did not recover and avoids changing shared timeout behavior despite a timeout also occurring in Legal review. It is reversible and directly testable; evidence is weak and does not establish that it is beneficial.",
+    "expected_benefit_hypothesis": "Lower Claim Extraction logical-call latency and HTTP attempts when the first extraction attempt times out and a retry would also fail.",
+    "primary_metric": "Mean Claim Extraction logical-call latency per frozen case, reported separately by case and paired run; timeout-affected calls also shown explicitly.",
+    "hard_safety_gates": [
+      "Claim Extraction fallback rate must not increase versus baseline in the observed paired sample.",
+      "No reduction in material Claim coverage or frozen expected fact-gap coverage; assess with a rubric frozen before any run.",
+      "No increase in unsupported Claims, parse/schema failures, or unsafe fact attribution.",
+      "Human Fact remains human_asserted and all downstream Safety/Human Review outcomes remain valid; no bypasses."
+    ],
+    "acceptance_rule": "Only consider the candidate if per-case paired latency is directionally lower and every hard safety gate passes. Any fallback/coverage/safety regression rejects it. If the small sample is noisy or mixed, classify INCONCLUSIVE and retain baseline; do not claim statistical significance.",
+    "rejected_candidates": [
+      {"candidate": "Increase the shared/global timeout", "reason": "A timeout also occurred in Legal review; a longer wait does not isolate Claim Extraction and current HTTPX setting is not a total logical-call deadline."},
+      {"candidate": "Increase global retries", "reason": "Would multiply waits/calls across all operations; no evidence justifies broadening retries."},
+      {"candidate": "Claim prompt/schema rewrite", "reason": "No parse/schema failure evidence; could reduce required material Claim recall and confounds timeout attribution."},
+      {"candidate": "Set a max_tokens cap", "reason": "No baseline cap or output-truncation evidence; risk of silently omitting Claims; no token limit should be guessed."},
+      {"candidate": "ContextPack/RAG/Legal strategy change", "reason": "Not isolated from the observed transport timeout and outside this candidate's single-variable boundary."}
+    ]
+  },
+  "future_p5_2_4_design": {
+    "status": "DESIGN_ONLY_REQUIRES_SEPARATE_USER_AUTHORIZATION_BEFORE_PROVIDER_RUN",
+    "baseline": "Current code and runtime: legal.claim_extraction max_retries=1 (up to 2 HTTP attempts); all other settings unchanged.",
+    "candidate": "CE-RETRY-0 only: legal.claim_extraction max_retries=0 (1 HTTP attempt). No production default change during this design stage.",
+    "frozen_cases": ["food-02", "privacy-03"],
+    "repetitions": "3 paired repetitions per case; randomize baseline/candidate order within each pair; 6 pairs total, 12 complete frozen Case runs across both arms.",
+    "estimated_workflow_logical_call_budget": 90,
+    "budget_basis": "P5.2.2 observed 15 workflow logical LLM calls over two frozen runs (9 and 6), average 7.5; 12 future runs implies approximately 90. This is a planning estimate only; Legal-only estimate is approximately 54 logical calls based on 9 Legal calls across the two runs. HTTP attempts and cost are unknown and may differ by arm.",
+    "controlled_variables": ["frozen dataset SHA", "case inputs and frozen Human Fact response", "provider/model", "prompt and policy versions", "temperature", "timeout", "runtime mode", "all non-Claim-Extraction retry behavior"],
+    "primary_analysis": "Compare paired Claim Extraction logical-call latency per case; report attempt count, fallback, usage availability, extracted Claim coverage, parse/schema status, and downstream safety outcomes as guardrails.",
+    "interpretation_boundary": "Small exploratory paired experiment only; provider nondeterminism and N=3 per case/arm prevent statistical or production-level claims. If no qualifying first-attempt timeout occurs, result is INSUFFICIENT_EXPOSURE, not evidence of no effect.",
+    "provider_calls_performed_in_this_stage": 0
+  },
+  "decision": {
+    "mechanism_root_cause": "NOT_IDENTIFIED",
+    "candidate_selected_for_future_evaluation": "CE-RETRY-0",
+    "candidate_proven_beneficial": false,
+    "production_change_recommended_now": false,
+    "real_provider_run_authorized_or_performed": false
+  }
+}

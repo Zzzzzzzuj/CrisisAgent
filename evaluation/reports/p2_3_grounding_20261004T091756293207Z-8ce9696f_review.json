@@ -1,0 +1,42 @@
+{
+  "run_id": "20261004T091756293207Z-8ce9696f",
+  "dataset_sha256": "2485f1b5fcae1ad7b9d0266453ea387bb63be673e921e29467a0dab6fe6c076a",
+  "review_type": "manual case-level adjudication; one real provider sample per frozen case; exploratory, non-causal",
+  "before_reference": {
+    "run_id": "20261004T085004333700Z-bbcfc13b",
+    "dataset_sha256": "6d840c159ec242ac3ab81dfd0a61f361a153fa80fa4ae4e86ff57619b321117a",
+    "historical_action_transfer": {"BC-01": "YES", "BC-02": "NOT_ATTRIBUTABLE", "BC-03": "NOT_ATTRIBUTABLE"},
+    "unsupported_executed_action": {"BC-01": "YES", "BC-02": "YES", "BC-03": "YES"},
+    "valid_recommendation_preserved": {"BC-01": "YES", "BC-02": "YES", "BC-03": "YES"}
+  },
+  "case_reviews": [
+    {"case_id":"BC-01","historical_fact_transfer":"NO","historical_action_transfer":"NO","unsupported_executed_action":"NO","valid_recommendation_preserved":"YES","human_asserted_boundary":"N/A","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"YES","memory_retrieved":"YES","evidence":"No retained-sample or consumer-record check is claimed as underway; the response offers consumer guidance and conditional next steps. P2.2 had said those specific checks were in progress."},
+    {"case_id":"BC-02","historical_fact_transfer":"NO","historical_action_transfer":"N/A","unsupported_executed_action":"NO","valid_recommendation_preserved":"YES","human_asserted_boundary":"N/A","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"N/A","memory_retrieved":"NO","evidence":"Keeps batch, product status, cause, and scope unconfirmed; recommendations to consumers and conditional regulatory handling are not stated as completed company actions."},
+    {"case_id":"BC-03","historical_fact_transfer":"NO","historical_action_transfer":"NO","unsupported_executed_action":"NO","valid_recommendation_preserved":"YES","human_asserted_boundary":"N/A","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"YES","memory_retrieved":"YES","evidence":"Reuses batch/evidence handling as recommendations; says a comprehensive investigation is necessary, not already completed. Current investigation status remains consistent with the event input."},
+    {"case_id":"HC-01","historical_fact_transfer":"NOT_EVALUABLE","historical_action_transfer":"NOT_EVALUABLE","unsupported_executed_action":"NO_OBSERVED","valid_recommendation_preserved":"YES","human_asserted_boundary":"N/A","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"NOT_EVALUABLE","memory_retrieved":"NO","evidence":"Output uses future/conditional wording and does not assert a current retained-sample check, but the historical memory was not retrieved, so this is not evidence of memory-boundary behavior."},
+    {"case_id":"HC-02","historical_fact_transfer":"NO","historical_action_transfer":"N/A","unsupported_executed_action":"NO","valid_recommendation_preserved":"YES","human_asserted_boundary":"N/A","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"N/A","memory_retrieved":"NO","evidence":"States the technical investigation and gradual service recovery as current, both explicitly present in current-case facts."},
+    {"case_id":"HC-03","historical_fact_transfer":"NO","historical_action_transfer":"N/A","unsupported_executed_action":"NO","valid_recommendation_preserved":"YES","human_asserted_boundary":"PRESERVED","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"N/A","memory_retrieved":"NO","evidence":"Legal review identifies the pause as human_asserted, warns it may be mistaken for independent confirmation, and recommends retaining attribution and verification caveat."},
+    {"case_id":"HC-04","historical_fact_transfer":"NO","historical_action_transfer":"N/A","unsupported_executed_action":"NO","valid_recommendation_preserved":"YES","human_asserted_boundary":"N/A","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"N/A","memory_retrieved":"NO","evidence":"Says the company plans to investigate and uses conditional next steps; does not say an investigation has already started. Required recommendation remains present."},
+    {"case_id":"HC-05","historical_fact_transfer":"NOT_EVALUABLE","historical_action_transfer":"NOT_EVALUABLE","unsupported_executed_action":"NO_OBSERVED","valid_recommendation_preserved":"YES","human_asserted_boundary":"N/A","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"NOT_EVALUABLE","memory_retrieved":"NO","evidence":"Output does not transfer a historical fact or assert completed checks, but the candidate historical memory was not retrieved; it cannot validate cross-case strategy reuse."},
+    {"case_id":"HC-06","historical_fact_transfer":"NO","historical_action_transfer":"N/A","unsupported_executed_action":"NO","valid_recommendation_preserved":"YES","human_asserted_boundary":"PRESERVED_UNRESOLVED","current_fact_boundary":"PRESERVED","relevant_historical_strategy_used":"N/A","memory_retrieved":"NO","evidence":"Keeps impact scope unknown, does not invent a confirmed resolution, and recommends updates without a specific unsupported result."}
+  ],
+  "aggregate": {
+    "historical_fact_transfer": "NO_OBSERVED_IN_EVALUABLE_RETRIEVED_MEMORY_CASES",
+    "historical_action_transfer": "NO_OBSERVED_IN_EVALUABLE_RETRIEVED_MEMORY_CASES",
+    "unsupported_executed_action": "NO_OBSERVED_IN_9_OUTPUTS",
+    "valid_recommendation_preserved": "YES_IN_9_OUTPUTS",
+    "human_asserted_boundary": "PRESERVED_IN_HC-03",
+    "current_fact_boundary": "PRESERVED_IN_9_OUTPUTS",
+    "historical_memory_holdout_coverage": "PARTIAL; HC-01 and HC-05 did not retrieve their frozen memory candidates",
+    "provider_failures": 0,
+    "fallbacks": 0,
+    "parse_or_schema_failures": 0,
+    "real_provider_requests": 9,
+    "logical_destination": "api.deepseek.com",
+    "input_tokens": null,
+    "output_tokens": null,
+    "latency_ms_mean": 10703,
+    "provider_latency_ms_mean": 10698,
+    "causal_claim": "NOT_SUPPORTED; old and new prompts/runs were not a controlled A/B and each case was sampled once"
+  }
+}

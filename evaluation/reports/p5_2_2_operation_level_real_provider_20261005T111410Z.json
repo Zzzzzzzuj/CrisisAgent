@@ -1,0 +1,581 @@
+{
+  "report_type": "p5_2_2_legal_operation_level_real_provider_measurement",
+  "generated_at_utc": "2026-10-05T11:14:10Z",
+  "branch": "feat/agent-observability",
+  "head": "497623e2cbed07f93f47e5f7121e5486c13b2f47",
+  "production_code_changed_this_stage": false,
+  "real_provider": "DeepSeek via OpenAI-compatible HTTPS",
+  "model": "deepseek-v4-flash",
+  "frozen_dataset_file": "evaluation/dynamic_real_case_v1.json",
+  "frozen_dataset_sha256": "8d5b0f979350db7f0d1ba2bbd23f1dd308d5f618f5333a2b73b336ce29d4aa40",
+  "cases": [
+    {
+      "case_id": "food-02",
+      "historical_candidate_role": "historical_claim_extraction_timeout_fallback",
+      "run_id": "20261005T094724930883Z-f11dbc9c",
+      "artifact_basename": "deepseek_semantic_validation_v1_20261005T094724930883Z-f11dbc9c.jsonl",
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "frozen_dataset_sha256": "8d5b0f979350db7f0d1ba2bbd23f1dd308d5f618f5333a2b73b336ce29d4aa40",
+      "runner_status": "SUCCESS",
+      "runtime_final_state": "WAITING_HUMAN",
+      "total_session_latency_ms": 119838.663,
+      "legal_execution_latency_ms": 93088.0,
+      "legal_llm_latency_ms": 93019.0,
+      "legal_logical_call_count": 6,
+      "legal_http_attempt_count": 7.0,
+      "legal_technical_retry_count": 1.0,
+      "legal_success_count": 6.0,
+      "legal_failure_count": 0.0,
+      "legal_provider_usage_call_count": 6,
+      "legal_missing_usage_call_count": 0,
+      "legal_provider_input_tokens": 5388.0,
+      "legal_provider_output_tokens": 13084.0,
+      "legal_provider_total_tokens": 18472.0,
+      "legal_operation_latency_sum_ms": 93019.0,
+      "legal_operation_latency_residual_ms": 0.0,
+      "latency_reconciliation": "FULL",
+      "operation_integrity": {
+        "call_id_present": true,
+        "call_ids_unique": true,
+        "operation_span_present": true,
+        "operation_spans_unique": true,
+        "attempt_index_starts_at_zero": true
+      },
+      "operations": [
+        {
+          "attempt_status_counts": {
+            "SUCCESS": 2
+          },
+          "failure_count": 0,
+          "http_attempt_count": 2,
+          "latency_ms": 4621.0,
+          "logical_call_count": 2,
+          "operation_span_count": 2,
+          "operation_type": "legal.action_proposal",
+          "provider_input_tokens": 1965,
+          "provider_output_tokens": 651,
+          "provider_total_tokens": 2616,
+          "success_count": 2,
+          "technical_retry_count": 0,
+          "token_source": "provider"
+        },
+        {
+          "attempt_status_counts": {
+            "SUCCESS": 1
+          },
+          "failure_count": 0,
+          "http_attempt_count": 1,
+          "latency_ms": 28362.0,
+          "logical_call_count": 1,
+          "operation_span_count": 1,
+          "operation_type": "legal.claim_extraction",
+          "provider_input_tokens": 484,
+          "provider_output_tokens": 6718,
+          "provider_total_tokens": 7202,
+          "success_count": 1,
+          "technical_retry_count": 0,
+          "token_source": "provider"
+        },
+        {
+          "attempt_status_counts": {
+            "SUCCESS": 2
+          },
+          "failure_count": 0,
+          "http_attempt_count": 2,
+          "latency_ms": 7608.0,
+          "logical_call_count": 2,
+          "operation_span_count": 2,
+          "operation_type": "legal.relation_check",
+          "provider_input_tokens": 849,
+          "provider_output_tokens": 1401,
+          "provider_total_tokens": 2250,
+          "success_count": 2,
+          "technical_retry_count": 0,
+          "token_source": "provider"
+        },
+        {
+          "attempt_status_counts": {
+            "SUCCESS": 1,
+            "TIMEOUT": 1
+          },
+          "failure_count": 0,
+          "http_attempt_count": 2,
+          "latency_ms": 52428.0,
+          "logical_call_count": 1,
+          "operation_span_count": 1,
+          "operation_type": "legal.review",
+          "provider_input_tokens": 2090,
+          "provider_output_tokens": 4314,
+          "provider_total_tokens": 6404,
+          "success_count": 1,
+          "technical_retry_count": 1,
+          "token_source": "provider"
+        }
+      ],
+      "attempt_ledger": [
+        {
+          "operation_type": "legal.claim_extraction",
+          "attempt_index": 0,
+          "status": "SUCCESS",
+          "latency_ms": 28362.0
+        },
+        {
+          "operation_type": "legal.relation_check",
+          "attempt_index": 0,
+          "status": "SUCCESS",
+          "latency_ms": 4723.0
+        },
+        {
+          "operation_type": "legal.review",
+          "attempt_index": 0,
+          "status": "TIMEOUT",
+          "latency_ms": 30227.0
+        },
+        {
+          "operation_type": "legal.review",
+          "attempt_index": 1,
+          "status": "SUCCESS",
+          "latency_ms": 21699.0
+        },
+        {
+          "operation_type": "legal.action_proposal",
+          "attempt_index": 0,
+          "status": "SUCCESS",
+          "latency_ms": 2512.0
+        },
+        {
+          "operation_type": "legal.relation_check",
+          "attempt_index": 0,
+          "status": "SUCCESS",
+          "latency_ms": 2884.0
+        },
+        {
+          "operation_type": "legal.action_proposal",
+          "attempt_index": 0,
+          "status": "SUCCESS",
+          "latency_ms": 2109.0
+        }
+      ],
+      "operation_fallback_count_for_claim_extraction": 0,
+      "total_fallback_count": 0,
+      "retrieval": {
+        "call_count": 2,
+        "latency_ms": 42.52,
+        "status_counts": {
+          "SUCCESS": 2
+        },
+        "targeted_retrieval_triggered": true
+      },
+      "human_gate": {
+        "human_fact_request_count": 1,
+        "human_fact_response_count": 1,
+        "response_type": "FACT_UNAVAILABLE",
+        "response_strategy": "single_frozen_response",
+        "final_wait_type": "FACT_INPUT",
+        "final_review_count": 0,
+        "approval_count": 0,
+        "rejection_count": 0,
+        "response_events": [
+          {
+            "sequence_index": 0,
+            "response_type": "FACT_UNAVAILABLE",
+            "resume_status": "waiting_human",
+            "observation_type": "fact_unavailable",
+            "next_wait_type": "FACT_INPUT",
+            "round_count": 3,
+            "runner_stop_reason": null
+          }
+        ],
+        "same_run_association": "Association only; no causal claim"
+      },
+      "last_legal_operation": "legal.action_proposal",
+      "loop": {
+        "action_sequence": [
+          "RETRIEVE_LEGAL_EVIDENCE",
+          "REQUEST_HUMAN_FACT",
+          "HUMAN_FACT_RESPONSE",
+          "REQUEST_HUMAN_FACT",
+          "REQUEST_HUMAN_FACT_VERIFICATION",
+          "HUMAN_FACT_RESPONSE",
+          "REQUEST_HUMAN_FACT_VERIFICATION"
+        ],
+        "observation_types": [
+          "retrieval_hit",
+          "case_fact_unresolved",
+          "fact_unavailable",
+          "case_fact_unresolved",
+          "case_fact_requires_human_input",
+          "FACT_UNAVAILABLE",
+          "case_fact_requires_human_input"
+        ],
+        "round_count": null,
+        "stop_reason": "human_fact_required"
+      },
+      "claim_extraction": {
+        "provider_status": "SUCCESS",
+        "fallback_used": false,
+        "failure_stage": "NONE",
+        "reason_code": "NONE"
+      }
+    },
+    {
+      "case_id": "privacy-03",
+      "historical_candidate_role": "historical_legal_retrieval_and_human_gate",
+      "run_id": "20261005T110923334786Z-d96ab2f2",
+      "artifact_basename": "deepseek_semantic_validation_v1_20261005T110923334786Z-d96ab2f2.jsonl",
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "frozen_dataset_sha256": "8d5b0f979350db7f0d1ba2bbd23f1dd308d5f618f5333a2b73b336ce29d4aa40",
+      "runner_status": "SUCCESS",
+      "runtime_final_state": "WAITING_HUMAN",
+      "total_session_latency_ms": 116609.041,
+      "legal_execution_latency_ms": 91599.0,
+      "legal_llm_latency_ms": 91552.0,
+      "legal_logical_call_count": 3,
+      "legal_http_attempt_count": 4.0,
+      "legal_technical_retry_count": 1.0,
+      "legal_success_count": 2.0,
+      "legal_failure_count": 1.0,
+      "legal_provider_usage_call_count": 2,
+      "legal_missing_usage_call_count": 1,
+      "legal_provider_input_tokens": 2568.0,
+      "legal_provider_output_tokens": 6346.0,
+      "legal_provider_total_tokens": 8914.0,
+      "legal_operation_latency_sum_ms": 91552.0,
+      "legal_operation_latency_residual_ms": 0.0,
+      "latency_reconciliation": "FULL",
+      "operation_integrity": {
+        "call_id_present": true,
+        "call_ids_unique": true,
+        "operation_span_present": true,
+        "operation_spans_unique": true,
+        "attempt_index_starts_at_zero": true
+      },
+      "operations": [
+        {
+          "attempt_status_counts": {
+            "TIMEOUT": 2
+          },
+          "failure_count": 1,
+          "http_attempt_count": 2,
+          "latency_ms": 60981.0,
+          "logical_call_count": 1,
+          "operation_span_count": 1,
+          "operation_type": "legal.claim_extraction",
+          "provider_input_tokens": null,
+          "provider_output_tokens": null,
+          "provider_total_tokens": null,
+          "success_count": 0,
+          "technical_retry_count": 1,
+          "token_source": "unavailable"
+        },
+        {
+          "attempt_status_counts": {
+            "SUCCESS": 1
+          },
+          "failure_count": 0,
+          "http_attempt_count": 1,
+          "latency_ms": 3986.0,
+          "logical_call_count": 1,
+          "operation_span_count": 1,
+          "operation_type": "legal.relation_check",
+          "provider_input_tokens": 483,
+          "provider_output_tokens": 814,
+          "provider_total_tokens": 1297,
+          "success_count": 1,
+          "technical_retry_count": 0,
+          "token_source": "provider"
+        },
+        {
+          "attempt_status_counts": {
+            "SUCCESS": 1
+          },
+          "failure_count": 0,
+          "http_attempt_count": 1,
+          "latency_ms": 26585.0,
+          "logical_call_count": 1,
+          "operation_span_count": 1,
+          "operation_type": "legal.review",
+          "provider_input_tokens": 2085,
+          "provider_output_tokens": 5532,
+          "provider_total_tokens": 7617,
+          "success_count": 1,
+          "technical_retry_count": 0,
+          "token_source": "provider"
+        }
+      ],
+      "attempt_ledger": [
+        {
+          "operation_type": "legal.claim_extraction",
+          "attempt_index": 0,
+          "status": "TIMEOUT",
+          "latency_ms": 30201.0
+        },
+        {
+          "operation_type": "legal.claim_extraction",
+          "attempt_index": 1,
+          "status": "TIMEOUT",
+          "latency_ms": 30279.0
+        },
+        {
+          "operation_type": "legal.relation_check",
+          "attempt_index": 0,
+          "status": "SUCCESS",
+          "latency_ms": 3986.0
+        },
+        {
+          "operation_type": "legal.review",
+          "attempt_index": 0,
+          "status": "SUCCESS",
+          "latency_ms": 26585.0
+        }
+      ],
+      "operation_fallback_count_for_claim_extraction": 1,
+      "total_fallback_count": 1,
+      "retrieval": {
+        "call_count": 1,
+        "latency_ms": 38.223,
+        "status_counts": {
+          "SUCCESS": 1
+        },
+        "targeted_retrieval_triggered": false
+      },
+      "human_gate": {
+        "human_fact_request_count": 1,
+        "human_fact_response_count": 1,
+        "response_type": "FACT_PROVIDED",
+        "response_strategy": "single_frozen_response",
+        "final_wait_type": "FINAL_REVIEW",
+        "final_review_count": 1,
+        "approval_count": 0,
+        "rejection_count": 0,
+        "response_events": [
+          {
+            "sequence_index": 0,
+            "response_type": "FACT_PROVIDED",
+            "resume_status": "waiting_human",
+            "observation_type": "fact_provided",
+            "next_wait_type": "FINAL_REVIEW",
+            "round_count": 2,
+            "runner_stop_reason": null
+          }
+        ],
+        "same_run_association": "Association only; no causal claim"
+      },
+      "last_legal_operation": "legal.review",
+      "loop": {
+        "action_sequence": [
+          "REQUEST_HUMAN_FACT",
+          "HUMAN_FACT_RESPONSE",
+          "USE_EXISTING_EVIDENCE",
+          "STOP_UNRESOLVED",
+          "REQUEST_HUMAN_FACT_VERIFICATION",
+          "HUMAN_FACT_RESPONSE",
+          "STOP"
+        ],
+        "observation_types": [
+          "case_fact_unresolved",
+          "fact_provided",
+          "candidate_rule_available",
+          "case_fact_unresolved",
+          "case_fact_requires_human_input",
+          "FACT_PROVIDED",
+          "human_asserted_fact_requires_review"
+        ],
+        "round_count": null,
+        "stop_reason": "human_asserted_fact_requires_review"
+      },
+      "claim_extraction": {
+        "provider_status": "TIMEOUT",
+        "fallback_used": true,
+        "failure_stage": "PROVIDER",
+        "reason_code": "PROVIDER_TIMEOUT"
+      }
+    }
+  ],
+  "span_integrity_all_cases": true,
+  "aggregate": {
+    "case_count": 2,
+    "legal_logical_calls": 9,
+    "legal_http_attempts": 11,
+    "legal_technical_retries": 2,
+    "legal_successful_logical_calls": 8,
+    "legal_failed_logical_calls": 1,
+    "legal_timeout_attempts": 3,
+    "parse_failures": 0,
+    "schema_failures": 0,
+    "legal_provider_usage_calls": 8,
+    "legal_calls_without_provider_usage": 1,
+    "observed_provider_input_tokens": 7956.0,
+    "observed_provider_output_tokens": 19430.0,
+    "observed_provider_total_tokens": 27386.0,
+    "legal_llm_latency_ms": 184571.0,
+    "legal_execution_latency_ms": 184687.0,
+    "retrieval_call_count": 3.0,
+    "retrieval_latency_ms": 80.743,
+    "human_fact_requests": 2.0,
+    "human_fact_responses": 2.0,
+    "final_review_count": 1.0,
+    "fallback_count": 1.0,
+    "unknown_operation_logical_calls": 6,
+    "unknown_operation_call_ids_unique": true,
+    "cost_estimation": "NOT_AVAILABLE",
+    "output_token_reasoning_semantics": "UNKNOWN",
+    "workflow_logical_llm_calls": 15.0,
+    "workflow_http_attempts": 17.0,
+    "workflow_technical_retries": 2.0,
+    "total_session_latency_ms": 236447.704,
+    "legal_action_proposal_calls": 2.0,
+    "retrieval_status_counts": {
+      "SUCCESS": 3
+    }
+  },
+  "operation_aggregate": [
+    {
+      "operation_type": "legal.action_proposal",
+      "logical_call_count": 2,
+      "http_attempt_count": 2,
+      "technical_retry_count": 0,
+      "success_count": 2,
+      "failure_count": 0,
+      "attempt_status_counts": {
+        "SUCCESS": 2
+      },
+      "latency_ms": 4621.0,
+      "provider_usage_call_count": 2,
+      "missing_usage_call_count": 0,
+      "provider_input_tokens": 1965.0,
+      "provider_output_tokens": 651.0,
+      "provider_total_tokens": 2616.0,
+      "token_source": "provider",
+      "operation_fallback_count": 0
+    },
+    {
+      "operation_type": "legal.claim_extraction",
+      "logical_call_count": 2,
+      "http_attempt_count": 3,
+      "technical_retry_count": 1,
+      "success_count": 1,
+      "failure_count": 1,
+      "attempt_status_counts": {
+        "SUCCESS": 1,
+        "TIMEOUT": 2
+      },
+      "latency_ms": 89343.0,
+      "provider_usage_call_count": 1,
+      "missing_usage_call_count": 1,
+      "provider_input_tokens": 484.0,
+      "provider_output_tokens": 6718.0,
+      "provider_total_tokens": 7202.0,
+      "token_source": "mixed",
+      "operation_fallback_count": 1
+    },
+    {
+      "operation_type": "legal.relation_check",
+      "logical_call_count": 3,
+      "http_attempt_count": 3,
+      "technical_retry_count": 0,
+      "success_count": 3,
+      "failure_count": 0,
+      "attempt_status_counts": {
+        "SUCCESS": 3
+      },
+      "latency_ms": 11594.0,
+      "provider_usage_call_count": 3,
+      "missing_usage_call_count": 0,
+      "provider_input_tokens": 1332.0,
+      "provider_output_tokens": 2215.0,
+      "provider_total_tokens": 3547.0,
+      "token_source": "provider",
+      "operation_fallback_count": 0
+    },
+    {
+      "operation_type": "legal.review",
+      "logical_call_count": 2,
+      "http_attempt_count": 3,
+      "technical_retry_count": 1,
+      "success_count": 2,
+      "failure_count": 0,
+      "attempt_status_counts": {
+        "TIMEOUT": 1,
+        "SUCCESS": 2
+      },
+      "latency_ms": 79013.0,
+      "provider_usage_call_count": 2,
+      "missing_usage_call_count": 0,
+      "provider_input_tokens": 4175.0,
+      "provider_output_tokens": 9846.0,
+      "provider_total_tokens": 14021.0,
+      "token_source": "provider",
+      "operation_fallback_count": 0
+    }
+  ],
+  "attribution": {
+    "historical_p5_1_per_call_operation_attribution": "UNKNOWN; not retroactively inferred",
+    "per_operation_latency_signal": "Exploratory two-case sample only",
+    "per_operation_retry_signal": "Exploratory two-case sample only",
+    "candidate_observations": [
+      {
+        "operation_type": "legal.claim_extraction",
+        "latency_signal": "MODERATE",
+        "retry_signal": "MODERATE",
+        "sample_note": "One case completed in one attempt; one case timed out on both attempts and used fallback."
+      },
+      {
+        "operation_type": "legal.review",
+        "latency_signal": "MODERATE",
+        "retry_signal": "WEAK",
+        "sample_note": "One case had a timeout then success; one case completed without retry."
+      },
+      {
+        "operation_type": "legal.action_proposal",
+        "latency_signal": "WEAK",
+        "retry_signal": "NOT_OBSERVED",
+        "sample_note": "Observed only in one case."
+      },
+      {
+        "operation_type": "legal.relation_check",
+        "latency_signal": "WEAK",
+        "retry_signal": "NOT_OBSERVED",
+        "sample_note": "Few calls across two cases."
+      }
+    ]
+  },
+  "comparison": {
+    "historical_total_legal_metrics_comparable": "DESCRIPTIVE_ONLY",
+    "strict_controlled_ab": "NO",
+    "instrumentation_improvement_claim": "NOT_CLAIMED",
+    "latency_improvement": "NOT_CLAIMED",
+    "cost_reduction": "NOT_CLAIMED"
+  },
+  "safety": {
+    "raw_provider_body_persisted": false,
+    "prompts_persisted": false,
+    "event_claim_evidence_or_human_fact_text_persisted": false,
+    "secrets_or_authorization_persisted": false,
+    "absolute_local_paths_persisted": false,
+    "reports_are_untracked_artifacts": true
+  },
+  "tests": {
+    "pre_provider": "39 passed; runner P5 extraction test passed in first 8 tests before fake CLI TestClient hang",
+    "post_provider": "40 passed in 1.30s",
+    "combined_runner_suite": "INCOMPLETE: sandbox TestClient fake CLI integration stalled; interrupted; no provider request in this test"
+  },
+  "limits": [
+    "Only two exploratory frozen Cases; not a stable production performance estimate.",
+    "A single frozen Human Fact response was submitted in each case under the runner default single_frozen_response policy.",
+    "No case was rerun after timeout or WAITING_HUMAN.",
+    "Provider usage is absent for one failed Legal claim-extraction logical call.",
+    "Latency reflects this provider/model and these observed requests only.",
+    "No cost pricing configuration was used.",
+    "P5.2.1 instrumentation made per-call attribution possible here; this is not evidence of performance improvement."
+  ],
+  "instrumentation_interpretation": {
+    "legal_call_span_integrity": "PASS for both cases",
+    "historical_p5_1_operation_attribution": "UNKNOWN; preserved as unknown",
+    "privacy_03_proposal": "NOT_OBSERVED in this replay",
+    "privacy_03_targeted_retrieval": "NOT_OBSERVED in this replay",
+    "unknown_operation_calls": "Non-Legal workflow calls remain operation_type=unknown; six calls aggregated separately"
+  }
+}

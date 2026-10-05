@@ -1,0 +1,112 @@
+{
+  "report_type": "p5_2_legal_performance_failure_attribution_final_closure",
+  "generated_at_utc": "2026-10-05T11:31:58Z",
+  "repository": {
+    "branch": "feat/agent-observability",
+    "checkpoint": "15a665230053d218b469750340df28641f4dcd60",
+    "checkpoint_matches_head": true,
+    "tracked_worktree_changes_at_closure": false,
+    "existing_evaluation_reports_preserved": true
+  },
+  "stage_status": {
+    "P5_2_STATUS": "CLOSED_WITH_NO_OPTIMIZATION_ADOPTED",
+    "P5_2_0_STATUS": "COMPLETE_ANALYSIS_WITH_ATTRIBUTION_LIMITATIONS",
+    "P5_2_1_STATUS": "CLOSED",
+    "P5_2_2_STATUS": "MEASUREMENT_COMPLETE_WITH_SAMPLE_LIMITATION",
+    "P5_2_3_STATUS": "CANDIDATE_DESIGNED_WITH_WEAK_EVIDENCE",
+    "P5_2_4_STATUS": "BLOCKED_NOT_RUN"
+  },
+  "measurement_conclusion": {
+    "P5_2_0_observation": "Legal was comparatively heavy in five P5.1 real-provider samples, but historical traces lacked operation identity for safe retrospective attribution.",
+    "P5_2_1": {
+      "legal_llm_call_sites": 5,
+      "attributed_call_sites": 5,
+      "unattributed_call_sites": 0,
+      "operation_allowlist": [
+        "legal.claim_extraction",
+        "legal.action_proposal",
+        "legal.relation_check",
+        "legal.review"
+      ],
+      "operation_span_logical_call_attempt_tracing": "PROVEN"
+    },
+    "P5_2_2": {
+      "frozen_cases": ["food-02", "privacy-03"],
+      "sample_scope": "two exploratory real-provider frozen-case runs only",
+      "claim_extraction": {
+        "logical_calls": 2,
+        "attempts": 3,
+        "retries": 1,
+        "successes": 1,
+        "failures": 1,
+        "latency_ms": 89343
+      },
+      "relation_check": {"calls": 3, "attempts": 3, "retries": 0, "latency_ms": 11594},
+      "legal_review": {"calls": 2, "attempts": 3, "retries": 1, "successes": 2, "latency_ms": 79013},
+      "action_proposal": {"calls": 2, "attempts": 2, "retries": 0, "latency_ms": 4621},
+      "claim_extraction_and_review_timeout_observed": true,
+      "stable_bottleneck_proven": false
+    }
+  },
+  "candidate_decision": {
+    "root_cause": "NOT_IDENTIFIED",
+    "CE_RETRY_0_EFFECTIVENESS": "NOT_EVALUATED",
+    "CE_RETRY_0_CANDIDATE_DECISION": "NOT_ADOPTED",
+    "decision_reason_codes": [
+      "INSUFFICIENT_MECHANISM_EVIDENCE",
+      "EQUIVALENT_CE_REPLAY_INPUT_UNAVAILABLE"
+    ],
+    "P5_2_4_stage_a": {
+      "status": "BLOCKED_NOT_RUN",
+      "provider_calls": 0,
+      "reason": "Frozen cases do not contain the Writer draft passed to Claim Extraction, and safe P5.2.2 artifacts intentionally do not retain the exact draft or invocation input. Empty or synthetic replacement would not be equivalent.",
+      "full_workflow_substitution": false,
+      "stage_b_executed": false
+    },
+    "current_retry_policy_unchanged": true,
+    "current_timeout_policy_unchanged": true,
+    "new_replay_infrastructure": "NOT_JUSTIFIED_FOR_THIS_CANDIDATE"
+  },
+  "observability_outcome": {
+    "LEGAL_OPERATION_OBSERVABILITY": "PROVEN",
+    "LEGAL_ATTEMPT_OBSERVABILITY": "PROVEN",
+    "REAL_PROVIDER_OPERATION_MEASUREMENT": "PROVEN_ON_TWO_FROZEN_CASES",
+    "LEGAL_PERFORMANCE_OPTIMIZATION": "NOT_IMPLEMENTED",
+    "STABLE_BOTTLENECK": "NOT_PROVEN",
+    "EXACT_OPERATION_REPLAY": "NOT_CURRENTLY_SUPPORTED",
+    "limitation_interpretation": "Trace safety intentionally excludes full draft, prompt and business bodies. This is a known safety-versus-exact-replayability boundary, not classified as a bug.",
+    "observability_to_decision_chain": [
+      "agent-level observation",
+      "Legal-level attribution",
+      "operation-level attribution",
+      "attempt-level attribution",
+      "candidate selection",
+      "candidate evaluability check",
+      "no-change decision"
+    ]
+  },
+  "claims": {
+    "PERFORMANCE_IMPROVEMENT": "NOT_CLAIMED",
+    "TOKEN_REDUCTION": "NOT_CLAIMED",
+    "COST_REDUCTION": "NOT_CLAIMED",
+    "production_improvement": "NOT_CLAIMED"
+  },
+  "interview_safe_conclusion_30_45_seconds": "我在真实 Provider 基线中观察到 Legal 的调用和时延相对较重，但没有直接改整个 Legal，而是先补齐 operation 和 HTTP attempt 级归因。food-02 和 privacy-03 两个冻结 Case 中，Claim Extraction 与 Legal Review 都出现过 timeout，所以证据并不能证明问题是 Claim Extraction 独有。我们提出过仅对 Claim Extraction 取消一次重试的 CE-RETRY-0 假设，但冻结数据没有保存当时 Writer 生成的 draft，安全评测工件也不保留精确调用输入，无法做等价 CE-only replay。我没有用合成输入替代，也没有修改生产 retry policy，最终保留原基线。",
+  "resume_boundary": {
+    "RESUME_WORTHY": "YES",
+    "scope": "observability, performance attribution and controlled-experiment boundary only",
+    "resume_candidate": "为多 Agent 危机响应链路建立 Agent、Legal Operation 与 HTTP Attempt 三级可观测性，并基于两组冻结真实模型 Case 定位 timeout 分布；因无法等价重放 Claim Extraction 输入，拒绝据弱证据调整生产重试策略。"
+  },
+  "safety_and_git": {
+    "report_safety": "PASS",
+    "prompt_draft_claim_evidence_human_fact_body_included": false,
+    "provider_raw_response_included": false,
+    "credentials_authorization_or_bearer_included": false,
+    "local_absolute_path_included": false,
+    "production_code_changed": false,
+    "tests_changed": false,
+    "real_provider_requests_in_this_closure_stage": 0,
+    "commit": false,
+    "push": false
+  }
+}
