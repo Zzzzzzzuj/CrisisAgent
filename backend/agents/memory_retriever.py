@@ -12,7 +12,7 @@ def retrieve_memories(query: str | dict[str, Any], memories: list[dict[str, Any]
         if memory.get("archived", False):
             continue
         score, reasons = _score(fields, memory)
-        if score > 0:
+        if score > 0 and _has_relevance_anchor(reasons):
             ranked.append({**memory, "score": round(score, 4), "matched_reasons": reasons})
     ranked.sort(key=lambda item: (-item["score"], str(item.get("memory_id", ""))))
     return ranked[:max(0, top_k)]
@@ -23,6 +23,14 @@ class MemoryRetriever:
         return retrieve_memories(query, memories, top_k=top_k)
 
 
+def _has_relevance_anchor(reasons: list[str]) -> bool:
+    """Require a case-group, entity-and-topic, or multi-tag topic anchor."""
+    matched = set(reasons)
+    return ("case_group_match" in matched
+            or ("entity_match" in matched and "tag_overlap" in matched)
+            or ("crisis_type_match" in matched and "tag_overlap_2plus" in matched))
+
+
 def _query_fields(query: str | dict[str, Any]) -> dict[str, Any]:
     if isinstance(query, dict):
         return {
@@ -30,7 +38,8 @@ def _query_fields(query: str | dict[str, Any]) -> dict[str, Any]:
             "type": str(query.get("crisis_type") or query.get("category") or "").lower(),
             "risk": str(query.get("risk_level") or "").lower(),
             "fact": str(query.get("fact_status") or "").lower(),
-            "tags": _tokens(query.get("tags") or query.get("risk_keywords") or query.get("event")),
+            "tags": _tokens(query.get("tags") or query.get("risk_keywords")
+                            or query.get("event_summary") or query.get("event")),
             "case_group_id": query.get("case_group_id"),
             "round_index": query.get("round_index"),
         }
@@ -53,9 +62,12 @@ def _score(fields: dict[str, Any], memory: dict[str, Any]) -> tuple[float, list[
     if fields["fact"] and fields["fact"] == str(memory.get("fact_status", "")).lower():
         score += 0.05
         reasons.append("fact_status_match")
-    if fields["tags"] & _tokens(memory.get("tags", [])):
-        score += min(0.15, 0.05 * len(fields["tags"] & _tokens(memory.get("tags", []))))
+    tag_overlap_count = len(fields["tags"] & _tokens(memory.get("tags", [])))
+    if tag_overlap_count:
+        score += min(0.15, 0.05 * tag_overlap_count)
         reasons.append("tag_overlap")
+        if tag_overlap_count >= 2:
+            reasons.append("tag_overlap_2plus")
     if fields["tags"] & _tokens(" ".join(str(memory.get(key, "")) for key in ("response_strategy", "legal_risk_summary", "redteam_summary"))):
         score += 0.05
         reasons.append("risk_keyword_overlap")

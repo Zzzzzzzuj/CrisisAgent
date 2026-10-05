@@ -217,11 +217,7 @@ def test_workflow_trace_records_agent_c_context_info_in_llm_mode(monkeypatch):
     assert writer_trace["agent"] == "Agent C"
     assert writer_trace["context"]["before_tokens"] >= writer_trace["context"]["after_tokens"]
     assert writer_trace["context"]["after_tokens"] > 0
-    assert writer_trace["context"]["sources"] == [
-        "event",
-        "sentiment_analysis",
-        "memory_context",
-    ]
+    assert writer_trace["context"]["sources"] == ["context_pack"]
 
 
 def test_workflow_trace_marks_fallback_in_llm_mode(monkeypatch):

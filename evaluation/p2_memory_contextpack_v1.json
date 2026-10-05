@@ -1,0 +1,24 @@
+{
+  "version": "p2-v1",
+  "memory_top_k": 2,
+  "memories": [
+    {"memory_id": "m-food-a", "entity_name": "甲食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["原料", "召回"], "final_statement_summary": "甲食品已确认某批次原料异常并启动召回。", "response_strategy": "先核查批次，再说明后续安排。"},
+    {"memory_id": "m-food-b", "entity_name": "乙食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["过期", "原料"], "final_statement_summary": "乙食品已确认过期原料问题。", "response_strategy": "核查后依法处置。"},
+    {"memory_id": "m-food-a-other", "entity_name": "甲食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["过期", "原料"], "final_statement_summary": "甲食品在另一历史事件中已确认使用过期原料。", "response_strategy": "区分历史批次与当前待核查批次。"},
+    {"memory_id": "m-privacy", "entity_name": "丙平台", "crisis_type": "data_privacy", "risk_level": "high", "fact_status": "unverified", "tags": ["数据", "排查"], "final_statement_summary": "丙平台启动数据安全排查。"},
+    {"memory_id": "m-outage", "entity_name": "丁服务", "crisis_type": "service_outage", "risk_level": "medium", "fact_status": "verified", "tags": ["服务", "中断"], "final_statement_summary": "丁服务确认系统故障。"},
+    {"memory_id": "m-complaint", "entity_name": "戊零售", "crisis_type": "consumer_complaint", "risk_level": "low", "fact_status": "unverified", "tags": ["退款", "投诉"], "final_statement_summary": "戊零售正在核查退款投诉。"}
+  ],
+  "queries": [
+    {"query_case_id": "q-same-event", "query": {"entity_name": "甲食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "verified", "tags": ["召回", "原料"]}, "relevant_memory_ids": ["m-food-a"], "kind": "obviously_relevant"},
+    {"query_case_id": "q-same-domain-different-fact", "query": {"entity_name": "乙食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "unverified", "tags": ["过期", "原料"]}, "relevant_memory_ids": ["m-food-b"], "kind": "same_domain_fact_differs"},
+    {"query_case_id": "q-conflicting-history", "query": {"entity_name": "己食品", "crisis_type": "food_safety", "risk_level": "high", "fact_status": "unverified", "tags": ["过期", "原料"]}, "relevant_memory_ids": ["m-food-a-other"], "kind": "historical_fact_conflict", "historical_fact_memory_id": "m-food-a-other"},
+    {"query_case_id": "q-privacy", "query": {"entity_name": "丙平台", "crisis_type": "data_privacy", "risk_level": "high", "fact_status": "unverified", "tags": ["数据", "排查"]}, "relevant_memory_ids": ["m-privacy"], "kind": "different_domain"},
+    {"query_case_id": "q-outage", "query": {"entity_name": "丁服务", "crisis_type": "service_outage", "risk_level": "medium", "fact_status": "verified", "tags": ["服务", "中断"]}, "relevant_memory_ids": ["m-outage"], "kind": "unrelated_distractors"}
+  ],
+  "context_cases": [
+    {"case_id": "pack-legal-light", "target_agent": "legal", "budget_chars": 10000, "event": {"event_id": "evt-light", "event_summary": "某食品企业收到原料质量投诉，正在核查。", "company": "甲食品", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"}, "legal_evidence": [{"evidence_id": "rule-1", "relevance_score": 0.9, "text": "核查期间避免确认未经验证的批次事实。"}], "public_signals": [], "required": [{"path": "event_facts.event_text", "contains": "正在核查"}, {"path": "fact_status", "equals": "unverified"}, {"path": "risk_level", "equals": "high"}, {"path": "top_legal_evidence", "item_id": "rule-1"}]},
+    {"case_id": "pack-legal-crowded", "target_agent": "legal", "budget_chars": 300, "event": {"event_id": "evt-crowded", "event_summary": "某平台疑似发生用户数据泄露，技术团队仍在核查影响范围。", "company": "丙平台", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain"}, "legal_evidence": [{"evidence_id": "rule-a", "relevance_score": 0.95, "text": "个人信息事件应先核查受影响范围。"}, {"evidence_id": "rule-b", "relevance_score": 0.85, "text": "核查结论形成后再确认具体数据类型。"}, {"evidence_id": "rule-c", "relevance_score": 0.75, "text": "风险缓解措施应依据已核实情况说明。"}], "public_signals": [{"provider": "public-1", "relevance_score": 0.8, "content_preview": "公众关注平台数据安全。"}], "required": [{"path": "event_facts.event_text", "contains": "仍在核查"}, {"path": "fact_status", "equals": "unverified"}, {"path": "top_legal_evidence", "item_id": "rule-a"}, {"path": "top_legal_evidence", "item_id": "rule-c"}]},
+    {"case_id": "pack-writer-memory", "target_agent": "writer", "budget_chars": 400, "event": {"event_id": "evt-writer", "event_summary": "己食品当前批次是否使用过期原料尚未确认。", "company": "己食品", "risk_level": "high", "fact_status": "unverified", "event_status": "uncertain", "crisis_type": "food_safety", "risk_keywords": ["过期", "原料"]}, "legal_evidence": [], "public_signals": [], "memory_ids": ["m-food-a-other"], "required": [{"path": "event_facts.event_text", "contains": "尚未确认"}, {"path": "fact_status", "equals": "unverified"}, {"path": "agent_specific_focus.target_agent", "equals": "writer"}]}
+  ]
+}
