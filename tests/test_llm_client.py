@@ -27,6 +27,7 @@ def test_llm_client_mock_mode_returns_response_without_api_key():
     trace = get_last_llm_trace()
     assert trace["token_source"] == "estimated"
     assert trace["total_tokens"] is None
+    assert trace["http_attempt_count"] == 0
 
 
 def test_llm_provider_usage_is_captured_without_request_or_response_body(monkeypatch, caplog):
@@ -62,11 +63,55 @@ def test_llm_provider_usage_is_captured_without_request_or_response_body(monkeyp
     trace = get_last_llm_trace()
     assert trace["token_source"] == "provider"
     assert (trace["input_tokens"], trace["output_tokens"], trace["total_tokens"]) == (11, 4, 15)
+    assert trace["http_attempt_count"] == 1
+    assert trace["retry_count"] == 0
     assert len(get_llm_trace_calls()) == 1
     assert "PRIVATE PROMPT" not in repr(trace)
     assert "test-key" not in repr(trace)
     assert "PRIVATE PROMPT" not in caplog.text
     assert "test-key" not in caplog.text
+
+
+def test_llm_trace_counts_one_transient_retry(monkeypatch):
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"choices": [{"message": {"content": "safe output"}}],
+                    "usage": {"prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3}}
+
+    class FakeClient:
+        attempts = 0
+
+        def __init__(self, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def post(self, *args, **kwargs):
+            type(self).attempts += 1
+            if type(self).attempts == 1:
+                import httpx
+                raise httpx.TimeoutException("synthetic timeout")
+            return FakeResponse()
+
+    monkeypatch.setattr("backend.llm.client.assert_external_model_call_allowed", lambda **kwargs: None)
+    monkeypatch.setattr("backend.llm.client.httpx.Client", FakeClient)
+    reset_last_llm_trace()
+    client = LLMClient(config=LLMConfig(provider="openai_compatible", model="test-model",
+                                        api_key="test-key", base_url="https://provider.invalid"),
+                       max_retries=1, retry_backoff_seconds=0)
+
+    assert client.chat([{"role": "user", "content": "safe fixture"}], agent_name="legal") == "safe output"
+    trace = get_last_llm_trace()
+    assert trace["http_attempt_count"] == 2
+    assert trace["retry_count"] == 1
+    assert get_llm_trace_calls()[0]["http_attempt_count"] == 2
 
 
 def test_build_chat_completions_url_appends_endpoint_once():

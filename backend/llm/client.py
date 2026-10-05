@@ -60,6 +60,7 @@ class LLMClient:
                 failure_type=None,
                 fallback_used=True,
                 retry_count=0,
+                http_attempt_count=0,
                 messages=messages,
                 response_text=response,
             )
@@ -112,6 +113,7 @@ class LLMClient:
                         failure_type=last_failure_type,
                         fallback_used=True,
                         retry_count=attempt_index,
+                        http_attempt_count=attempt_index + 1,
                         messages=messages,
                     )
                     raise last_error from exc
@@ -142,7 +144,8 @@ class LLMClient:
                 success=False,
                 failure_type=FAILURE_EMPTY_RESPONSE,
                 fallback_used=True,
-                retry_count=self.max_retries,
+                retry_count=attempt_index,
+                http_attempt_count=attempt_index + 1,
                 messages=messages,
             )
             raise RuntimeError("LLM chat response format was invalid.") from exc
@@ -156,7 +159,8 @@ class LLMClient:
                 success=False,
                 failure_type=FAILURE_EMPTY_RESPONSE,
                 fallback_used=True,
-                retry_count=self.max_retries,
+                retry_count=attempt_index,
+                http_attempt_count=attempt_index + 1,
                 messages=messages,
             )
             raise RuntimeError("LLM chat response content was empty.")
@@ -169,7 +173,8 @@ class LLMClient:
             success=True,
             failure_type=None,
             fallback_used=False,
-            retry_count=0,
+            retry_count=attempt_index,
+            http_attempt_count=attempt_index + 1,
             messages=messages,
             response_text=content,
             usage=usage,
@@ -276,6 +281,7 @@ def _record_llm_trace(
     fallback_used: bool,
     retry_count: int,
     messages,
+    http_attempt_count: int = 0,
     response_text: str = "",
     usage: dict | None = None,
 ) -> None:
@@ -293,6 +299,7 @@ def _record_llm_trace(
             "failure_type": failure_type,
             "fallback_used": fallback_used,
             "retry_count": retry_count,
+            "http_attempt_count": http_attempt_count,
             "estimated_tokens": max(1, (input_chars + response_chars) // 4),
             "input_chars": input_chars,
             "output_chars": response_chars,

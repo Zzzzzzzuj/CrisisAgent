@@ -156,6 +156,57 @@ def test_missing_usage_is_null_not_estimated(tmp_path):
                      "total_tokens": None, "usage_available": False}
 
 
+def test_observability_report_is_persisted_with_allowlisted_per_agent_and_call_metrics(tmp_path):
+    run = RealLLMEvalRun(tmp_path, {**_metadata(), "p5_0_baseline_commit": "2b245ee"})
+    run.append_case({
+        "case_id": "safe-case",
+        "case_integrity": {"case_input_sha256": "a" * 64, "event": "PRIVATE EVENT"},
+        "observability": {
+            "session_total_latency_ms": 120.5,
+            "logical_llm_calls": 1,
+            "http_attempts": 2,
+            "technical_retries": 1,
+            "token_source": "provider",
+            "input_tokens": 12,
+            "output_tokens": 4,
+            "total_tokens": 16,
+            "agent_metrics": [{
+                "agent_name": "legal", "execution_count": 1, "latency_ms": 90,
+                "llm_call_count": 1, "llm_latency_ms": 60, "retrieval_call_count": 1,
+                "retrieval_latency_ms": 8, "tool_call_count": 0, "tool_latency_ms": 0,
+                "context_chars_before": 700, "context_chars_after": 500,
+                "context_budget_chars": 800, "context_truncated": False,
+                "input_tokens": 12, "output_tokens": 4, "total_tokens": 16,
+                "token_source": "provider", "prompt": "PRIVATE PROMPT",
+            }],
+            "llm_calls": [{
+                "agent_name": "legal", "latency_ms": 60, "success": True,
+                "http_attempt_count": 2, "technical_retries": 1,
+                "input_tokens": 12, "output_tokens": 4, "total_tokens": 16,
+                "token_source": "provider", "response_text": "PRIVATE PROVIDER BODY",
+            }],
+            "human_fact_request_count": 0, "human_fact_response_count": 0,
+            "final_review_count": 0, "approval_count": 0, "rejection_count": 0,
+            "fallback_count": 0, "fallback_categories": [],
+            "retrieval_call_count": 1, "retrieval_latency_ms": 8,
+            "retrieval_latency_status": "available", "retrieval_status_counts": {"SUCCESS": 1},
+            "tool_call_count": 0, "tool_latency_ms": 0, "tool_status_counts": {},
+        },
+    })
+
+    saved = read_case_records(run.jsonl_path)[0]
+    assert saved["case_integrity"]["case_input_sha256"] == "a" * 64
+    assert saved["observability"]["http_attempts"] == 2
+    assert saved["observability"]["technical_retries"] == 1
+    assert saved["observability"]["agent_metrics"][0]["context_chars_after"] == 500
+    assert saved["observability"]["llm_calls"][0]["total_tokens"] == 16
+    persisted = run.jsonl_path.read_text(encoding="utf-8")
+    for text in ("PRIVATE EVENT", "PRIVATE PROMPT", "PRIVATE PROVIDER BODY"):
+        assert text not in persisted
+    metadata = json.loads(run.metadata_path.read_text(encoding="utf-8"))
+    assert metadata["p5_0_baseline_commit"] == "2b245ee"
+
+
 def test_action_proposal_telemetry_is_persisted_without_business_text(tmp_path):
     run = RealLLMEvalRun(tmp_path, _metadata())
     result = _result({"case_id": "case-1"})

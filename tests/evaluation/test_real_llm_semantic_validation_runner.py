@@ -40,6 +40,64 @@ def _clear_llm_environment(monkeypatch):
         monkeypatch.delenv(name, raising=False)
 
 
+def test_p5_observability_is_extracted_per_agent_and_per_provider_call():
+    trace = [{
+        "agent": "legal", "status": "success", "duration_ms": 90,
+        "llm_calls": [{"latency_ms": 60, "success": True, "fallback_used": False,
+                       "http_attempt_count": 2, "retry_count": 1,
+                       "token_source": "provider", "input_tokens": 12,
+                       "output_tokens": 4, "total_tokens": 16}],
+        "retrieval_calls": [{"status": "SUCCESS", "latency_ms": 8}],
+        "context_pack": {"chars_before": 700, "chars_after": 500,
+                          "budget_chars": 800, "truncated": False},
+    }]
+    case = {"case_id": "fixture", "event": "PRIVATE EVENT",
+            "human_response": {"response_type": "FACT_UNAVAILABLE", "fact_text": ""}}
+    result = runner._extract_case_result(
+        case,
+        {"session_id": "s-p5", "execution_trace": trace, "state_status": "COMPLETED"},
+        {"session_id": "s-p5", "trace": trace, "status": "COMPLETED", "metadata": {}},
+        {}, 123.0,
+    )
+
+    observed = result["observability"]
+    assert observed["session_total_latency_ms"] == 123.0
+    assert observed["logical_llm_calls"] == 1
+    assert observed["http_attempts"] == 2
+    assert observed["technical_retries"] == 1
+    assert observed["token_source"] == "provider"
+    assert observed["input_tokens"] == 12
+    assert observed["agent_metrics"][0]["context_chars_before"] == 700
+    assert observed["agent_metrics"][0]["context_chars_after"] == 500
+    assert observed["llm_calls"][0]["agent_name"] == "legal"
+    assert result["case_integrity"]["case_input_sha256"] == runner.canonical_text_sha256(
+        json.dumps(case, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+    assert "PRIVATE EVENT" not in json.dumps(result, ensure_ascii=False)
+
+
+def test_fallback_count_uses_trace_canonical_count_when_result_and_trace_mirror_event():
+    fallback_call = {
+        "agent": "legal", "fallback_used": True,
+        "failure_type": "schema_validation_failed", "latency_ms": 12,
+        "token_source": "unavailable",
+    }
+    trace = [{"agent": "legal", "status": "success", "duration_ms": 20,
+              "llm_calls": [fallback_call]}]
+    case = {"case_id": "fallback-fixture", "event": "PRIVATE EVENT"}
+    result = runner._extract_case_result(
+        case,
+        {"session_id": "s-fallback", "execution_trace": trace, "state_status": "COMPLETED",
+         "results": {"legal": {"llm_calls": [fallback_call]}}},
+        {"session_id": "s-fallback", "trace": trace, "status": "COMPLETED", "metadata": {},
+         "results": {"legal": {"llm_calls": [fallback_call]}}},
+        {}, 20.0,
+    )
+
+    assert result["reliability"]["fallback_count"] == 1
+    assert result["observability"]["fallback_count"] == 1
+    assert "PRIVATE EVENT" not in json.dumps(result, ensure_ascii=False)
+
+
 def test_real_config_loads_dummy_credential_from_project_env(monkeypatch, tmp_path):
     _clear_llm_environment(monkeypatch)
     monkeypatch.setenv("AGENT_MODE", "llm")
@@ -639,6 +697,22 @@ def test_default_strategy_keeps_single_response_semantics():
     assert len(client.fact_payloads) == 1
     assert result["human_fact"]["response_count"] == 1
     assert result["human_fact"]["runner_stop_reason"] == "single_response_complete"
+
+
+def test_stop_before_fact_input_never_submits_frozen_human_response():
+    client = _FactSequenceClient([_fact_snapshot("request-1", 0)])
+    result = runner._case_executor(
+        client, _unavailable_case(),
+        human_response_strategy=runner.STOP_BEFORE_FACT_INPUT,
+    )
+
+    assert client.fact_payloads == []
+    assert client.approval_calls == 0
+    assert result["runtime_final_state"] == "WAITING_HUMAN"
+    assert result["human_fact"]["requested"] is True
+    assert result["human_fact"]["response_count"] == 0
+    assert result["human_fact"]["response_type"] is None
+    assert result["human_fact"]["runner_stop_reason"] == "blocked_before_writer_v2"
 
 
 def test_case_three_error_keeps_prior_results_and_default_stops(tmp_path, monkeypatch):

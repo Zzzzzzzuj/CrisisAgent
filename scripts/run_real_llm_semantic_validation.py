@@ -43,10 +43,14 @@ from backend.env import load_project_env
 FROZEN_CASE_PATH = ROOT / "evaluation" / "dynamic_real_case_v1.json"
 EXPECTED_FROZEN_SHA256 = "8d5b0f979350db7f0d1ba2bbd23f1dd308d5f618f5333a2b73b336ce29d4aa40"
 DEFAULT_CASE_IDS = ("privacy-03", "food-03", "outage-01", "complaint-02", "outage-02")
+P5_0_BASELINE_COMMIT = "2b245ee8113d0012aaf52ad94ab88f00832a4a43"
 DEFAULT_REPORT_DIR = ROOT / "evaluation" / "reports"
 DEFAULT_HUMAN_RESPONSE_STRATEGY = "single_frozen_response"
 REPEAT_FROZEN_UNAVAILABLE = "repeat_frozen_unavailable"
-HUMAN_RESPONSE_STRATEGIES = (DEFAULT_HUMAN_RESPONSE_STRATEGY, REPEAT_FROZEN_UNAVAILABLE)
+STOP_BEFORE_FACT_INPUT = "stop_before_fact_input"
+HUMAN_RESPONSE_STRATEGIES = (
+    DEFAULT_HUMAN_RESPONSE_STRATEGY, REPEAT_FROZEN_UNAVAILABLE, STOP_BEFORE_FACT_INPUT,
+)
 DEFAULT_MAX_FACT_RESPONSES = 3
 MAX_FACT_RESPONSES_LIMIT = 10
 
@@ -416,6 +420,14 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
     loop_actions = loop.get("actions") if isinstance(loop.get("actions"), list) else []
     trace = final.get("trace") if isinstance(final.get("trace"), list) else initial.get("execution_trace", [])
     trace = trace if isinstance(trace, list) else []
+    from backend.observability.run_metrics import build_run_metrics
+
+    session_id = str(initial.get("session_id") or final.get("session_id") or "unknown")
+    runtime_status = str(final.get("status") or final.get("state_status")
+                         or initial.get("status") or initial.get("state_status") or "unknown")
+    run_metrics = build_run_metrics(
+        session_id, trace, runtime_status, _read_map(final.get("approval")),
+    )
 
     selected_actions: list[str] = []
     observations: list[str] = []
@@ -482,11 +494,9 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
         "provider_error_count", "llm_call_count", "call_count", "prompt_tokens", "total_tokens",
     })
     fallback_agents: list[str] = []
-    fallback_count = 0
     timeout_count = parse_failure_count = schema_failure_count = provider_error_count = llm_call_count = None
     for item in nested:
         if item.get("fallback_used") is True:
-            fallback_count += 1
             agent = item.get("agent") or item.get("agent_name")
             if isinstance(agent, str) and agent not in fallback_agents:
                 fallback_agents.append(agent)
@@ -521,8 +531,16 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
                                         if isinstance(case.get("expected_human_fact_request"), bool) else None),
         "expected_response_type": human_response.get("response_type"),
     }
+    observability = _build_observability_record(
+        run_metrics, trace, latency_ms,
+    )
+    case_input_sha256 = canonical_text_sha256(json.dumps(
+        case, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8"))
     return {
         "case_id": case.get("case_id"), "ground_truth": expected,
+        "case_integrity": {"case_input_sha256": case_input_sha256},
+        "observability": observability,
         "model_provider": "fake" if fake_mode else os.getenv("LLM_PROVIDER", "unknown"),
         "model_name": "deterministic-mock" if fake_mode else os.getenv("LLM_MODEL", "unknown"),
         "runtime_final_state": final.get("status") or final.get("state_status") or initial.get("state_status"),
@@ -575,7 +593,7 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
         "reliability": {
             "llm_call_count": llm_call_count, "timeout_count": timeout_count,
             "parse_failure_count": parse_failure_count, "schema_failure_count": schema_failure_count,
-            "fallback_count": fallback_count if nested else None, "fallback_agents": fallback_agents,
+            "fallback_count": run_metrics.get("fallback_count", 0), "fallback_agents": fallback_agents,
             "provider_error_count": provider_error_count,
         },
         "trace": {
@@ -585,6 +603,97 @@ def _extract_case_result(case: Mapping[str, Any], initial: Mapping[str, Any],
         },
         "usage": {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
                   "total_tokens": total_tokens, "usage_available": usage_available},
+    }
+
+
+def _build_observability_record(metrics: Mapping[str, Any], trace: list[Any],
+                                session_total_latency_ms: float) -> dict[str, Any]:
+    calls = []
+    contexts: dict[str, list[dict[str, Any]]] = {}
+    for item in trace:
+        row = _read_map(item)
+        agent = row.get("agent") if isinstance(row.get("agent"), str) else "unknown"
+        context = _read_map(row.get("context_pack"))
+        if context:
+            contexts.setdefault(agent, []).append(context)
+        agent_calls = row.get("llm_calls")
+        if not isinstance(agent_calls, list):
+            agent_calls = [row["llm"]] if isinstance(row.get("llm"), Mapping) else []
+        for call in agent_calls:
+            if not isinstance(call, Mapping):
+                continue
+            attempts = call.get("http_attempt_count")
+            calls.append({
+                "agent_name": agent,
+                "latency_ms": call.get("latency_ms"),
+                "success": call.get("success"),
+                "failure_type": call.get("failure_type"),
+                "fallback_used": call.get("fallback_used"),
+                "http_attempt_count": attempts,
+                "technical_retries": max(0, attempts - 1) if type(attempts) is int else None,
+                "input_tokens": call.get("input_tokens"),
+                "output_tokens": call.get("output_tokens"),
+                "total_tokens": call.get("total_tokens"),
+                "token_source": call.get("token_source", "unavailable"),
+            })
+
+    agent_metrics = []
+    for item in metrics.get("agent_metrics", []):
+        if not isinstance(item, Mapping):
+            continue
+        name = item.get("agent_name")
+        if not isinstance(name, str):
+            continue
+        selected_calls = [call for call in calls if call["agent_name"] == name]
+        selected_contexts = contexts.get(name, [])
+        sources = {call["token_source"] for call in selected_calls
+                   if call["token_source"] in {"provider", "estimated"}}
+        token_source = next(iter(sources)) if len(sources) == 1 and selected_calls else (
+            "mixed" if sources or selected_calls else "unavailable")
+        agent_metrics.append({
+            **dict(item),
+            "context_chars_before": sum(row.get("chars_before", 0) for row in selected_contexts
+                                         if type(row.get("chars_before")) is int),
+            "context_chars_after": sum(row.get("chars_after", 0) for row in selected_contexts
+                                        if type(row.get("chars_after")) is int),
+            "context_budget_chars": (selected_contexts[0].get("budget_chars")
+                                      if selected_contexts and all(
+                                          row.get("budget_chars") == selected_contexts[0].get("budget_chars")
+                                          for row in selected_contexts) else None),
+            "context_truncated": any(bool(row.get("truncated")) for row in selected_contexts),
+            "input_tokens": sum(call["input_tokens"] for call in selected_calls
+                                 if token_source == "provider" and type(call["input_tokens"]) is int),
+            "output_tokens": sum(call["output_tokens"] for call in selected_calls
+                                  if token_source == "provider" and type(call["output_tokens"]) is int),
+            "total_tokens": sum(call["total_tokens"] for call in selected_calls
+                                 if token_source == "provider" and type(call["total_tokens"]) is int),
+            "token_source": token_source,
+        })
+
+    all_sources = {call["token_source"] for call in calls}
+    sources = {source for source in all_sources if source in {"provider", "estimated"}}
+    token_source = (next(iter(all_sources)) if len(all_sources) == 1
+                    and next(iter(all_sources)) in {"provider", "estimated"}
+                    else "mixed" if calls and sources else "unavailable")
+    attempts_known = all(type(call["http_attempt_count"]) is int for call in calls)
+    total_attempts = sum(call["http_attempt_count"] for call in calls) if attempts_known else None
+    metrics_copy = dict(metrics)
+    return {
+        **metrics_copy,
+        "session_total_latency_ms": session_total_latency_ms,
+        "logical_llm_calls": len(calls),
+        "http_attempts": total_attempts,
+        "technical_retries": sum(call["technical_retries"] for call in calls)
+            if attempts_known else None,
+        "token_source": token_source,
+        "input_tokens": sum(call["input_tokens"] or 0 for call in calls
+                             if token_source == "provider"),
+        "output_tokens": sum(call["output_tokens"] or 0 for call in calls
+                              if token_source == "provider"),
+        "total_tokens": sum(call["total_tokens"] or 0 for call in calls
+                             if token_source == "provider"),
+        "agent_metrics": agent_metrics,
+        "llm_calls": calls,
     }
 
 
@@ -623,6 +732,9 @@ def _case_executor(
             break
         if wait_type != "FACT_INPUT":
             response_info["runner_stop_reason"] = "unknown_wait_type"
+            break
+        if human_response_strategy == STOP_BEFORE_FACT_INPUT:
+            response_info["runner_stop_reason"] = "blocked_before_writer_v2"
             break
         if len(response_info["events"]) >= max_fact_responses:
             response_info["runner_stop_reason"] = "fact_response_budget_exhausted"
@@ -822,6 +934,7 @@ def run_validation(
         human_response_strategy=human_response_strategy,
         max_fact_responses=max_fact_responses,
     )
+    metadata["p5_0_baseline_commit"] = P5_0_BASELINE_COMMIT
     metadata["AGENT_MODE"] = "mock" if mode == "fake" else "llm"
     metadata["OFFLINE_EVAL"] = "1" if mode == "fake" else os.getenv("OFFLINE_EVAL", "0")
     run = RealLLMEvalRun(output_dir, metadata)
@@ -919,7 +1032,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="Continue with the next frozen case after writing an ERROR record.")
     parser.add_argument("--human-response-strategy", choices=HUMAN_RESPONSE_STRATEGIES,
                         default=DEFAULT_HUMAN_RESPONSE_STRATEGY,
-                        help="Explicit evaluation-only Human Fact response strategy.")
+                        help="Evaluation-only Human Fact strategy; stop_before_fact_input never submits a response.")
     parser.add_argument("--max-fact-responses", type=int, default=DEFAULT_MAX_FACT_RESPONSES,
                         help=f"Evaluation response bound (1-{MAX_FACT_RESPONSES_LIMIT}).")
     parser.add_argument("--confirm-real-provider", action="store_true",
