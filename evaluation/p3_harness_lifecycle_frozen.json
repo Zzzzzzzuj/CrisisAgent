@@ -1,0 +1,53 @@
+{
+  "dataset_id": "p3-human-gated-harness-lifecycle-v1",
+  "purpose": "Deterministic isolated activation and rollback drill; not a production incident or automatic deployment.",
+  "base_version": {
+    "harness_id": "crisisagent-default",
+    "version": "1.0.0",
+    "expected_status_before": "ACTIVE"
+  },
+  "safe_candidate": {
+    "version": "1.0.1-p3-drill",
+    "change": {
+      "retrieval_policy.max_context_pollution_rate": 0.45
+    },
+    "change_summary": "Tighten the maximum tolerated evidence context pollution rate for this controlled lifecycle drill.",
+    "evaluation_mode": "main_workflow_replay",
+    "replay_case_ids": [
+      "replay-evidence-low",
+      "replay-evidence-conflict",
+      "replay-context-pollution",
+      "replay-tool-timeout",
+      "replay-tool-retry",
+      "replay-review-required",
+      "replay-resume-snapshot"
+    ],
+    "expected_policy_category": "safe"
+  },
+  "reject_candidate": {
+    "harness_id": "crisisagent-default",
+    "version": "1.0.1-rv004-writer-v2-policy",
+    "comparison_id": "writer-v2-0f59f9cb-0465-4685-9e4d-54e39ca4c586",
+    "expected_status": "REJECTED",
+    "expected_gate_passed": false
+  },
+  "rollback": {
+    "target_harness_id": "crisisagent-default",
+    "target_version": "1.0.0",
+    "expected_status_after_activation": "APPROVED",
+    "expected_status_after_rollback": "ACTIVE"
+  },
+  "lifecycle_expectations": [
+    "DRAFT",
+    "EVALUATED",
+    "APPROVED",
+    "ACTIVE",
+    "ROLLED_BACK"
+  ],
+  "approval_requirement": "Human approval is required after evaluation and safety gates pass; approval identity must come from the existing authenticated Human Gate/API context.",
+  "replay_dataset": {
+    "path": "data/harness_replay_cases.json",
+    "sha256_lf_normalized": "841356517870b0b08beb36c1ef50cf987489ba1a9f9c5f67c90b6669b765b200"
+  },
+  "provider_calls_allowed": false
+}

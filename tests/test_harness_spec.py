@@ -27,10 +27,29 @@ def test_dynamic_runtime_result_contains_default_harness_snapshot(monkeypatch, t
 def test_harness_repository_can_copy_and_enable_version(tmp_path, monkeypatch):
     path = tmp_path / "harnesses.json"
     monkeypatch.setenv("HARNESS_SPEC_STORE_PATH", str(path))
-    from backend.harness.service import copy_harness_version, set_harness_enabled
+    monkeypatch.setenv("HARNESS_COMPARISON_STORE_PATH", str(tmp_path / "comparisons.json"))
+    from backend.harness.service import (
+        approve_harness_version,
+        copy_harness_version,
+        mark_harness_evaluated,
+        set_harness_enabled,
+    )
+    from backend.evaluation.harness_comparison_store import get_harness_comparison_store
 
     copied = copy_harness_version("crisisagent-default", "1.0.0", "1.1.0")
     assert copied["metadata"]["status"] == "draft"
+    with pytest.raises(ValueError, match="human-approved"):
+        set_harness_enabled(copied["metadata"]["harness_id"], "1.1.0")
+    gate = {"passed": True, "reason": "deterministic test gate"}
+    mark_harness_evaluated(copied["metadata"]["harness_id"], "1.1.0", "comparison-1", gate)
+    get_harness_comparison_store().save({
+        "comparison_id": "comparison-1",
+        "mode": "main_workflow_replay",
+        "baseline": {"harness_id": "crisisagent-default", "version": "1.0.0", "metrics": {}, "cases": []},
+        "candidate": {"harness_id": copied["metadata"]["harness_id"], "version": "1.1.0", "metrics": {}, "cases": []},
+        "policy_diff": {},
+    })
+    approve_harness_version(copied["metadata"]["harness_id"], "1.1.0", "comparison-1", "test-reviewer", gate)
     enabled = set_harness_enabled(copied["metadata"]["harness_id"], "1.1.0")
     assert enabled["metadata"]["status"] == "active"
     assert get_effective_harness_spec(copied["metadata"]["harness_id"], "1.1.0")["metadata"]["version"] == "1.1.0"
