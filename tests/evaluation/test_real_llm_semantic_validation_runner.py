@@ -46,7 +46,11 @@ def test_p5_observability_is_extracted_per_agent_and_per_provider_call():
         "llm_calls": [{"latency_ms": 60, "success": True, "fallback_used": False,
                        "http_attempt_count": 2, "retry_count": 1,
                        "token_source": "provider", "input_tokens": 12,
-                       "output_tokens": 4, "total_tokens": 16}],
+                       "output_tokens": 4, "total_tokens": 16,
+                       "llm_call_id": "a" * 32, "operation_type": "legal.review",
+                       "operation_span_id": "b" * 32,
+                       "attempts": [{"attempt_index": 0, "attempt_latency_ms": 25,
+                                     "attempt_status": "SUCCESS"}] }],
         "retrieval_calls": [{"status": "SUCCESS", "latency_ms": 8}],
         "context_pack": {"chars_before": 700, "chars_after": 500,
                           "budget_chars": 800, "truncated": False},
@@ -70,6 +74,10 @@ def test_p5_observability_is_extracted_per_agent_and_per_provider_call():
     assert observed["agent_metrics"][0]["context_chars_before"] == 700
     assert observed["agent_metrics"][0]["context_chars_after"] == 500
     assert observed["llm_calls"][0]["agent_name"] == "legal"
+    assert observed["llm_calls"][0]["llm_call_id"] == "a" * 32
+    assert observed["llm_calls"][0]["operation_type"] == "legal.review"
+    assert observed["operation_metrics"][0]["operation_type"] == "legal.review"
+    assert observed["operation_metrics"][0]["provider_total_tokens"] == 16
     assert result["case_integrity"]["case_input_sha256"] == runner.canonical_text_sha256(
         json.dumps(case, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8"))
     assert "PRIVATE EVENT" not in json.dumps(result, ensure_ascii=False)

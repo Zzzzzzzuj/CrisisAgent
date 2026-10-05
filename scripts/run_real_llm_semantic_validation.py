@@ -635,6 +635,10 @@ def _build_observability_record(metrics: Mapping[str, Any], trace: list[Any],
                 "output_tokens": call.get("output_tokens"),
                 "total_tokens": call.get("total_tokens"),
                 "token_source": call.get("token_source", "unavailable"),
+                "llm_call_id": call.get("llm_call_id"),
+                "operation_type": call.get("operation_type", "unknown"),
+                "operation_span_id": call.get("operation_span_id"),
+                "attempts": call.get("attempts", []),
             })
 
     agent_metrics = []

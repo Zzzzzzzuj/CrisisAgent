@@ -5,6 +5,10 @@ from __future__ import annotations
 from collections import defaultdict
 from copy import deepcopy
 
+_LEGAL_OPERATION_TYPES = {
+    "legal.claim_extraction", "legal.action_proposal", "legal.relation_check", "legal.review",
+}
+
 
 def build_run_metrics(session_id: str, trace: list, state_status: str, approval: dict | None = None) -> dict:
     agents: dict[str, dict] = defaultdict(_empty_agent_metrics)
@@ -15,6 +19,7 @@ def build_run_metrics(session_id: str, trace: list, state_status: str, approval:
         "finished_at": None,
         "total_latency_ms": 0.0,
         "agent_metrics": [],
+        "operation_metrics": [],
         "llm_call_count": 0,
         "llm_latency_ms": 0.0,
         "input_tokens": None,
@@ -52,6 +57,7 @@ def build_run_metrics(session_id: str, trace: list, state_status: str, approval:
     retrieval_latency_total = 0.0
     retrieval_latency_count = 0
     agent_retrieval_latency_counts: dict[str, int] = defaultdict(int)
+    operation_calls: dict[str, list[dict]] = defaultdict(list)
 
     for row in trace or []:
         if not isinstance(row, dict):
@@ -74,6 +80,10 @@ def build_run_metrics(session_id: str, trace: list, state_status: str, approval:
         for call in calls:
             if not isinstance(call, dict):
                 continue
+            operation_type = call.get("operation_type")
+            if operation_type not in _LEGAL_OPERATION_TYPES:
+                operation_type = "unknown"
+            operation_calls[operation_type].append(call)
             latency = _number(call.get("latency_ms")) or 0.0
             agent["llm_call_count"] += 1
             agent["llm_latency_ms"] += latency
@@ -209,7 +219,49 @@ def build_run_metrics(session_id: str, trace: list, state_status: str, approval:
             else "partial" if observed_retrieval_latencies else "unavailable"
         )
         metrics["agent_metrics"].append({"agent_name": name, **deepcopy(values)})
+    metrics["operation_metrics"] = [
+        _operation_metrics(name, calls) for name, calls in sorted(operation_calls.items())
+    ]
     return metrics
+
+
+def _operation_metrics(operation_type: str, calls: list[dict]) -> dict:
+    attempts = [attempt for call in calls for attempt in call.get("attempts", [])
+                if isinstance(attempt, dict)]
+    usage_calls = [call for call in calls if call.get("token_source") == "provider"
+                   and _number(call.get("total_tokens")) is not None]
+    token_source = "provider" if usage_calls and len(usage_calls) == len(calls) else (
+        "mixed" if usage_calls else "unavailable"
+    )
+    return {
+        "operation_type": operation_type,
+        "operation_span_count": len({call.get("operation_span_id") for call in calls
+                                      if isinstance(call.get("operation_span_id"), str)}),
+        "logical_call_count": len(calls),
+        "http_attempt_count": sum(int(_number(call.get("http_attempt_count")) or 0) for call in calls),
+        "technical_retry_count": sum(int(_number(call.get("retry_count")) or 0) for call in calls),
+        "success_count": sum(call.get("success") is True for call in calls),
+        "failure_count": sum(call.get("success") is False for call in calls),
+        "latency_ms": sum(_number(call.get("latency_ms")) or 0.0 for call in calls),
+        "attempt_status_counts": _attempt_status_counts(attempts),
+        "provider_input_tokens": (sum(int(_number(call.get("input_tokens")) or 0) for call in usage_calls)
+                                  if usage_calls else None),
+        "provider_output_tokens": (sum(int(_number(call.get("output_tokens")) or 0) for call in usage_calls)
+                                   if usage_calls else None),
+        "provider_total_tokens": (sum(int(_number(call.get("total_tokens")) or 0) for call in usage_calls)
+                                  if usage_calls else None),
+        "token_source": token_source,
+    }
+
+
+def _attempt_status_counts(attempts: list[dict]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    allowed = {"SUCCESS", "TIMEOUT", "HTTP_ERROR", "CONNECTION_ERROR", "UNKNOWN"}
+    for attempt in attempts:
+        status = attempt.get("attempt_status")
+        if status in allowed:
+            counts[status] = counts.get(status, 0) + 1
+    return counts
 
 
 def _empty_agent_metrics() -> dict:

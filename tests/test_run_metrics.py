@@ -48,6 +48,41 @@ def test_missing_provider_usage_is_not_reported_as_real_tokens():
     assert metrics["total_tokens"] is None
 
 
+def test_operation_metrics_preserve_logical_call_retry_and_provider_usage_relationships():
+    metrics = build_run_metrics("s-ops", [{"agent": "legal", "llm_calls": [{
+        "llm_call_id": "a" * 32, "operation_type": "legal.claim_extraction",
+        "operation_span_id": "b" * 32, "latency_ms": 40, "success": True,
+        "http_attempt_count": 2, "retry_count": 1, "token_source": "provider",
+        "input_tokens": 11, "output_tokens": 9, "total_tokens": 20,
+        "attempts": [
+            {"attempt_index": 0, "attempt_latency_ms": 18, "attempt_status": "TIMEOUT"},
+            {"attempt_index": 1, "attempt_latency_ms": 20, "attempt_status": "SUCCESS"},
+        ],
+    }]}], "COMPLETED")
+
+    assert metrics["operation_metrics"] == [{
+        "operation_type": "legal.claim_extraction", "operation_span_count": 1,
+        "logical_call_count": 1, "http_attempt_count": 2, "technical_retry_count": 1,
+        "success_count": 1, "failure_count": 0, "latency_ms": 40.0,
+        "attempt_status_counts": {"TIMEOUT": 1, "SUCCESS": 1},
+        "provider_input_tokens": 11, "provider_output_tokens": 9,
+        "provider_total_tokens": 20, "token_source": "provider",
+    }]
+
+
+def test_unrecognized_operation_type_is_aggregated_as_unknown_without_raw_label():
+    metrics = build_run_metrics("s-unknown", [{"agent": "legal", "llm_calls": [{
+        "operation_type": "legal.claim_extraction:PRIVATE TEXT", "latency_ms": 3,
+        "http_attempt_count": 1, "retry_count": 0, "success": False,
+        "token_source": "estimated", "estimated_tokens": 99,
+    }]}], "COMPLETED")
+
+    assert metrics["operation_metrics"][0]["operation_type"] == "unknown"
+    assert "PRIVATE TEXT" not in repr(metrics)
+    assert metrics["operation_metrics"][0]["token_source"] == "unavailable"
+    assert metrics["operation_metrics"][0]["provider_total_tokens"] is None
+
+
 def test_context_pack_trace_reports_characters_not_tokens():
     observed = context_pack_trace_metadata({
         "target_agent": "legal", "pre_compression_estimated_chars": 1000,

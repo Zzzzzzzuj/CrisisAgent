@@ -42,6 +42,7 @@ CASE_FIELDS: dict[str, tuple[str, ...]] = {
         "tool_call_count", "tool_latency_ms", "tool_status_counts", "fallback_count",
         "fallback_categories", "human_fact_request_count", "human_fact_response_count",
         "final_review_count", "approval_count", "rejection_count", "agent_metrics", "llm_calls",
+        "operation_metrics",
     ),
     "diagnosis": ("claims", "event_fact_gap_candidates", "human_fact_dependency",
                   "writer_introduction_status"),
@@ -179,6 +180,21 @@ def _safe_observability(source: Mapping[str, Any]) -> dict[str, Any]:
     def token_source(value):
         return value if value in {"provider", "estimated", "unavailable", "mixed"} else "unavailable"
 
+    def safe_id(value):
+        return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{32}", value) else None
+
+    operation_types = {
+        "legal.claim_extraction", "legal.action_proposal", "legal.relation_check",
+        "legal.review", "unknown",
+    }
+    attempt_statuses = {"SUCCESS", "TIMEOUT", "HTTP_ERROR", "CONNECTION_ERROR", "UNKNOWN"}
+
+    def attempt_status_counts(value):
+        if not isinstance(value, Mapping):
+            return {}
+        return {key: _safe_count(count) for key, count in value.items()
+                if key in attempt_statuses and _safe_count(count) is not None}
+
     agents = []
     for item in source.get("agent_metrics", []) if isinstance(source.get("agent_metrics"), list) else []:
         if not isinstance(item, Mapping) or not _is_label(item.get("agent_name"), 80):
@@ -215,6 +231,44 @@ def _safe_observability(source: Mapping[str, Any]) -> dict[str, Any]:
             "output_tokens": _safe_count(item.get("output_tokens")),
             "total_tokens": _safe_count(item.get("total_tokens")),
             "token_source": token_source(item.get("token_source")),
+            "llm_call_id": safe_id(item.get("llm_call_id")),
+            "operation_type": (item.get("operation_type") if item.get("operation_type") in operation_types
+                               else "unknown"),
+            "operation_span_id": safe_id(item.get("operation_span_id")),
+            "attempts": [
+                {"attempt_index": _safe_count(attempt.get("attempt_index")),
+                 "attempt_latency_ms": number(attempt.get("attempt_latency_ms")),
+                 "attempt_status": attempt.get("attempt_status")
+                    if attempt.get("attempt_status") in attempt_statuses else "UNKNOWN"}
+                for attempt in item.get("attempts", [])[:100]
+                if isinstance(attempt, Mapping)
+            ] if isinstance(item.get("attempts"), list) else [],
+        })
+
+    operation_metrics = []
+    for item in source.get("operation_metrics", []) if isinstance(source.get("operation_metrics"), list) else []:
+        if not isinstance(item, Mapping):
+            continue
+        operation_type = item.get("operation_type")
+        if operation_type not in operation_types:
+            operation_type = "unknown"
+        operation_metrics.append({
+            "operation_type": operation_type,
+            "operation_span_count": _safe_count(item.get("operation_span_count")),
+            "logical_call_count": _safe_count(item.get("logical_call_count")),
+            "http_attempt_count": _safe_count(item.get("http_attempt_count")),
+            "technical_retry_count": _safe_count(item.get("technical_retry_count")),
+            "success_count": _safe_count(item.get("success_count")),
+            "failure_count": _safe_count(item.get("failure_count")),
+            "latency_ms": number(item.get("latency_ms")),
+            "attempt_status_counts": attempt_status_counts(item.get("attempt_status_counts")),
+            "provider_input_tokens": (_safe_count(item.get("provider_input_tokens"))
+                                      if item.get("token_source") in {"provider", "mixed"} else None),
+            "provider_output_tokens": (_safe_count(item.get("provider_output_tokens"))
+                                       if item.get("token_source") in {"provider", "mixed"} else None),
+            "provider_total_tokens": (_safe_count(item.get("provider_total_tokens"))
+                                      if item.get("token_source") in {"provider", "mixed"} else None),
+            "token_source": token_source(item.get("token_source")),
         })
 
     safe = {
@@ -243,6 +297,7 @@ def _safe_observability(source: Mapping[str, Any]) -> dict[str, Any]:
         "approval_count": _safe_count(source.get("approval_count")),
         "rejection_count": _safe_count(source.get("rejection_count")),
         "agent_metrics": agents[:100], "llm_calls": llm_calls[:1000],
+        "operation_metrics": operation_metrics[:100],
     }
     if safe["token_source"] != "provider":
         safe["input_tokens"] = safe["output_tokens"] = safe["total_tokens"] = None
@@ -277,6 +332,15 @@ def _safe_decision_telemetry(value: Any) -> list[dict[str, Any]]:
         for key in ("proposal_called", "validator_called", "validator_allowed",
                     "fallback_used", "proposal_fallback_used", "previous_observation_changed_state"):
             safe[key] = item.get(key) if type(item.get(key)) is bool else None
+        operation_type = item.get("operation_type")
+        safe["operation_type"] = (operation_type if operation_type in {
+            "legal.claim_extraction", "legal.action_proposal", "legal.relation_check",
+            "legal.review", "unknown",
+        } else "unknown")
+        for key in ("operation_span_id", "llm_call_id"):
+            identity = item.get(key)
+            safe[key] = (identity if isinstance(identity, str)
+                         and re.fullmatch(r"[0-9a-f]{32}", identity) else None)
         eligible = []
         for option in item.get("eligible_actions", []) if isinstance(item.get("eligible_actions"), list) else []:
             if not isinstance(option, Mapping) or not _is_label(option.get("action"), 80):

@@ -517,13 +517,17 @@ def test_p31a_relation_is_required_for_coverage_change():
     relation_calls = []
 
     def relation(claims, chunks, **kwargs):
-        relation_calls.append((claims, chunks))
+        from backend.llm.client import _LEGAL_OPERATION_CONTEXT
+        relation_calls.append((claims, chunks, dict(_LEGAL_OPERATION_CONTEXT.get({})))
+        )
         return build_legal_claim_relations(claims, chunks, **kwargs)
 
     row = execute_recommended_targeted_search(
         *inputs(), retrieve_call=lambda *_a, **_kw: {"chunks": [RULE]}, relation_call=relation,
     )["targeted_search_executions"][0]
     assert len(relation_calls) == 1 and relation_calls[0][0][0]["claim"] == CLAIM
+    assert relation_calls[0][2]["operation_type"] == "legal.relation_check"
+    assert relation_calls[0][2]["operation_span_id"]
     assert row["after_legal_rule_status"] == "candidate_found"
 
 
@@ -559,6 +563,7 @@ def test_llm_path_searches_after_original_prompt_and_keeps_business_output(monke
     monkeypatch.setattr(legal_agent, "evaluate_retrieval_need", lambda **_kw: {"need_rag": True})
     searches = []
     prompts = []
+    operation_contexts = []
 
     def fake_retrieve(query, top_k):
         searches.append(query)
@@ -568,6 +573,8 @@ def test_llm_path_searches_after_original_prompt_and_keeps_business_output(monke
 
     def fake_llm(prompt):
         prompts.append(prompt)
+        from backend.llm.client import _LEGAL_OPERATION_CONTEXT
+        operation_contexts.append(deepcopy(_LEGAL_OPERATION_CONTEXT.get({})))
         if "从下面的声明草稿" in prompt:
             return json.dumps({"claims": [{"claim": CLAIM, "requires_legal_rule": True,
                                            "requires_case_fact": False}]}, ensure_ascii=False)
@@ -590,6 +597,12 @@ def test_llm_path_searches_after_original_prompt_and_keeps_business_output(monke
     assert legal_prompt == prompts[-2]
     assert RULE["text"] not in legal_prompt
     assert output["legal_risks"] == ["审慎"]
+    operation_types = [row.get("operation_type") for row in operation_contexts]
+    assert "legal.claim_extraction" in operation_types
+    assert "legal.relation_check" in operation_types
+    assert operation_types.count("legal.relation_check") >= 2
+    assert "legal.review" in operation_types
+    assert all(row.get("operation_span_id") for row in operation_contexts)
     assert output["_metadata"]["claim_coverage"]["claim_coverage"][0]["legal_rule_status"] == "no_candidate"
     assert output["_metadata"]["targeted_legal_search"]["targeted_search_executions"][0]["after_legal_rule_status"] == "candidate_found"
 

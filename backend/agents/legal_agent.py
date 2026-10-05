@@ -13,7 +13,12 @@ from backend.agents.legal_targeted_search import (
     run_legal_action_loop,
 )
 from backend.llm import LLMClient
-from backend.llm.client import get_last_llm_trace, record_llm_fallback
+from backend.llm.client import (
+    get_last_llm_trace,
+    legal_operation_scope,
+    mark_llm_operation_fallback,
+    record_llm_fallback,
+)
 from backend.llm.parser import parse_json_response, validate_required_fields
 from backend.logger import get_logger
 from backend.rag.evidence_quality_gate import evaluate_rag_evidence_quality
@@ -73,13 +78,20 @@ def run(payload: dict) -> dict:
     _RELATION_CONTEXT.set({"legal_claim_relations": [], "relation_status": "skipped"})
     _RETRIEVAL_CALLS_CONTEXT.set([])
     sentiment = payload.get("sentiment_analysis") or {}
-    claim_extraction = extract_claims(
-        payload.get("draft", ""),
-        config.agent_mode,
-        call_llm,
-        event=payload.get("event", ""),
-        risk_level=sentiment.get("risk_level") if isinstance(sentiment, dict) else None,
-    )
+    with legal_operation_scope("legal.claim_extraction"):
+        claim_extraction = extract_claims(
+            payload.get("draft", ""),
+            config.agent_mode,
+            call_llm,
+            event=payload.get("event", ""),
+            risk_level=sentiment.get("risk_level") if isinstance(sentiment, dict) else None,
+        )
+    extraction_telemetry = claim_extraction.get("claim_extraction_telemetry", {})
+    if (isinstance(extraction_telemetry, dict) and extraction_telemetry.get("fallback_used")
+            and extraction_telemetry.get("failure_stage") in {"PARSE", "SCHEMA"}):
+        failure_type = ("invalid_json" if extraction_telemetry.get("failure_stage") == "PARSE"
+                        else "schema_validation_failed")
+        mark_llm_operation_fallback(AGENT_NAME, "legal.claim_extraction", failure_type)
 
     if config.agent_mode == "llm":
         _set_rag_info(enabled=True, hit=False, sources=[])
@@ -244,19 +256,23 @@ def _run_mock(payload: dict) -> dict:
 def _run_llm(payload: dict, claim_extraction: dict | None = None) -> dict:
     legal_context = _retrieve_legal_context(payload)
     try:
-        relation = build_legal_claim_relations(
-            (claim_extraction or {}).get("legal_claims", []),
-            _RAW_CHUNKS_CONTEXT.get(),
-            mode="llm",
-            llm_call=call_llm,
-        )
+        with legal_operation_scope("legal.relation_check"):
+            relation = build_legal_claim_relations(
+                (claim_extraction or {}).get("legal_claims", []),
+                _RAW_CHUNKS_CONTEXT.get(),
+                mode="llm",
+                llm_call=call_llm,
+            )
+        if isinstance(relation, dict) and relation.get("relation_status") == "fallback":
+            mark_llm_operation_fallback(AGENT_NAME, "legal.relation_check", "schema_validation_failed")
     except Exception as exc:
         logger.warning("Legal claim relation failed safely: %s", exc.__class__.__name__)
         relation = {"legal_claim_relations": [], "relation_status": "fallback",
                     "relation_status_reason": "execution_error"}
     _RELATION_CONTEXT.set(relation)
     prompt = _build_legal_prompt(payload, legal_context)
-    raw_text = call_llm(prompt)
+    with legal_operation_scope("legal.review"):
+        raw_text = call_llm(prompt)
     parsed = parse_json_response(raw_text)
     validate_required_fields(parsed, REQUIRED_FIELDS)
 

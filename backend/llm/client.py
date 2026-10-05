@@ -1,6 +1,8 @@
 import json
 import os
 import time
+import uuid
+from contextlib import contextmanager
 from contextvars import ContextVar
 from copy import deepcopy
 from time import perf_counter
@@ -16,6 +18,14 @@ logger = get_logger(__name__)
 _LAST_LLM_TRACE: dict = {}
 _LLM_TRACE_CONTEXT: ContextVar[dict] = ContextVar("llm_trace_context", default={})
 _LLM_TRACE_CALLS: ContextVar[list] = ContextVar("llm_trace_calls", default=[])
+_LEGAL_OPERATION_CONTEXT: ContextVar[dict] = ContextVar("legal_operation_context", default={})
+
+LEGAL_OPERATION_TYPES = frozenset({
+    "legal.claim_extraction",
+    "legal.action_proposal",
+    "legal.relation_check",
+    "legal.review",
+})
 
 
 FAILURE_TIMEOUT = "timeout"
@@ -24,6 +34,25 @@ FAILURE_PROVIDER_ERROR = "provider_error"
 FAILURE_INVALID_JSON = "invalid_json"
 FAILURE_SCHEMA_VALIDATION_FAILED = "schema_validation_failed"
 FAILURE_EMPTY_RESPONSE = "empty_response"
+
+
+@contextmanager
+def legal_operation_scope(operation_type: str):
+    """Attach a low-cardinality Legal operation identity to calls in this scope."""
+    safe_type = operation_type if isinstance(operation_type, str) and operation_type in LEGAL_OPERATION_TYPES else "unknown"
+    identity = {"operation_type": safe_type, "operation_span_id": _new_trace_id()}
+    try:
+        token = _LEGAL_OPERATION_CONTEXT.set(identity)
+    except Exception:
+        yield {"operation_type": "unknown", "operation_span_id": None}
+        return
+    try:
+        yield identity
+    finally:
+        try:
+            _LEGAL_OPERATION_CONTEXT.reset(token)
+        except Exception:
+            pass
 
 
 class LLMClient:
@@ -48,6 +77,10 @@ class LLMClient:
 
     def chat(self, messages, temperature=0.3, agent_name: str = "unknown"):
         start = perf_counter()
+        llm_call_id = _new_trace_id()
+        operation_context = _LEGAL_OPERATION_CONTEXT.get({})
+        operation_type = operation_context.get("operation_type", "unknown")
+        operation_span_id = operation_context.get("operation_span_id")
         if self.config.mock_enabled:
             logger.info("LLM mock response enabled because LLM_API_KEY is not configured")
             response = _mock_chat_response(messages)
@@ -63,6 +96,9 @@ class LLMClient:
                 http_attempt_count=0,
                 messages=messages,
                 response_text=response,
+                llm_call_id=llm_call_id,
+                operation_type=operation_type,
+                operation_span_id=operation_span_id,
             )
             return response
 
@@ -94,13 +130,17 @@ class LLMClient:
         last_error: RuntimeError | None = None
         last_failure_type = None
         attempts = self.max_retries + 1
+        attempt_traces = []
         for attempt_index in range(attempts):
+            attempt_start = perf_counter()
             try:
                 with httpx.Client(timeout=self.timeout_seconds) as client:
                     response = client.post(url, headers=headers, json=payload)
                     response.raise_for_status()
+                _append_attempt_trace(attempt_traces, attempt_index, attempt_start, "SUCCESS")
                 break
             except Exception as exc:
+                _append_attempt_trace(attempt_traces, attempt_index, attempt_start, _attempt_status(exc))
                 last_failure_type = _classify_request_exception(exc)
                 last_error = _build_runtime_error(exc, self.config.model)
                 if attempt_index >= self.max_retries or not _is_retryable_failure(last_failure_type):
@@ -115,6 +155,10 @@ class LLMClient:
                         retry_count=attempt_index,
                         http_attempt_count=attempt_index + 1,
                         messages=messages,
+                        llm_call_id=llm_call_id,
+                        operation_type=operation_type,
+                        operation_span_id=operation_span_id,
+                        attempts=attempt_traces,
                     )
                     raise last_error from exc
                 _sleep_before_retry(self.retry_backoff_seconds, attempt_index)
@@ -147,6 +191,10 @@ class LLMClient:
                 retry_count=attempt_index,
                 http_attempt_count=attempt_index + 1,
                 messages=messages,
+                llm_call_id=llm_call_id,
+                operation_type=operation_type,
+                operation_span_id=operation_span_id,
+                attempts=attempt_traces,
             )
             raise RuntimeError("LLM chat response format was invalid.") from exc
 
@@ -162,6 +210,10 @@ class LLMClient:
                 retry_count=attempt_index,
                 http_attempt_count=attempt_index + 1,
                 messages=messages,
+                llm_call_id=llm_call_id,
+                operation_type=operation_type,
+                operation_span_id=operation_span_id,
+                attempts=attempt_traces,
             )
             raise RuntimeError("LLM chat response content was empty.")
 
@@ -178,6 +230,10 @@ class LLMClient:
             messages=messages,
             response_text=content,
             usage=usage,
+            llm_call_id=llm_call_id,
+            operation_type=operation_type,
+            operation_span_id=operation_span_id,
+            attempts=attempt_traces,
         )
         return content
 
@@ -228,6 +284,29 @@ def record_llm_fallback(agent_name: str, exc: Exception) -> dict:
         })
         _LLM_TRACE_CALLS.set(calls)
     return get_last_llm_trace()
+
+
+def mark_llm_operation_fallback(agent_name: str, operation_type: str, failure_type: str) -> None:
+    """Mark the matching successful provider call when its Legal parser falls back."""
+    calls = get_llm_trace_calls()
+    if not calls:
+        return
+    latest = calls[-1]
+    if latest.get("operation_type") != operation_type or latest.get("success") is not True:
+        return
+    messages = {
+        FAILURE_TIMEOUT: "provider timeout",
+        FAILURE_RATE_LIMIT: "provider rate limit",
+        FAILURE_PROVIDER_ERROR: "provider error",
+        FAILURE_INVALID_JSON: "invalid JSON response",
+        FAILURE_SCHEMA_VALIDATION_FAILED: "schema validation failed",
+        FAILURE_EMPTY_RESPONSE: "empty response",
+    }
+    try:
+        record_llm_fallback(agent_name, RuntimeError(messages.get(failure_type, "provider error")))
+    except Exception:
+        # Metrics enrichment is best-effort and must not alter the Legal result.
+        return
 
 
 def classify_failure_from_exception(exc: Exception) -> str:
@@ -284,6 +363,10 @@ def _record_llm_trace(
     http_attempt_count: int = 0,
     response_text: str = "",
     usage: dict | None = None,
+    llm_call_id: str | None = None,
+    operation_type: str = "unknown",
+    operation_span_id: str | None = None,
+    attempts: list[dict] | None = None,
 ) -> None:
     input_chars = _estimate_message_chars(messages)
     response_chars = len(str(response_text or ""))
@@ -307,6 +390,10 @@ def _record_llm_trace(
             "output_tokens": provider_usage.get("output_tokens") if provider_usage else None,
             "total_tokens": provider_usage.get("total_tokens") if provider_usage else None,
             "token_source": token_source,
+            "llm_call_id": llm_call_id,
+            "operation_type": operation_type,
+            "operation_span_id": operation_span_id,
+            "attempts": deepcopy(attempts or []),
         }
     _LAST_LLM_TRACE.update(call_trace)
     _LLM_TRACE_CONTEXT.set(deepcopy(_LAST_LLM_TRACE))
@@ -323,6 +410,38 @@ def _estimate_message_chars(messages) -> int:
 
 def _elapsed_ms(start: float) -> int:
     return max(0, int((perf_counter() - start) * 1000))
+
+
+def _attempt_trace(attempt_index: int, start: float, status: str) -> dict:
+    return {
+        "attempt_index": attempt_index,
+        "attempt_latency_ms": _elapsed_ms(start),
+        "attempt_status": status,
+    }
+
+
+def _append_attempt_trace(attempts: list[dict], attempt_index: int, start: float, status: str) -> None:
+    try:
+        attempts.append(_attempt_trace(attempt_index, start, status))
+    except Exception:
+        return
+
+
+def _new_trace_id() -> str | None:
+    try:
+        return uuid.uuid4().hex
+    except Exception:
+        return None
+
+
+def _attempt_status(exc: Exception) -> str:
+    if isinstance(exc, httpx.TimeoutException):
+        return "TIMEOUT"
+    if isinstance(exc, httpx.HTTPStatusError):
+        return "HTTP_ERROR"
+    if isinstance(exc, httpx.RequestError):
+        return "CONNECTION_ERROR"
+    return "UNKNOWN"
 
 
 def _classify_request_exception(exc: Exception) -> str:
