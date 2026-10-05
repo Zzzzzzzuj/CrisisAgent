@@ -1,0 +1,16 @@
+{
+  "run_id": "20261004T132227460546Z-43254009",
+  "status": "NETWORK_GUARD_BLOCKED",
+  "controlled_case_count": 1,
+  "strategy_type_selection_proven": true,
+  "observation_driven_strategy_change_proven": false,
+  "provider_request_count": 2,
+  "technical_retry_count": 0,
+  "network_block_count": 14,
+  "paths": {
+    "jsonl": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_mixed_action_20261004T132227460546Z-43254009.jsonl",
+    "metadata": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_mixed_action_20261004T132227460546Z-43254009_metadata.json",
+    "summary": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_mixed_action_20261004T132227460546Z-43254009_summary.json",
+    "network_diagnostic": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_mixed_action_20261004T132227460546Z-43254009_network_diagnostic.jsonl"
+  }
+}

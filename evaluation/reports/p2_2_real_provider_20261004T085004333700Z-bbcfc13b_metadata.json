@@ -1,0 +1,22 @@
+{
+  "run_id": "20261004T085004333700Z-bbcfc13b",
+  "status": "COMPLETE",
+  "dataset_sha256": "6d840c159ec242ac3ab81dfd0a61f361a153fa80fa4ae4e86ff57619b321117a",
+  "dataset_frozen_before_provider_request": true,
+  "provider_config": {
+    "provider": "openai_compatible",
+    "model": "deepseek-v4-flash",
+    "host": "api.deepseek.com"
+  },
+  "logical_destination_allowlist": [
+    "api.deepseek.com"
+  ],
+  "provider_usage_raw_available": false,
+  "input_tokens": null,
+  "output_tokens": null,
+  "cost_evaluation": "NOT_AVAILABLE",
+  "request_jsonl": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p2_2_real_provider_20261004T085004333700Z-bbcfc13b.jsonl",
+  "completed_condition_count": 12,
+  "real_provider_request_count": 12,
+  "summary_path": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p2_2_real_provider_20261004T085004333700Z-bbcfc13b_summary.json"
+}
