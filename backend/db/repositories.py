@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Protocol
 from uuid import uuid4
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.core.state import AgentState, validate_state_status
@@ -161,6 +161,53 @@ class SQLAlchemyCheckpointRepository:
             ).scalar_one()
             db.commit()
         return ExecutionLease(session_id, owner, fence, expiry)
+
+    def renew_execution(self, lease: ExecutionLease, *, lease_seconds: int = 3600,
+                        now: datetime | None = None) -> ExecutionLease | None:
+        if lease_seconds <= 0:
+            raise ValueError("A positive lease duration is required.")
+        with self.session_factory() as db:
+            now = now or db.execute(select(func.now())).scalar_one()
+            if now.tzinfo is None:
+                now = now.replace(tzinfo=timezone.utc)
+            expiry = now + timedelta(seconds=lease_seconds)
+            statement = (
+                update(AgentCheckpoint)
+                .where(
+                    AgentCheckpoint.session_id == lease.session_id,
+                    AgentCheckpoint.execution_owner == lease.owner,
+                    AgentCheckpoint.execution_fence == lease.fence,
+                    AgentCheckpoint.lease_expires_at > now,
+                    AgentCheckpoint.status.in_(("QUEUED", "RUNNING")),
+                )
+                .values(lease_expires_at=expiry)
+            )
+            if db.execute(statement.execution_options(synchronize_session=False)).rowcount != 1:
+                return None
+            db.commit()
+        return ExecutionLease(lease.session_id, lease.owner, lease.fence, expiry)
+
+    def find_stale_executions(self, *, now: datetime | None = None, limit: int = 100) -> list[dict]:
+        if limit <= 0:
+            return []
+        with self.session_factory() as db:
+            now = now or db.execute(select(func.now())).scalar_one()
+            if now.tzinfo is None:
+                now = now.replace(tzinfo=timezone.utc)
+            rows = db.execute(
+                select(AgentCheckpoint.session_id, AgentCheckpoint.execution_kind,
+                       AgentCheckpoint.status, AgentCheckpoint.execution_fence)
+                .where(
+                    AgentCheckpoint.status.in_(("QUEUED", "RUNNING")),
+                    or_(AgentCheckpoint.lease_expires_at <= now,
+                        and_(AgentCheckpoint.execution_owner.is_(None),
+                             AgentCheckpoint.lease_expires_at.is_(None))),
+                )
+                .order_by(AgentCheckpoint.updated_at, AgentCheckpoint.session_id)
+                .limit(limit)
+            ).all()
+        return [dict(session_id=row.session_id, kind=row.execution_kind,
+                     status=row.status, fence=row.execution_fence) for row in rows]
 
     def save_checkpoint(self, state: AgentState) -> dict:
         validate_state_status(state.status)

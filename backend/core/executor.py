@@ -33,7 +33,9 @@ AGENT_REGISTRY: dict[str, AgentRunner] = {
 }
 
 
-def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = None) -> dict:
+def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = None,
+            *, checkpoint: Callable[[AgentState], object] | None = None,
+            skip_completed: bool = False) -> dict:
     registry = agent_registry or AGENT_REGISTRY
     plan_id = plan.get("plan_id")
     agent_state = _ensure_state(plan_id, state)
@@ -45,6 +47,9 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
     items = plan.get("plan", [])
     for position, item in enumerate(items):
         agent_name = item.get("agent")
+        if skip_completed and agent_state.get_result(agent_name) is not None:
+            executed_agents.append(agent_name)
+            continue
         reason = item.get("reason", "")
         agent_state.current_agent = agent_name
         start_time = _now_iso()
@@ -108,7 +113,12 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
                 (agent_state.metadata.get("skill_runtime_results") or {}).get(agent_name, {})
             )
         agent_state.add_trace(trace_item)
-        if agent_name == "legal" and pause_for_claim(agent_state, items[position + 1:]):
+        paused = agent_name == "legal" and pause_for_claim(agent_state, items[position + 1:])
+        agent_state.current_agent = None
+        if checkpoint is not None:
+            # A remote call completed before this checkpoint can be repeated after a crash.
+            checkpoint(agent_state)
+        if paused:
             break
     agent_state.current_agent = None
     return {

@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Callable
 from uuid import uuid4
 
 from backend.agents import decision_agent, planner_agent
@@ -99,20 +100,30 @@ def initialize_dynamic_state(
     return state
 
 
-def execute_dynamic_state(state: AgentState, agent_registry: dict | None = None) -> dict:
+def execute_dynamic_state(state: AgentState, agent_registry: dict | None = None,
+                          *, checkpoint: Callable[[AgentState], object] | None = None) -> dict:
     planner_input = state.metadata.get("planner_input") or {
         "event": state.event,
         "category": _infer_category(state.event),
         "risk_level": _infer_risk_level(state.event),
     }
     state.metadata["planner_input"] = planner_input
-    raw_plan = planner_agent.run(planner_input)
-    validated_plan = validate_plan(raw_plan)
+    raw_plan = state.metadata.get("raw_plan") if checkpoint is not None else None
+    validated_plan = state.metadata.get("validated_plan") if checkpoint is not None else None
+    if not isinstance(raw_plan, dict) or not isinstance(validated_plan, dict):
+        raw_plan = planner_agent.run(planner_input)
+        validated_plan = validate_plan(raw_plan)
+        if checkpoint is not None:
+            state.metadata["raw_plan"] = deepcopy(raw_plan)
+            state.metadata["validated_plan"] = deepcopy(validated_plan)
+            state.plan_id = validated_plan["plan_id"]
+            checkpoint(state)
     execution_result = execute_dynamic_plan_for_state(
         state=state,
         raw_plan=raw_plan,
         validated_plan=validated_plan,
         agent_registry=agent_registry,
+        checkpoint=checkpoint,
     )
     apply_guardrails_to_state(state)
     apply_reasoning_mode_to_state(state)
@@ -129,6 +140,7 @@ def execute_dynamic_plan_for_state(
     raw_plan: dict,
     validated_plan: dict,
     agent_registry: dict | None = None,
+    checkpoint: Callable[[AgentState], object] | None = None,
 ) -> dict:
     state.set_status(RUNNING)
     state.plan_id = validated_plan["plan_id"]
@@ -136,6 +148,8 @@ def execute_dynamic_plan_for_state(
         validated_plan,
         state,
         agent_registry=agent_registry or _build_runtime_registry(),
+        checkpoint=checkpoint,
+        skip_completed=checkpoint is not None,
     )
     state.metadata["raw_plan"] = raw_plan
     state.metadata["validated_plan"] = validated_plan

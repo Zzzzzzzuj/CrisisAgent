@@ -87,7 +87,7 @@ def test_duplicate_queued_work_runs_only_once(db_repository, monkeypatch):
     release = Event()
     calls = []
 
-    def execute(state):
+    def execute(state, *, checkpoint=None):
         calls.append(state.session_id)
         started.set()
         assert release.wait(timeout=5)

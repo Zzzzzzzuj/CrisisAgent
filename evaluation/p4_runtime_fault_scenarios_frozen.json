@@ -1,0 +1,57 @@
+{
+  "dataset_id": "p4-runtime-crash-recovery-v1",
+  "storage": "isolated_database_checkpoint",
+  "provider": "mock",
+  "scenarios": [
+    {
+      "id": "F1",
+      "name": "crash_after_claim",
+      "initial_status": "QUEUED",
+      "crash_point": "after_atomic_claim_before_useful_work",
+      "expected_durable_state": "QUEUED",
+      "expected_reclaim": "expired_lease_new_owner_fence_increment",
+      "expected_final_state": "COMPLETED_OR_WAITING_HUMAN",
+      "duplicate_external_call_boundary": "none_before_crash"
+    },
+    {
+      "id": "F2",
+      "name": "crash_after_safe_checkpoint",
+      "initial_status": "RUNNING",
+      "crash_point": "after_completed_agent_checkpoint_before_next_agent",
+      "expected_durable_state": "completed_agent_result_and_cursor",
+      "expected_reclaim": "expired_lease_new_owner_fence_increment",
+      "expected_final_state": "COMPLETED_OR_WAITING_HUMAN",
+      "duplicate_external_call_boundary": "checkpointed_agent_not_repeated"
+    },
+    {
+      "id": "F3",
+      "name": "old_worker_returns",
+      "initial_status": "RUNNING",
+      "crash_point": "old_worker_resumes_after_reclaim",
+      "expected_durable_state": "new_owner_checkpoint_only",
+      "expected_reclaim": "expired_lease_new_owner_fence_increment",
+      "expected_final_state": "new_owner_state_preserved",
+      "duplicate_external_call_boundary": "old_worker_may_have_sent_call_but_cannot_write"
+    },
+    {
+      "id": "F4",
+      "name": "human_fact_resume_crash",
+      "initial_status": "RUNNING_RESPONSE_RECORDED",
+      "crash_point": "after_resume_claim_before_response_consumption",
+      "expected_durable_state": "same_response_and_request_id",
+      "expected_reclaim": "expired_lease_new_owner_fence_increment",
+      "expected_final_state": "COMPLETED_OR_WAITING_HUMAN",
+      "duplicate_external_call_boundary": "one_effective_checkpoint_transition"
+    },
+    {
+      "id": "F5",
+      "name": "external_llm_ambiguity",
+      "initial_status": "RUNNING",
+      "crash_point": "after_request_before_result_checkpoint",
+      "expected_durable_state": "last_safe_checkpoint_without_result",
+      "expected_reclaim": "expired_lease_new_owner_fence_increment",
+      "expected_final_state": "COMPLETED_OR_WAITING_HUMAN",
+      "duplicate_external_call_boundary": "at_least_once_risk_no_exactly_once_guarantee"
+    }
+  ]
+}
