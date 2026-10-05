@@ -6,6 +6,7 @@ from evaluation.p2_1b_deterministic_closure_eval import evaluate
 
 
 HOLDOUT = Path("evaluation/p2_1b_deterministic_closure_holdout.json")
+BEFORE_FIXTURE = Path("evaluation/p2_1b_legacy_context_baseline.json")
 FROZEN_SHA256 = "9f61a24c2ae4a47bef44cb5320090fdb78e19f48c94939a75e817b5137393370"
 
 
@@ -19,8 +20,7 @@ def test_p2_1b_holdout_is_frozen_and_covers_requested_scenarios():
 
 
 def test_frozen_before_report_records_provider_resume_state_gap():
-    before_path = Path("evaluation/reports/p2_1b_before.json")
-    before = json.loads(before_path.read_text(encoding="utf-8"))
+    before = json.loads(BEFORE_FIXTURE.read_text(encoding="utf-8"))
     assert before["dataset_sha256"] == FROZEN_SHA256
     assert before["context_pack"]["previous_observation_retained"] == 0
     assert before["context_pack"]["human_fact_status_retained"] == 0

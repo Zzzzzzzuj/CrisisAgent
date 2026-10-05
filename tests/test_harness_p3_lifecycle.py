@@ -17,6 +17,7 @@ from backend.harness.service import (
     set_harness_enabled,
 )
 from backend.harness.store import JsonHarnessRepository
+from backend.evaluation.harness_comparison_store import get_harness_comparison_store
 from backend.main import app
 
 
@@ -41,18 +42,44 @@ def _frozen_drill() -> dict:
 
 
 def _client(tmp_path, monkeypatch) -> TestClient:
-    monkeypatch.setenv("HARNESS_SPEC_STORE_PATH", str(tmp_path / "harnesses.json"))
-    monkeypatch.setenv("HARNESS_COMPARISON_STORE_PATH", str(tmp_path / "comparisons.json"))
+    _seed_temporary_runtime(tmp_path, monkeypatch)
+    return TestClient(app)
+
+
+def _rejected_candidate(frozen: dict) -> dict:
+    rejected = deepcopy(build_default_harness_spec())
+    metadata = rejected["metadata"]
+    metadata.update({
+        "version": frozen["reject_candidate"]["version"],
+        "status": frozen["reject_candidate"]["expected_status"],
+        "comparison_id": frozen["reject_candidate"]["comparison_id"],
+    })
+    return rejected
+
+
+def _failed_comparison(frozen: dict) -> dict:
+    rejected = frozen["reject_candidate"]
+    return {
+        "comparison_id": rejected["comparison_id"],
+        "candidate": {"harness_id": rejected["harness_id"], "version": rejected["version"]},
+        "gate_result": {"passed": rejected["expected_gate_passed"]},
+    }
+
+
+def _seed_temporary_runtime(tmp_path, monkeypatch) -> tuple[Path, Path]:
+    specs_path = tmp_path / "harnesses.json"
+    comparisons_path = tmp_path / "comparisons.json"
+    monkeypatch.setenv("HARNESS_SPEC_STORE_PATH", str(specs_path))
+    monkeypatch.setenv("HARNESS_COMPARISON_STORE_PATH", str(comparisons_path))
     monkeypatch.setenv("AUDIT_LOG_STORE_PATH", str(tmp_path / "audit.json"))
     monkeypatch.setenv("AUTH_ENABLED", "false")
+
+    frozen = _frozen_drill()
     repository = JsonHarnessRepository()
     repository.save(build_default_harness_spec())
-
-    persisted = json.loads((ROOT / "data" / "harness_specs.runtime.json").read_text(encoding="utf-8"))
-    rejected = next(row for row in persisted["specs"]
-                    if row.get("metadata", {}).get("version") == REJECTED_VERSION)
-    repository.save(deepcopy(rejected))
-    return TestClient(app)
+    repository.save(_rejected_candidate(frozen))
+    get_harness_comparison_store().save(_failed_comparison(frozen))
+    return specs_path, comparisons_path
 
 
 def test_p3_frozen_drill_and_lifecycle_guards(tmp_path, monkeypatch):
@@ -188,10 +215,9 @@ def test_p3_approval_rejects_caller_supplied_pass_without_persisted_comparison(t
         )
 
 
-def test_p3_historical_reject_record_is_unchanged():
+def test_p3_historical_reject_record_is_unchanged(tmp_path, monkeypatch):
     frozen = _frozen_drill()
-    specs_path = ROOT / "data" / "harness_specs.runtime.json"
-    comparisons_path = ROOT / "data" / "harness_comparisons.runtime.json"
+    specs_path, comparisons_path = _seed_temporary_runtime(tmp_path, monkeypatch)
     specs_before = specs_path.read_bytes()
     comparisons_before = comparisons_path.read_bytes()
     specs = json.loads(specs_before).get("specs", [])
@@ -203,5 +229,11 @@ def test_p3_historical_reject_record_is_unchanged():
     assert candidate["metadata"]["status"] == "REJECTED"
     assert comparison.get("gate_result", {}).get("passed") is False
     assert candidate["metadata"]["comparison_id"] == comparison["comparison_id"]
+    client = TestClient(app)
+    actor = {"X-User-Id": "p3-drill-operator", "X-User-Role": "admin"}
+    harness_id = frozen["reject_candidate"]["harness_id"]
+    version = frozen["reject_candidate"]["version"]
+    assert client.post(f"/api/harnesses/{harness_id}/{version}/enable", headers=actor).status_code == 409
+    assert client.post(f"/api/harnesses/{harness_id}/{version}/rollback", headers=actor).status_code == 409
     assert specs_path.read_bytes() == specs_before
     assert comparisons_path.read_bytes() == comparisons_before
