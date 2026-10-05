@@ -1,0 +1,9 @@
+{
+  "run_id": "20261004T132834477962Z-751c74aa",
+  "status": "COMPLETE",
+  "case_count": 2,
+  "provider_request_count": 14,
+  "qualified_case_count": 0,
+  "jsonl_path": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_natural_20261004T132834477962Z-751c74aa.jsonl",
+  "metadata_path": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_natural_20261004T132834477962Z-751c74aa_metadata.json"
+}

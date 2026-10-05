@@ -1,0 +1,101 @@
+{
+  "run_id": "20261004T132520175390Z-02274519",
+  "status": "COMPLETE",
+  "dataset_sha256": "d6533fc9aa36c250f9b0ff7199213a5a6f142f67ca3291fb6c1af86355a9975f",
+  "dataset_frozen_before_provider_request": true,
+  "provider": {
+    "provider": "openai_compatible",
+    "model": "deepseek-v4-flash",
+    "logical_host": "api.deepseek.com"
+  },
+  "controlled_case_ids": [
+    "C2-privacy-notification",
+    "C3-product-recall"
+  ],
+  "natural_case_ids": [
+    "privacy-01",
+    "quality-02"
+  ],
+  "paths": {
+    "jsonl": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_mixed_action_20261004T132520175390Z-02274519.jsonl",
+    "metadata": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_mixed_action_20261004T132520175390Z-02274519_metadata.json",
+    "summary": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_mixed_action_20261004T132520175390Z-02274519_summary.json",
+    "network_diagnostic": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_mixed_action_20261004T132520175390Z-02274519_network_diagnostic.jsonl"
+  },
+  "parent_infrastructure_run_id": "20261004T132227460546Z-43254009",
+  "retrieval_corpus": "repository_local_markdown_kb",
+  "production_retriever_used": true,
+  "database_kb_lookup_disabled_in_evaluation": true,
+  "qualification": [
+    {
+      "case_id": "C1-food-expiry",
+      "qualified": true,
+      "dependency": "INDEPENDENT",
+      "initial_case_fact_gap": "unresolved",
+      "initial_legal_rule_gap": "no_candidate",
+      "eligible_actions": [
+        {
+          "action": "REQUEST_HUMAN_FACT",
+          "target_claim_index": 0,
+          "reason_code": "CASE_FACT_GAP"
+        },
+        {
+          "action": "RETRIEVE_LEGAL_EVIDENCE",
+          "target_claim_index": 0,
+          "reason_code": "LEGAL_RULE_GAP"
+        }
+      ]
+    },
+    {
+      "case_id": "C2-privacy-notification",
+      "qualified": true,
+      "dependency": "INDEPENDENT",
+      "initial_case_fact_gap": "unresolved",
+      "initial_legal_rule_gap": "no_candidate",
+      "eligible_actions": [
+        {
+          "action": "REQUEST_HUMAN_FACT",
+          "target_claim_index": 0,
+          "reason_code": "CASE_FACT_GAP"
+        },
+        {
+          "action": "RETRIEVE_LEGAL_EVIDENCE",
+          "target_claim_index": 0,
+          "reason_code": "LEGAL_RULE_GAP"
+        }
+      ]
+    },
+    {
+      "case_id": "C3-product-recall",
+      "qualified": true,
+      "dependency": "INDEPENDENT",
+      "initial_case_fact_gap": "unresolved",
+      "initial_legal_rule_gap": "no_candidate",
+      "eligible_actions": [
+        {
+          "action": "REQUEST_HUMAN_FACT",
+          "target_claim_index": 0,
+          "reason_code": "CASE_FACT_GAP"
+        },
+        {
+          "action": "RETRIEVE_LEGAL_EVIDENCE",
+          "target_claim_index": 0,
+          "reason_code": "LEGAL_RULE_GAP"
+        }
+      ]
+    }
+  ],
+  "negative_controls": {
+    "fact_dependent_retrieval_denied": true,
+    "outside_eligibility_denied": true,
+    "budget_exhausted_denied": true,
+    "reason_codes": [
+      "fact_dependent_legal_query",
+      "action_not_eligible",
+      "tool_budget_exhausted"
+    ]
+  },
+  "provider_request_count": 4,
+  "technical_retry_count": 0,
+  "network_block_count": 0
+}

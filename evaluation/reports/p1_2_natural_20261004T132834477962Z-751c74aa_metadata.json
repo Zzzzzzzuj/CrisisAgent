@@ -1,0 +1,21 @@
+{
+  "run_id": "20261004T132834477962Z-751c74aa",
+  "status": "COMPLETE",
+  "dataset_sha256": "d6533fc9aa36c250f9b0ff7199213a5a6f142f67ca3291fb6c1af86355a9975f",
+  "dataset_frozen_before_provider_request": true,
+  "provider": {
+    "provider": "openai_compatible",
+    "model": "deepseek-v4-flash",
+    "logical_host": "api.deepseek.com"
+  },
+  "natural_case_ids": [
+    "privacy-01",
+    "quality-02"
+  ],
+  "retrieval_corpus": "repository_local_markdown_kb",
+  "production_retriever_used": true,
+  "database_kb_lookup_disabled_in_evaluation": true,
+  "jsonl_path": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_natural_20261004T132834477962Z-751c74aa.jsonl",
+  "summary_path": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p1_2_natural_20261004T132834477962Z-751c74aa_summary.json",
+  "provider_request_count": 14
+}

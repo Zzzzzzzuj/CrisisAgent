@@ -1,0 +1,65 @@
+{
+  "run_id": "20261004T093012497980Z-c7c9433c",
+  "dataset_sha256": "c040100ed5325b2d0bac821ffe51cd68996f0d655b2311683f9a9f1e1e2fd3e6",
+  "frozen_before_retrieval": true,
+  "qualified_case_count": 3,
+  "qualifications": [
+    {
+      "case_id": "G1",
+      "expected_memory_id": "p23b-g1-memory",
+      "retrieved_memory_ids": [
+        "p23b-g1-memory"
+      ],
+      "expected_memory_retrieved": true,
+      "retrieval_score": 0.5,
+      "matched_reasons": [
+        "crisis_type_match",
+        "risk_level_match",
+        "tag_overlap",
+        "tag_overlap_2plus"
+      ],
+      "historical_marker_present": true,
+      "source_case_id": "p23b-historical-g1",
+      "source_case_id_present": true,
+      "qualification_status": "QUALIFIED"
+    },
+    {
+      "case_id": "G2",
+      "expected_memory_id": "p23b-g2-memory",
+      "retrieved_memory_ids": [
+        "p23b-g2-memory"
+      ],
+      "expected_memory_retrieved": true,
+      "retrieval_score": 0.5,
+      "matched_reasons": [
+        "crisis_type_match",
+        "risk_level_match",
+        "tag_overlap",
+        "tag_overlap_2plus"
+      ],
+      "historical_marker_present": true,
+      "source_case_id": "p23b-historical-g2",
+      "source_case_id_present": true,
+      "qualification_status": "QUALIFIED"
+    },
+    {
+      "case_id": "G3",
+      "expected_memory_id": "p23b-g3-memory",
+      "retrieved_memory_ids": [
+        "p23b-g3-memory"
+      ],
+      "expected_memory_retrieved": true,
+      "retrieval_score": 0.5,
+      "matched_reasons": [
+        "crisis_type_match",
+        "risk_level_match",
+        "tag_overlap",
+        "tag_overlap_2plus"
+      ],
+      "historical_marker_present": true,
+      "source_case_id": "p23b-historical-g3",
+      "source_case_id_present": true,
+      "qualification_status": "QUALIFIED"
+    }
+  ]
+}

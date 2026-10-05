@@ -1,0 +1,634 @@
+{
+  "report_type": "p5_1_real_provider_five_run_reconciliation",
+  "created_at_utc": "2026-10-05T08:58:20.759473+00:00",
+  "p5_0_baseline_commit": "2b245ee",
+  "current_head": "2b245ee8113d0012aaf52ad94ab88f00832a4a43",
+  "status": "WAITING_FINAL_FULL_REGRESSION",
+  "p5_1_real_provider_baseline": "PROVEN_ON_OBSERVED_PATHS",
+  "p5_1_complete_workflow_baseline": "NOT_PROVEN",
+  "known_limitation": "Real Provider baseline repeatedly entered Human Fact / Review paths before complete six-step coverage.",
+  "real_provider_requests_this_stage": 0,
+  "production_behavior_modified_this_stage": false,
+  "runs": [
+    {
+      "case_id": "outage-02",
+      "run_id": "20261005T081440552073Z-f94cbe7b",
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "runtime_final_state": "WAITING_HUMAN",
+      "metrics": {
+        "logical_llm_calls": 6,
+        "http_attempts": 6,
+        "technical_retries": 0,
+        "calls_with_provider_usage": 6,
+        "calls_without_provider_usage": 0,
+        "input_tokens": 5594,
+        "output_tokens": 13900,
+        "total_tokens": 19494,
+        "session_latency_ms": 69654.273,
+        "retrieval_calls": 1,
+        "retrieval_latency_ms": 37.358,
+        "tool_calls": 4,
+        "tool_latency_ms": 0.0,
+        "fallback_count": 0,
+        "old_reliability_fallback_count": 0,
+        "human_fact_requests": 2,
+        "human_fact_responses": 1,
+        "trace_response_markers": 2,
+        "final_reviews": 0,
+        "approvals": 0,
+        "rejections": 0
+      }
+    },
+    {
+      "case_id": "food-02",
+      "run_id": "20261005T081727755101Z-4a5b4086",
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "runtime_final_state": "WAITING_HUMAN",
+      "metrics": {
+        "logical_llm_calls": 6,
+        "http_attempts": 7,
+        "technical_retries": 1,
+        "calls_with_provider_usage": 5,
+        "calls_without_provider_usage": 1,
+        "input_tokens": 4957,
+        "output_tokens": 10026,
+        "total_tokens": 14983,
+        "session_latency_ms": 117916.878,
+        "retrieval_calls": 1,
+        "retrieval_latency_ms": 50.29,
+        "tool_calls": 4,
+        "tool_latency_ms": 0.0,
+        "fallback_count": 1,
+        "old_reliability_fallback_count": 2,
+        "human_fact_requests": 2,
+        "human_fact_responses": 1,
+        "trace_response_markers": 2,
+        "final_reviews": 0,
+        "approvals": 0,
+        "rejections": 0
+      }
+    },
+    {
+      "case_id": "food-01",
+      "run_id": "20261005T081938579598Z-6ae902fe",
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "runtime_final_state": "WAITING_HUMAN",
+      "metrics": {
+        "logical_llm_calls": 6,
+        "http_attempts": 7,
+        "technical_retries": 1,
+        "calls_with_provider_usage": 5,
+        "calls_without_provider_usage": 1,
+        "input_tokens": 4675,
+        "output_tokens": 8786,
+        "total_tokens": 13461,
+        "session_latency_ms": 127463.126,
+        "retrieval_calls": 1,
+        "retrieval_latency_ms": 42.694,
+        "tool_calls": 4,
+        "tool_latency_ms": 0.0,
+        "fallback_count": 3,
+        "old_reliability_fallback_count": 6,
+        "human_fact_requests": 2,
+        "human_fact_responses": 1,
+        "trace_response_markers": 2,
+        "final_reviews": 0,
+        "approvals": 0,
+        "rejections": 0
+      }
+    },
+    {
+      "case_id": "privacy-03",
+      "run_id": "20261005T082210154754Z-df9c016c",
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "runtime_final_state": "WAITING_HUMAN",
+      "metrics": {
+        "logical_llm_calls": 8,
+        "http_attempts": 8,
+        "technical_retries": 0,
+        "calls_with_provider_usage": 8,
+        "calls_without_provider_usage": 0,
+        "input_tokens": 7143,
+        "output_tokens": 17757,
+        "total_tokens": 24900,
+        "session_latency_ms": 91164.145,
+        "retrieval_calls": 2,
+        "retrieval_latency_ms": 38.031,
+        "tool_calls": 4,
+        "tool_latency_ms": 16.0,
+        "fallback_count": 0,
+        "old_reliability_fallback_count": 0,
+        "human_fact_requests": 1,
+        "human_fact_responses": 1,
+        "trace_response_markers": 1,
+        "final_reviews": 1,
+        "approvals": 0,
+        "rejections": 0
+      }
+    },
+    {
+      "case_id": "privacy-02",
+      "run_id": "20261005T084108088169Z-af370f92",
+      "provider": "openai_compatible",
+      "model": "deepseek-v4-flash",
+      "runtime_final_state": "WAITING_HUMAN",
+      "metrics": {
+        "logical_llm_calls": 5,
+        "http_attempts": 7,
+        "technical_retries": 2,
+        "calls_with_provider_usage": 4,
+        "calls_without_provider_usage": 1,
+        "input_tokens": 4354,
+        "output_tokens": 8476,
+        "total_tokens": 12830,
+        "session_latency_ms": 137071.401,
+        "retrieval_calls": 1,
+        "retrieval_latency_ms": 34.055,
+        "tool_calls": 4,
+        "tool_latency_ms": 0.0,
+        "fallback_count": 1,
+        "old_reliability_fallback_count": 2,
+        "human_fact_requests": 1,
+        "human_fact_responses": 0,
+        "trace_response_markers": 0,
+        "final_reviews": 0,
+        "approvals": 0,
+        "rejections": 0
+      }
+    }
+  ],
+  "aggregate": {
+    "logical_llm_calls": 31,
+    "http_attempts": 35,
+    "technical_retries": 4,
+    "calls_with_provider_usage": 28,
+    "calls_without_provider_usage": 3,
+    "input_tokens": 26723,
+    "output_tokens": 58945,
+    "total_tokens": 85668,
+    "session_latency_ms": 543269.8230000001,
+    "retrieval_calls": 6,
+    "retrieval_latency_ms": 202.428,
+    "tool_calls": 20,
+    "tool_latency_ms": 16.0,
+    "fallback_count": 5,
+    "old_reliability_fallback_count": 10,
+    "human_fact_requests": 8,
+    "human_fact_responses": 4,
+    "trace_response_markers": 7,
+    "final_reviews": 1,
+    "approvals": 0,
+    "rejections": 0
+  },
+  "canonical_metric_sources": {
+    "logical_llm_calls": [
+      "observability.llm_calls length",
+      "logical calls, distinct from transport retries",
+      "trace coverage"
+    ],
+    "http_attempts": [
+      "observability.http_attempts",
+      "transport attempts including retries",
+      "absent attempt metadata not inferred"
+    ],
+    "technical_retries": [
+      "observability.technical_retries",
+      "additional technical attempts",
+      "not a fallback count"
+    ],
+    "input_tokens": [
+      "provider-tagged observability.llm_calls[].input_tokens",
+      "provider reported input only",
+      "missing usage not estimated"
+    ],
+    "output_tokens": [
+      "provider-tagged observability.llm_calls[].output_tokens",
+      "provider reported output only",
+      "reasoning detail unavailable"
+    ],
+    "total_tokens": [
+      "provider-tagged observability.llm_calls[].total_tokens",
+      "provider reported total only",
+      "missing usage not estimated"
+    ],
+    "agent_latency": [
+      "observability.agent_metrics[].latency_ms",
+      "recorded Agent execution duration sum",
+      "descriptive five-run sample"
+    ],
+    "llm_latency": [
+      "observability.agent_metrics[].llm_latency_ms",
+      "recorded LLM-call latency sum",
+      "not causal attribution"
+    ],
+    "session_latency": [
+      "observability.session_total_latency_ms",
+      "runner-observed session elapsed time",
+      "not production percentile"
+    ],
+    "retrieval_call_count": [
+      "observability.retrieval_call_count",
+      "structured retrieval executions",
+      "trace coverage"
+    ],
+    "retrieval_latency": [
+      "observability.retrieval_latency_ms",
+      "recorded retrieval latency sum",
+      "not causal attribution"
+    ],
+    "tool_call_count": [
+      "observability.tool_call_count",
+      "structured tool/skill results",
+      "current instrumentation boundary"
+    ],
+    "tool_latency": [
+      "observability.tool_latency_ms",
+      "recorded tool duration sum",
+      "zero may mean duration uninstrumented"
+    ],
+    "fallback_count": [
+      "observability.fallback_count (RunMetrics)",
+      "fallback events in structured trace; retries/provider failures are separate",
+      "historical Runner field double-counted mirrored result+trace markers"
+    ],
+    "human_fact_request_count": [
+      "observability.human_fact_request_count",
+      "request action markers",
+      "action count, not response submissions"
+    ],
+    "human_fact_response_count": [
+      "human_fact.human_fact_sequence length",
+      "distinct submitted response events",
+      "RunMetrics trace markers mirror responses"
+    ],
+    "final_review_count": [
+      "observability.final_review_count",
+      "human_gate waiting-review events",
+      "not approval count"
+    ],
+    "context_chars_before": [
+      "agent_metrics context_chars_before",
+      "pre-pack character count",
+      "agent-run aggregate; not tokens"
+    ],
+    "context_chars_after": [
+      "agent_metrics context_chars_after",
+      "post-pack character count",
+      "agent-run aggregate; not tokens"
+    ]
+  },
+  "fallback_reconciliation": {
+    "canonical_metric": "observability.fallback_count (RunMetrics)",
+    "canonical_total": 5,
+    "legacy_runner_reliability_fallback_total": 10,
+    "root_cause": "旧 Runner 同时递归扫描 results 与 trace；同一 fallback_used 镜像标记被计两次。RunMetrics 基于规范 Trace 计一次。评测 Runner 已在当前工作区改为使用 RunMetrics canonical count。",
+    "affected_run_ids": [
+      "20261005T081727755101Z-4a5b4086",
+      "20261005T081938579598Z-6ae902fe",
+      "20261005T084108088169Z-af370f92"
+    ],
+    "historical_run_artifacts_modified": false
+  },
+  "token_usage": {
+    "logical_llm_calls": 31,
+    "calls_with_provider_usage": 28,
+    "calls_without_provider_usage": 3,
+    "input_tokens": 26723,
+    "output_tokens": 58945,
+    "total_tokens": 85668,
+    "missing_usage_estimated": false,
+    "output_token_reasoning_semantics": "UNKNOWN",
+    "reasoning_token_detail_available": "NO"
+  },
+  "latency": {
+    "session_total_latency_ms": 543269.823,
+    "agent_aggregates": {
+      "human_fact": {
+        "execution_count": 12,
+        "llm_call_count": 0,
+        "latency_ms": 0,
+        "llm_latency_ms": 0,
+        "retrieval_call_count": 0,
+        "retrieval_latency_ms": 0,
+        "tool_call_count": 0,
+        "tool_latency_ms": 0
+      },
+      "legal": {
+        "execution_count": 11,
+        "llm_call_count": 16,
+        "latency_ms": 395976.0,
+        "llm_latency_ms": 395691.0,
+        "retrieval_call_count": 6,
+        "retrieval_latency_ms": 202.428,
+        "tool_call_count": 10,
+        "tool_latency_ms": 16.0
+      },
+      "redteam": {
+        "execution_count": 5,
+        "llm_call_count": 5,
+        "latency_ms": 62487.0,
+        "llm_latency_ms": 62460.0,
+        "retrieval_call_count": 0,
+        "retrieval_latency_ms": 0,
+        "tool_call_count": 5,
+        "tool_latency_ms": 0
+      },
+      "sentiment": {
+        "execution_count": 5,
+        "llm_call_count": 5,
+        "latency_ms": 17037.0,
+        "llm_latency_ms": 17018.0,
+        "retrieval_call_count": 0,
+        "retrieval_latency_ms": 0,
+        "tool_call_count": 0,
+        "tool_latency_ms": 0
+      },
+      "writer": {
+        "execution_count": 5,
+        "llm_call_count": 5,
+        "latency_ms": 44828.0,
+        "llm_latency_ms": 44800.0,
+        "retrieval_call_count": 0,
+        "retrieval_latency_ms": 0,
+        "tool_call_count": 5,
+        "tool_latency_ms": 0
+      },
+      "human_gate": {
+        "execution_count": 1,
+        "llm_call_count": 0,
+        "latency_ms": 0,
+        "llm_latency_ms": 0,
+        "retrieval_call_count": 0,
+        "retrieval_latency_ms": 0,
+        "tool_call_count": 0,
+        "tool_latency_ms": 0
+      }
+    },
+    "legal_is_heaviest_observed_agent_in_this_sample": true,
+    "legal_llm_latency_ms": 395691.0,
+    "retrieval_latency_ms": 202.428,
+    "interpretation": "Observed sample only; no causal or stable production bottleneck claim."
+  },
+  "retrieval": {
+    "call_count": 6,
+    "latency_ms": 202.428,
+    "status_by_run": {
+      "20261005T081440552073Z-f94cbe7b": {
+        "SUCCESS": 1
+      },
+      "20261005T081727755101Z-4a5b4086": {
+        "SUCCESS": 1
+      },
+      "20261005T081938579598Z-6ae902fe": {
+        "SUCCESS": 1
+      },
+      "20261005T082210154754Z-df9c016c": {
+        "SUCCESS": 2
+      },
+      "20261005T084108088169Z-af370f92": {
+        "SUCCESS": 1
+      }
+    }
+  },
+  "tools": {
+    "call_count": 20,
+    "latency_ms": 16.0
+  },
+  "human_gate": {
+    "request_actions": 8,
+    "distinct_response_submissions": 4,
+    "mirrored_trace_response_markers": 7,
+    "final_review_count": 1,
+    "approvals": 0,
+    "rejections": 0,
+    "canonical_response_source": "human_fact.human_fact_sequence length"
+  },
+  "context_pack": {
+    "distribution": {
+      "aggregate_rows": 15,
+      "count_after_gt_before": 15,
+      "count_after_lt_before": 0,
+      "count_equal": 0,
+      "count_truncated": 0,
+      "execution_level_distribution": "NOT_RECOVERABLE"
+    },
+    "agent_run_aggregates": [
+      {
+        "run_id": "20261005T081440552073Z-f94cbe7b",
+        "case_id": "outage-02",
+        "agent": "legal",
+        "before_chars": 902,
+        "after_chars": 1519,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T081440552073Z-f94cbe7b",
+        "case_id": "outage-02",
+        "agent": "redteam",
+        "before_chars": 964,
+        "after_chars": 1581,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T081440552073Z-f94cbe7b",
+        "case_id": "outage-02",
+        "agent": "writer",
+        "before_chars": 914,
+        "after_chars": 1533,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T081727755101Z-4a5b4086",
+        "case_id": "food-02",
+        "agent": "legal",
+        "before_chars": 910,
+        "after_chars": 1527,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T081727755101Z-4a5b4086",
+        "case_id": "food-02",
+        "agent": "redteam",
+        "before_chars": 972,
+        "after_chars": 1588,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T081727755101Z-4a5b4086",
+        "case_id": "food-02",
+        "agent": "writer",
+        "before_chars": 922,
+        "after_chars": 1541,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T081938579598Z-6ae902fe",
+        "case_id": "food-01",
+        "agent": "legal",
+        "before_chars": 930,
+        "after_chars": 1545,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T081938579598Z-6ae902fe",
+        "case_id": "food-01",
+        "agent": "redteam",
+        "before_chars": 992,
+        "after_chars": 1609,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T081938579598Z-6ae902fe",
+        "case_id": "food-01",
+        "agent": "writer",
+        "before_chars": 942,
+        "after_chars": 1560,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T082210154754Z-df9c016c",
+        "case_id": "privacy-03",
+        "agent": "legal",
+        "before_chars": 916,
+        "after_chars": 1533,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T082210154754Z-df9c016c",
+        "case_id": "privacy-03",
+        "agent": "redteam",
+        "before_chars": 980,
+        "after_chars": 1597,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T082210154754Z-df9c016c",
+        "case_id": "privacy-03",
+        "agent": "writer",
+        "before_chars": 930,
+        "after_chars": 1547,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T084108088169Z-af370f92",
+        "case_id": "privacy-02",
+        "agent": "legal",
+        "before_chars": 930,
+        "after_chars": 1545,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T084108088169Z-af370f92",
+        "case_id": "privacy-02",
+        "agent": "redteam",
+        "before_chars": 992,
+        "after_chars": 1609,
+        "budget_chars": 3000,
+        "truncated": false
+      },
+      {
+        "run_id": "20261005T084108088169Z-af370f92",
+        "case_id": "privacy-02",
+        "agent": "writer",
+        "before_chars": 942,
+        "after_chars": 1560,
+        "budget_chars": 3000,
+        "truncated": false
+      }
+    ],
+    "token_reduction_proven": false
+  },
+  "coverage_matrix": {
+    "Sentiment": {
+      "outage-02": "OBSERVED",
+      "food-02": "OBSERVED",
+      "food-01": "OBSERVED",
+      "privacy-03": "OBSERVED",
+      "privacy-02": "OBSERVED"
+    },
+    "Writer V1": {
+      "outage-02": "OBSERVED",
+      "food-02": "OBSERVED",
+      "food-01": "OBSERVED",
+      "privacy-03": "OBSERVED",
+      "privacy-02": "OBSERVED"
+    },
+    "RedTeam": {
+      "outage-02": "OBSERVED",
+      "food-02": "OBSERVED",
+      "food-01": "OBSERVED",
+      "privacy-03": "OBSERVED",
+      "privacy-02": "OBSERVED"
+    },
+    "Legal": {
+      "outage-02": "OBSERVED",
+      "food-02": "OBSERVED",
+      "food-01": "OBSERVED",
+      "privacy-03": "OBSERVED",
+      "privacy-02": "OBSERVED"
+    },
+    "Writer V2": {
+      "outage-02": "NOT_OBSERVED",
+      "food-02": "NOT_OBSERVED",
+      "food-01": "NOT_OBSERVED",
+      "privacy-03": "NOT_OBSERVED",
+      "privacy-02": "NOT_OBSERVED"
+    },
+    "Decision": {
+      "outage-02": "NOT_OBSERVED",
+      "food-02": "NOT_OBSERVED",
+      "food-01": "NOT_OBSERVED",
+      "privacy-03": "NOT_OBSERVED",
+      "privacy-02": "NOT_OBSERVED"
+    },
+    "Retrieval": {
+      "outage-02": "OBSERVED",
+      "food-02": "OBSERVED",
+      "food-01": "OBSERVED",
+      "privacy-03": "OBSERVED",
+      "privacy-02": "OBSERVED"
+    },
+    "Human Fact": {
+      "outage-02": "OBSERVED",
+      "food-02": "OBSERVED",
+      "food-01": "OBSERVED",
+      "privacy-03": "OBSERVED",
+      "privacy-02": "OBSERVED"
+    },
+    "Final Review": {
+      "outage-02": "NOT_OBSERVED",
+      "food-02": "NOT_OBSERVED",
+      "food-01": "NOT_OBSERVED",
+      "privacy-03": "OBSERVED",
+      "privacy-02": "NOT_OBSERVED"
+    }
+  },
+  "boundary": {
+    "real_user_traffic": "NO",
+    "production_traffic": "NO",
+    "writer_v2_baseline": "NOT_PROVEN",
+    "decision_baseline": "NOT_PROVEN",
+    "complete_six_step_workflow_baseline": "NOT_PROVEN",
+    "token_reduction": "NOT_CLAIMED",
+    "cost_reduction": "NOT_CLAIMED",
+    "latency_improvement": "NOT_CLAIMED",
+    "full_pytest": "WAITING_FOR_USER_LOCAL_RUN"
+  }
+}

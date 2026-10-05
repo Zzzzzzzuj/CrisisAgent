@@ -1,0 +1,21 @@
+{
+  "run_id": "20261004T091756293207Z-8ce9696f",
+  "status": "COMPLETE",
+  "dataset_sha256": "2485f1b5fcae1ad7b9d0266453ea387bb63be673e921e29467a0dab6fe6c076a",
+  "dataset_frozen_before_provider_request": true,
+  "provider_config": {
+    "provider": "openai_compatible",
+    "model": "deepseek-v4-flash",
+    "host": "api.deepseek.com"
+  },
+  "logical_destination_allowlist": [
+    "api.deepseek.com"
+  ],
+  "input_tokens": null,
+  "output_tokens": null,
+  "cost_evaluation": "NOT_AVAILABLE",
+  "jsonl_path": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p2_3_grounding_20261004T091756293207Z-8ce9696f.jsonl",
+  "completed_case_count": 9,
+  "real_provider_request_count": 9,
+  "summary_path": "C:\\Users\\19726\\Documents\\CrisisAgent\\evaluation\\reports\\p2_3_grounding_20261004T091756293207Z-8ce9696f_summary.json"
+}
