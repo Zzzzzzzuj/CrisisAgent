@@ -216,7 +216,7 @@ def test_fact_response_reenters_legal_loop_before_writer_v2(runtime, monkeypatch
 
     def legal(payload):
         calls["legal"] += 1
-        claim = {"claim": DRAFT.rstrip("。"), "requires_legal_rule": True,
+        claim = {"claim": "公司是否使用过期食品原料；法律规定是否禁止使用过期食品原料", "requires_legal_rule": True,
                  "requires_case_fact": True}
         extraction = {"legal_claims": [claim], "claim_extraction_status": "ok"}
         relation = {"legal_claim_relations": [

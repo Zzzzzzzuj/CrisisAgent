@@ -13,6 +13,7 @@ from backend.agents.legal_action_policy import (
     STOP_UNRESOLVED,
     TARGETED_LEGAL_SEARCH,
     USE_EXISTING_EVIDENCE,
+    classify_legal_query_dependency,
     compute_eligible_actions,
     recommend_legal_actions,
     validate_action_proposal,
@@ -86,7 +87,8 @@ def execute_recommended_targeted_search(
     claim = claims[index]
     before = next((row.get("legal_rule_status") for row in coverage.get("claim_coverage", [])
                    if isinstance(row, dict) and row.get("claim_index") == index), "uncertain")
-    query = _targeted_query(claim.get("claim"), rag_info.get("query", ""))
+    query = _targeted_query(classify_legal_query_dependency(claim)["legal_rule_topic"],
+                            rag_info.get("query", ""))
     if query is None:
         return {"targeted_search_executions": [], "targeted_search_stop_reason": "query_not_distinct"}
 
@@ -187,6 +189,7 @@ def run_legal_action_loop(
     current_coverage = deepcopy(coverage) if isinstance(coverage, dict) else {"claim_coverage": []}
     current_relation = deepcopy(relation) if isinstance(relation, dict) else {"legal_claim_relations": [], "relation_status": "skipped"}
     claims = extraction.get("legal_claims", [])
+    dependencies = _information_dependencies(claims)
     resume = isinstance(cursor, dict)
     if resume:
         rag_info = deepcopy(cursor.get("rag_info", rag_info))
@@ -203,6 +206,12 @@ def run_legal_action_loop(
         if not isinstance(human_observation, dict) or human_observation.get("request_id") in consumed_requests:
             return _stopped_resume(cursor, "human_fact_already_consumed")
         if human_observation.get("claim_index") not in requested_gaps:
+            return _stopped_resume(cursor, "observation_inconsistent")
+        if (cursor.get("information_dependencies", dependencies) != dependencies
+                or cursor.get("claim_gap_state", _gap_state(current_coverage)) != _gap_state(current_coverage)):
+            return _stopped_resume(cursor, "dependency_or_gap_state_mismatch")
+        human_observation = deepcopy(human_observation)
+        if not _apply_human_input_observation(current_coverage, human_observation):
             return _stopped_resume(cursor, "observation_inconsistent")
         consumed_requests.append(human_observation["request_id"])
         human_response_type = human_observation.get("observation_type")
@@ -231,6 +240,7 @@ def run_legal_action_loop(
             remaining_rounds=max_rounds - round_index,
             remaining_tool_calls=max_calls - tool_calls_used,
             max_same_action_per_gap=same_action_limit,
+            claim_relation=current_relation, rag_info=rag_info,
         )
         if (retry_gap_index is not None and tool_calls_used < max_calls
                 and attempted.get(retry_gap_index, 0) < same_action_limit):
@@ -262,6 +272,8 @@ def run_legal_action_loop(
 
         selected_action = selected["action"]
         selected_index = selected["target_claim_index"]
+        decision["dependency_type"] = dependencies[selected_index]["dependency_type"]
+        decision["dependency_reason_code"] = dependencies[selected_index]["reason_code"]
         if decision.get("safety_stop"):
             stop_reason = decision["validator_reason_code"]
             action = _loop_action(round_index, STOP_UNRESOLVED, "proposal_rejected", stop_reason,
@@ -407,6 +419,7 @@ def run_legal_action_loop(
             "status": execution.get("status"),
             "legal_rule_status": execution.get("after_legal_rule_status", "uncertain"),
             "evidence_refs": deepcopy(execution.get("targeted_evidence_refs", [])),
+            "claim_state_changed": execution.get("before_legal_rule_status") != execution.get("after_legal_rule_status"),
         }
         _apply_targeted_observation(current_coverage, current_relation, execution)
         stop_reason = execution.get("stop_reason", "action_completed")
@@ -454,12 +467,14 @@ def run_legal_action_loop(
         "context_chars_total": sum(item.get("context_chars", 0) for item in actions),
         "current_gap": current_gap,
         "claim_progress": _claim_progress(claims, current_coverage, requested_gaps, attempted),
+        "information_dependencies": dependencies,
         "phase": "WAITING_HUMAN" if stop_reason == "human_fact_required" else "STOPPED",
         "stop_reason": stop_reason,
         "cursor": {"round_count": rounds_used, "tool_calls_used": tool_calls_used,
                    "current_claim_index": (current_gap or {}).get("claim_index") if current_gap else
                                           _latest_claim_index(actions, previous_observation),
                    "claim_progress": _claim_progress(claims, current_coverage, requested_gaps, attempted),
+                   "information_dependencies": dependencies, "claim_gap_state": _gap_state(current_coverage),
                    "attempted_actions": attempted, "requested_fact_gaps": requested_gaps,
                    "consumed_request_ids": consumed_requests, "previous_observation": previous_observation,
                    "human_response_type": human_response_type,
@@ -491,6 +506,39 @@ def _recommend_after_human(extraction: dict, coverage: dict, relation: dict, rag
         if row["claim_index"] in requested_gaps and row["recommended_action"] == REQUEST_HUMAN_FACT_VERIFICATION:
             row.update(recommended_action="STOP_UNRESOLVED", action_reason="human_fact_already_consumed")
     return recommendations
+
+
+def _information_dependencies(claims: list) -> list[dict]:
+    return [{"claim_index": index,
+             "dependency_type": result["dependency_type"], "reason_code": result["reason_code"]}
+            for index, claim in enumerate(claims if isinstance(claims, list) else [])
+            for result in [classify_legal_query_dependency(claim)]]
+
+
+def _gap_state(coverage: dict) -> list[dict]:
+    return [{key: row.get(key) for key in ("claim_index", "case_fact_status", "case_fact_input_status",
+                                           "legal_rule_status", "verification_status")}
+            for row in coverage.get("claim_coverage", []) if isinstance(row, dict)]
+
+
+def _apply_human_input_observation(coverage: dict, observation: dict) -> bool:
+    kind = observation.get("observation_type")
+    if kind not in {"fact_provided", "fact_unavailable"}:
+        return False
+    provided = kind == "fact_provided"
+    if (observation.get("response_type") != ("FACT_PROVIDED" if provided else "FACT_UNAVAILABLE")
+            or observation.get("verification_status") != ("human_asserted" if provided else "unresolved")):
+        return False
+    index = observation.get("claim_index")
+    row = next((item for item in coverage.get("claim_coverage", [])
+                if isinstance(item, dict) and item.get("claim_index") == index), None)
+    if not isinstance(row, dict) or row.get("case_fact_status") != "unresolved":
+        return False
+    new_status = "human_asserted" if provided else "unavailable"
+    observation["claim_state_changed"] = row.get("case_fact_input_status") != new_status
+    row["case_fact_input_status"] = new_status
+    row["verification_status"] = "human_asserted" if provided else "unresolved"
+    return True
 
 
 def _human_stop_reason(observation_type: str | None) -> str:
@@ -716,6 +764,7 @@ def _annotate_decision(action: dict, decision: dict) -> None:
         "executed_action", "executed_target_claim_index", "result_observation_type",
         "result_observation_status", "remaining_rounds", "remaining_tool_calls",
         "proposal_context_chars",
+        "dependency_type", "dependency_reason_code",
     ):
         if key in decision:
             action[key] = decision[key]

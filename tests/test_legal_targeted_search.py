@@ -368,7 +368,7 @@ def test_fact_unavailable_advances_to_different_case_fact_then_task_stops():
     assert second["current_gap"]["claim_index"] == 1
     assert sum(row["selected_action"] == "REQUEST_HUMAN_FACT" for row in second["actions"]) == 2
     final = run_legal_action_loop(
-        extraction, coverage, relation, rag,
+        extraction, second["claim_coverage"], second["claim_evidence_relation"], rag,
         retrieve_call=lambda *_a, **_kw: pytest.fail("no legal search"),
         cursor=second["cursor"],
         human_observation=_human_observation(request_id="request-2", claim_index=1),
@@ -419,7 +419,7 @@ def test_human_fact_requests_are_bounded_by_persisted_round_budget():
     )
     assert second["current_gap"]["claim_index"] == 1
     exhausted = run_legal_action_loop(
-        extraction, coverage, relation, rag,
+        extraction, second["claim_coverage"], second["claim_evidence_relation"], rag,
         retrieve_call=lambda *_a, **_kw: pytest.fail("no legal search"),
         policy=policy, cursor=second["cursor"],
         human_observation=_human_observation(request_id="request-2", claim_index=1),
