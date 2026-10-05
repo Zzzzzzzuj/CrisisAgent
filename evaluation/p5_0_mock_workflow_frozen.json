@@ -1,0 +1,31 @@
+{
+  "version": "p5.0-mock-workflow-v1",
+  "data_kind": "synthetic_mock_workflow_inputs",
+  "performance_representative": false,
+  "cases": [
+    {
+      "case_id": "M1",
+      "scenario": "normal_workflow",
+      "event": "普通服务体验反馈，希望企业说明后续处理安排。",
+      "expected_observable_events": ["agent_execution", "context_pack"]
+    },
+    {
+      "case_id": "M2",
+      "scenario": "legal_and_human_fact_gate",
+      "event": "食品安全投诉持续传播，涉事批次原因尚未确认，消费者关注监管要求。",
+      "expected_observable_events": ["agent_execution", "context_pack", "human_fact_request"]
+    },
+    {
+      "case_id": "M3",
+      "scenario": "privacy_and_human_fact_gate",
+      "event": "用户信息处理事件引发关注，是否已通知监管部门尚未确认，仍需核实影响范围。",
+      "expected_observable_events": ["agent_execution", "context_pack", "human_fact_request"]
+    },
+    {
+      "case_id": "M4",
+      "scenario": "legal_retrieval_observability",
+      "event": "某食品品牌今天被曝在门店使用超过保质期的食品原料，消费者投诉并要求企业说明处理安排。",
+      "expected_observable_events": ["agent_execution", "context_pack", "retrieval"]
+    }
+  ]
+}

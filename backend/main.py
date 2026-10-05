@@ -614,7 +614,17 @@ def _build_dynamic_metrics(state: AgentState) -> dict:
             "decision": state.approval.get("decision"),
             "reason": state.approval.get("reason"),
         },
+        "run_metrics": _safe_run_metrics(state),
     }
+
+
+def _safe_run_metrics(state: AgentState) -> dict | None:
+    try:
+        from backend.observability.run_metrics import build_run_metrics
+
+        return build_run_metrics(state.session_id, state.trace, state.status, state.approval)
+    except Exception:
+        return None
 
 
 def _duration_ms(start_time: str | None, end_time: str | None) -> int:

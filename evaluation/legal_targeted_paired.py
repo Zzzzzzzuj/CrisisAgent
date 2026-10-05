@@ -1,6 +1,5 @@
 """Frozen, offline broad-vs-targeted evaluation using the real local RAG pipeline."""
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -21,6 +20,7 @@ from backend.rag.pipeline_retriever import RagPipelineRetriever
 from backend.rag.query_rewriter import rewrite_query
 from backend.rag.reranker import RuleBasedReranker
 from backend.rag.vector_retriever import VectorRetriever
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 DEFAULT_CASES = Path(__file__).resolve().parents[1] / "data" / "legal_targeted_paired_cases.json"
@@ -37,9 +37,7 @@ def _ref(chunk) -> str:
 
 
 def _normalized_kb_hash(path: Path) -> str:
-    text = path.read_bytes().decode("utf-8")
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return canonical_text_sha256(path.read_bytes())
 
 
 class _RecordingHybrid:

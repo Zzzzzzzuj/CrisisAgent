@@ -1,14 +1,14 @@
-import hashlib
 import json
 from pathlib import Path
 
 from backend.agents import context_pack, writer_agent
+from evaluation.frozen_hash import canonical_text_sha256
 from evaluation import p2_3_grounded_fact_action_eval as eval_runner
 
 
 def _dataset():
     raw = eval_runner.DATASET.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == eval_runner.FROZEN_SHA256
+    assert canonical_text_sha256(raw) == eval_runner.FROZEN_SHA256
     return json.loads(raw.decode("utf-8"))
 
 
@@ -87,4 +87,4 @@ def test_memory_off_keeps_normal_action_recommendation_prompt_path():
 
 def test_p2_2_eval_runner_is_not_invoked_by_p2_3_tests():
     assert Path(eval_runner.DATASET).exists()
-    assert eval_runner.FROZEN_SHA256 == hashlib.sha256(Path(eval_runner.DATASET).read_bytes()).hexdigest()
+    assert eval_runner.FROZEN_SHA256 == canonical_text_sha256(Path(eval_runner.DATASET).read_bytes())

@@ -8,7 +8,6 @@ the repository test suite.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import ipaddress
 import json
 import os
@@ -38,6 +37,7 @@ from evaluation.real_eval_network_guard import (
     parse_proxy_endpoint,
     transport_allowed,
 )
+from evaluation.frozen_hash import canonical_text_sha256
 from backend.env import load_project_env
 
 FROZEN_CASE_PATH = ROOT / "evaluation" / "dynamic_real_case_v1.json"
@@ -101,8 +101,7 @@ def load_frozen_cases(
 
 def _frozen_identity_sha256(raw: bytes) -> str:
     """Hash frozen text independent of platform newline conversion only."""
-    normalized = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
-    return hashlib.sha256(normalized).hexdigest()
+    return canonical_text_sha256(raw)
 
 
 def _fake_environment(temp_root: Path) -> dict[str, str]:

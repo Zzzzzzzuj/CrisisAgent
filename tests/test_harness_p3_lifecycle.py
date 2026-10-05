@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
@@ -19,6 +18,7 @@ from backend.harness.service import (
 from backend.harness.store import JsonHarnessRepository
 from backend.evaluation.harness_comparison_store import get_harness_comparison_store
 from backend.main import app
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,8 +31,7 @@ REJECTED_COMPARISON = "writer-v2-0f59f9cb-0465-4685-9e4d-54e39ca4c586"
 
 
 def _normalized_sha(path: Path) -> str:
-    raw = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
-    return hashlib.sha256(raw).hexdigest()
+    return canonical_text_sha256(path.read_bytes())
 
 
 def _frozen_drill() -> dict:

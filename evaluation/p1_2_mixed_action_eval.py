@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -33,6 +32,7 @@ from backend.llm.config import get_llm_config
 from backend.llm.offline_guard import assert_external_model_call_allowed
 from backend.rag import document_loader
 from backend.rag.retriever import retrieve
+from evaluation.frozen_hash import canonical_text_sha256
 from scripts.run_real_llm_semantic_validation import _network_guard
 
 DATASET = ROOT / "evaluation" / "p1_2_mixed_action_frozen.json"
@@ -50,8 +50,8 @@ SAFE_ACTION_KEYS = (
 
 
 def _frozen_data() -> tuple[dict, str]:
-    raw = DATASET.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
-    digest = hashlib.sha256(raw).hexdigest()
+    raw = DATASET.read_bytes()
+    digest = canonical_text_sha256(raw)
     if digest != DATASET_SHA256:
         raise ValueError("P1.2 frozen dataset SHA mismatch; no Provider request was made.")
     return json.loads(raw.decode("utf-8")), digest

@@ -1,0 +1,12 @@
+{
+  "version": "p5.0-observability-v1",
+  "data_kind": "synthetic_safe_instrumentation_fixtures",
+  "cases": [
+    {"case_id": "O1", "scenario": "normal_low_risk", "expected_observable_events": ["agent_execution", "llm_call"]},
+    {"case_id": "O2", "scenario": "legal_retrieval", "expected_observable_events": ["retrieval_success", "retrieval_latency", "tool_call"]},
+    {"case_id": "O3", "scenario": "human_fact_pause_resume", "expected_observable_events": ["human_fact_request", "human_fact_response"]},
+    {"case_id": "O4", "scenario": "final_review", "expected_observable_events": ["final_review", "approval"]},
+    {"case_id": "O5", "scenario": "provider_fallback", "expected_observable_events": ["llm_fallback", "fallback_category"]},
+    {"case_id": "O6", "scenario": "context_pack_truncation", "expected_observable_events": ["context_chars_before_after", "truncated"]}
+  ]
+}

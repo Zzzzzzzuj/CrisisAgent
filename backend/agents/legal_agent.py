@@ -1,6 +1,7 @@
 import os
 from contextvars import ContextVar
 from copy import deepcopy
+from time import perf_counter
 
 from backend.config import get_config
 from backend.agents.legal_claim_extractor import extract_claims
@@ -55,6 +56,7 @@ _LAST_RAG_INFO = deepcopy(_DEFAULT_RAG_INFO)
 _RAG_INFO_CONTEXT: ContextVar[dict] = ContextVar("legal_rag_info_context", default=deepcopy(_DEFAULT_RAG_INFO))
 _RAW_CHUNKS_CONTEXT: ContextVar[list[dict]] = ContextVar("legal_raw_chunks_context", default=[])
 _RELATION_CONTEXT: ContextVar[dict] = ContextVar("legal_relation_context", default={})
+_RETRIEVAL_CALLS_CONTEXT: ContextVar[list] = ContextVar("legal_retrieval_calls", default=[])
 REQUIRED_FIELDS = (
     "legal_risks",
     "safe_points",
@@ -69,6 +71,7 @@ def run(payload: dict) -> dict:
     dynamic_runtime = isinstance(payload.get("harness_runtime_context"), dict)
     _RAW_CHUNKS_CONTEXT.set([])
     _RELATION_CONTEXT.set({"legal_claim_relations": [], "relation_status": "skipped"})
+    _RETRIEVAL_CALLS_CONTEXT.set([])
     sentiment = payload.get("sentiment_analysis") or {}
     claim_extraction = extract_claims(
         payload.get("draft", ""),
@@ -104,6 +107,24 @@ def get_last_rag_info() -> dict:
     return deepcopy(_RAG_INFO_CONTEXT.get(_LAST_RAG_INFO))
 
 
+def _timed_retrieve(query: str, top_k: int = 3) -> dict:
+    started = perf_counter()
+    try:
+        result = retrieve(query, top_k=top_k)
+    except Exception:
+        _RETRIEVAL_CALLS_CONTEXT.set([*_RETRIEVAL_CALLS_CONTEXT.get([]), {
+            "latency_ms": round((perf_counter() - started) * 1000, 3), "status": "ERROR",
+        }])
+        raise
+    chunks = result.get("chunks", []) if isinstance(result, dict) else []
+    fallback = bool(result.get("fallback_used")) if isinstance(result, dict) else False
+    status = "FALLBACK" if fallback else "SUCCESS" if chunks else "NO_HIT"
+    _RETRIEVAL_CALLS_CONTEXT.set([*_RETRIEVAL_CALLS_CONTEXT.get([]), {
+        "latency_ms": round((perf_counter() - started) * 1000, 3), "status": status,
+    }])
+    return result
+
+
 def _set_rag_info(
     enabled: bool,
     hit: bool,
@@ -118,6 +139,7 @@ def _set_rag_info(
     retrieval_skipped: bool = False,
     retrieval_executed: bool = False,
     retrieval_status: str = "not_started",
+    retrieval_latency_ms: float | None = None,
     evidence_quality: dict | None = None,
 ) -> None:
     chunks = chunks or []
@@ -161,6 +183,7 @@ def _set_rag_info(
             "retrieval_skipped": retrieval_skipped,
             "retrieval_executed": retrieval_executed,
             "retrieval_status": retrieval_status,
+            "retrieval_latency_ms": retrieval_latency_ms,
             "evidence_quality": evidence_quality_info,
     }
     _LAST_RAG_INFO.clear()
@@ -361,8 +384,9 @@ def _retrieve_legal_context(payload: dict) -> str:
         return ""
 
     try:
-        retrieval_result = retrieve(query, top_k=3)
+        retrieval_result = _timed_retrieve(query, top_k=3)
     except Exception as exc:
+        retrieval_latency_ms = _RETRIEVAL_CALLS_CONTEXT.get([])[-1]["latency_ms"]
         logger.warning(
             "%s RAG retrieval failed: %s",
             AGENT_NAME,
@@ -381,12 +405,14 @@ def _retrieve_legal_context(payload: dict) -> str:
             gate=gate,
             retrieval_skipped=False,
             retrieval_executed=True,
+            retrieval_latency_ms=retrieval_latency_ms,
             fallback_used=True,
             retrieval_status="retrieval_error",
             evidence_quality=evidence_quality,
         )
         return ""
 
+    retrieval_latency_ms = _RETRIEVAL_CALLS_CONTEXT.get([])[-1]["latency_ms"]
     raw_chunks = retrieval_result.get("chunks", [])
     _RAW_CHUNKS_CONTEXT.set(deepcopy(raw_chunks) if isinstance(raw_chunks, list) else [])
     sources = retrieval_result.get("sources", [])
@@ -440,6 +466,7 @@ def _retrieve_legal_context(payload: dict) -> str:
         gate=gate,
         retrieval_skipped=False,
         retrieval_executed=True,
+        retrieval_latency_ms=retrieval_latency_ms,
         retrieval_status="executed_with_hits" if source_names else "executed_no_hit",
         evidence_quality=evidence_quality,
     )
@@ -526,7 +553,7 @@ def _attach_metadata(output: dict, llm_trace: dict | None = None, claim_extracti
         try:
             action_loop = run_legal_action_loop(
                 extraction, coverage, relation, rag_info,
-                retrieve_call=retrieve, relation_call=build_legal_claim_relations,
+                retrieve_call=_timed_retrieve, relation_call=build_legal_claim_relations,
                 llm_call=call_llm, mode=get_config().agent_mode,
                 event=str(context.get("event", "")),
                 risk_level=str(sentiment.get("risk_level", "unknown")) if isinstance(sentiment, dict) else "unknown",
@@ -549,7 +576,7 @@ def _attach_metadata(output: dict, llm_trace: dict | None = None, claim_extracti
         try:
             targeted = execute_recommended_targeted_search(
                 extraction, coverage, relation, recommendation, rag_info,
-                retrieve_call=retrieve, relation_call=build_legal_claim_relations,
+                retrieve_call=_timed_retrieve, relation_call=build_legal_claim_relations,
                 llm_call=call_llm, mode="llm",
             )
         except Exception as exc:
@@ -558,6 +585,7 @@ def _attach_metadata(output: dict, llm_trace: dict | None = None, claim_extracti
                         "failure_type": exc.__class__.__name__}
     metadata = {
         "rag": rag_info,
+        "retrieval_calls": deepcopy(_RETRIEVAL_CALLS_CONTEXT.get([])),
         "claim_extraction": extraction,
         "claim_evidence_relation": relation,
         "claim_coverage": coverage,

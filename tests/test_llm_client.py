@@ -2,12 +2,13 @@ import json
 
 import pytest
 
-from backend.llm.client import LLMClient, _build_chat_completions_url
+from backend.llm.client import LLMClient, _build_chat_completions_url, get_last_llm_trace, get_llm_trace_calls, reset_last_llm_trace
 from backend.llm.config import LLMConfig
 from backend.llm.parser import LLMParseError, parse_json_response, validate_required_fields
 
 
 def test_llm_client_mock_mode_returns_response_without_api_key():
+    reset_last_llm_trace()
     client = LLMClient(
         config=LLMConfig(
             provider="openai_compatible",
@@ -23,6 +24,49 @@ def test_llm_client_mock_mode_returns_response_without_api_key():
     assert parsed["mock"] is True
     assert parsed["content"] == "mock llm response"
     assert parsed["input_preview"] == "hello crisis agent"
+    trace = get_last_llm_trace()
+    assert trace["token_source"] == "estimated"
+    assert trace["total_tokens"] is None
+
+
+def test_llm_provider_usage_is_captured_without_request_or_response_body(monkeypatch, caplog):
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"choices": [{"message": {"content": "safe output"}}],
+                    "usage": {"prompt_tokens": 11, "completion_tokens": 4, "total_tokens": 15}}
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def post(self, *args, **kwargs):
+            return FakeResponse()
+
+    monkeypatch.setattr("backend.llm.client.assert_external_model_call_allowed", lambda **kwargs: None)
+    monkeypatch.setattr("backend.llm.client.httpx.Client", FakeClient)
+    reset_last_llm_trace()
+    client = LLMClient(config=LLMConfig(provider="openai_compatible", model="test-model",
+                                        api_key="test-key", base_url="https://provider.invalid"),
+                       max_retries=0)
+
+    assert client.chat([{"role": "user", "content": "PRIVATE PROMPT"}], agent_name="writer") == "safe output"
+    trace = get_last_llm_trace()
+    assert trace["token_source"] == "provider"
+    assert (trace["input_tokens"], trace["output_tokens"], trace["total_tokens"]) == (11, 4, 15)
+    assert len(get_llm_trace_calls()) == 1
+    assert "PRIVATE PROMPT" not in repr(trace)
+    assert "test-key" not in repr(trace)
+    assert "PRIVATE PROMPT" not in caplog.text
+    assert "test-key" not in caplog.text
 
 
 def test_build_chat_completions_url_appends_endpoint_once():

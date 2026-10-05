@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import hashlib
 import json
 import os
 import sys
@@ -15,12 +14,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 CASE_PATH = ROOT / "evaluation" / "dynamic_real_case_v1.json"
 REPORT_PATH = ROOT / "evaluation" / "reports" / "dynamic_real_case_validation_v1.json"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 def _set_safe_environment(temp_root: Path) -> None:
@@ -58,7 +58,7 @@ def _set_safe_environment(temp_root: Path) -> None:
 
 def _load_cases() -> tuple[dict[str, Any], str]:
     raw = CASE_PATH.read_bytes()
-    return json.loads(raw.decode("utf-8")), hashlib.sha256(raw).hexdigest()
+    return json.loads(raw.decode("utf-8")), canonical_text_sha256(raw)
 
 
 def _extract_json(response) -> dict[str, Any]:

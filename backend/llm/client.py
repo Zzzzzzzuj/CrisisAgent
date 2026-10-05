@@ -15,6 +15,7 @@ from backend.logger import get_logger
 logger = get_logger(__name__)
 _LAST_LLM_TRACE: dict = {}
 _LLM_TRACE_CONTEXT: ContextVar[dict] = ContextVar("llm_trace_context", default={})
+_LLM_TRACE_CALLS: ContextVar[list] = ContextVar("llm_trace_calls", default=[])
 
 
 FAILURE_TIMEOUT = "timeout"
@@ -118,9 +119,19 @@ class LLMClient:
         else:  # pragma: no cover - defensive guard.
             raise last_error or RuntimeError("LLM chat request failed.")
 
+        usage = None
         try:
             data = response.json()
             content = data["choices"][0]["message"]["content"]
+            raw_usage = data.get("usage")
+            if isinstance(raw_usage, dict):
+                usage = {
+                    key: value for key, value in (
+                        ("input_tokens", raw_usage.get("prompt_tokens")),
+                        ("output_tokens", raw_usage.get("completion_tokens")),
+                        ("total_tokens", raw_usage.get("total_tokens")),
+                    ) if isinstance(value, int) and not isinstance(value, bool) and value >= 0
+                }
         except (ValueError, KeyError, IndexError, TypeError) as exc:
             logger.error("LLM chat response format was invalid")
             _record_llm_trace(
@@ -161,6 +172,7 @@ class LLMClient:
             retry_count=0,
             messages=messages,
             response_text=content,
+            usage=usage,
         )
         return content
 
@@ -173,6 +185,11 @@ def get_last_llm_trace() -> dict:
 def reset_last_llm_trace() -> None:
     _LAST_LLM_TRACE.clear()
     _LLM_TRACE_CONTEXT.set({})
+    _LLM_TRACE_CALLS.set([])
+
+
+def get_llm_trace_calls() -> list[dict]:
+    return deepcopy(_LLM_TRACE_CALLS.get([]))
 
 
 def record_llm_fallback(agent_name: str, exc: Exception) -> dict:
@@ -197,6 +214,14 @@ def record_llm_fallback(agent_name: str, exc: Exception) -> dict:
     _LAST_LLM_TRACE.clear()
     _LAST_LLM_TRACE.update(trace)
     _LLM_TRACE_CONTEXT.set(deepcopy(trace))
+    calls = get_llm_trace_calls()
+    if calls:
+        calls[-1].update({
+            "success": False,
+            "fallback_used": True,
+            "failure_type": trace["failure_type"],
+        })
+        _LLM_TRACE_CALLS.set(calls)
     return get_last_llm_trace()
 
 
@@ -252,12 +277,14 @@ def _record_llm_trace(
     retry_count: int,
     messages,
     response_text: str = "",
+    usage: dict | None = None,
 ) -> None:
     input_chars = _estimate_message_chars(messages)
     response_chars = len(str(response_text or ""))
     _LAST_LLM_TRACE.clear()
-    _LAST_LLM_TRACE.update(
-        {
+    provider_usage = usage if isinstance(usage, dict) and "total_tokens" in usage else None
+    token_source = "provider" if provider_usage is not None else "estimated"
+    call_trace = {
             "provider": provider,
             "model": model,
             "agent_name": agent_name,
@@ -269,9 +296,14 @@ def _record_llm_trace(
             "estimated_tokens": max(1, (input_chars + response_chars) // 4),
             "input_chars": input_chars,
             "output_chars": response_chars,
+            "input_tokens": provider_usage.get("input_tokens") if provider_usage else None,
+            "output_tokens": provider_usage.get("output_tokens") if provider_usage else None,
+            "total_tokens": provider_usage.get("total_tokens") if provider_usage else None,
+            "token_source": token_source,
         }
-    )
+    _LAST_LLM_TRACE.update(call_trace)
     _LLM_TRACE_CONTEXT.set(deepcopy(_LAST_LLM_TRACE))
+    _LLM_TRACE_CALLS.set([*_LLM_TRACE_CALLS.get([]), deepcopy(call_trace)])
 
 
 def _estimate_message_chars(messages) -> int:

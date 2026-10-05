@@ -1,12 +1,13 @@
 from copy import deepcopy
 from datetime import datetime, timezone
+from time import perf_counter
 from typing import Callable
 
 from backend.agents import decision_agent, legal_agent, redteam_agent, sentiment_agent, writer_agent
 from backend.core.adapter import build_agent_input
 from backend.core.human_fact_runtime import pause_for_claim
 from backend.core.state import AgentState
-from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
+from backend.llm.client import get_last_llm_trace, get_llm_trace_calls, reset_last_llm_trace
 from backend.harness.spec import harness_trace_reference
 from backend.core.harness_runtime import get_runtime_context
 from backend.core.context_pack_runtime import ContextPackRuntimeProvider, inject_context_pack
@@ -53,20 +54,23 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
         reason = item.get("reason", "")
         agent_state.current_agent = agent_name
         start_time = _now_iso()
+        monotonic_start = perf_counter()
+        context_pack = None
 
         if agent_name not in registry:
             error = "Agent is not registered."
             agent_state.mark_failed(agent_name, error)
-            agent_state.add_trace(
-                _build_trace_item(agent_name, reason, start_time, _now_iso(), "failed", None, error)
-            )
+            trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "failed", None, error)
+            trace_item["duration_ms"] = _elapsed_ms(monotonic_start)
+            agent_state.add_trace(trace_item)
             continue
 
         try:
             reset_last_llm_trace()
             payload = build_agent_input(agent_name, agent_state, runtime_context=runtime_context)
             if runtime_context is not None:
-                payload = inject_context_pack(payload, _CONTEXT_PACK_PROVIDER.build_for_agent(agent_state, agent_name))
+                context_pack = _CONTEXT_PACK_PROVIDER.build_for_agent(agent_state, agent_name)
+                payload = inject_context_pack(payload, context_pack)
                 skill_run = _SKILL_SELECTOR.select_and_execute(agent_state, agent_name, payload)
                 payload["skill_results"] = deepcopy(skill_run)
             output = registry[agent_name](_adapt_payload_for_runner(agent_name, payload))
@@ -74,7 +78,10 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
             error = f"{exc.__class__.__name__}: {exc}"
             agent_state.mark_failed(agent_name, error)
             trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "failed", None, error)
+            trace_item["duration_ms"] = _elapsed_ms(monotonic_start)
             trace_item.update(_collect_llm_metadata())
+            if context_pack:
+                trace_item["context_pack"] = context_pack_trace_metadata(context_pack)
             if runtime_context is not None:
                 trace_item.update(runtime_context.trace_metadata())
             agent_state.add_trace(trace_item)
@@ -98,6 +105,7 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
             agent_state.metadata["legal_targeted_search"] = deepcopy(output_metadata["targeted_legal_search"])
         trace_item = _build_trace_item(agent_name, reason, start_time, _now_iso(), "success",
                                        summarize_trace_output(clean_output), None)
+        trace_item["duration_ms"] = _elapsed_ms(monotonic_start)
         trace_item.update(sanitize_trace_metadata(_collect_trace_metadata(agent_name, output_metadata)))
         if runtime_context is not None:
             trace_item.update(runtime_context.trace_metadata())
@@ -121,6 +129,7 @@ def execute(plan: dict, state, agent_registry: dict[str, AgentRunner] | None = N
         if paused:
             break
     agent_state.current_agent = None
+    _safe_run_metrics(agent_state)
     return {
         "plan_id": plan_id,
         "executed_agents": executed_agents,
@@ -187,7 +196,8 @@ def _collect_llm_metadata() -> dict:
     llm_trace = get_last_llm_trace()
     if not llm_trace:
         return {}
-    return {"llm": deepcopy(llm_trace)}
+    calls = get_llm_trace_calls()
+    return {"llm": deepcopy(llm_trace), "llm_calls": calls}
 
 
 def _extract_result_metadata(output) -> dict:
@@ -206,6 +216,9 @@ def _strip_result_metadata(output):
 
 def _collect_trace_metadata(agent_name: str | None, result_metadata: dict) -> dict:
     trace_metadata = {}
+    llm_calls = get_llm_trace_calls()
+    if llm_calls:
+        trace_metadata["llm_calls"] = llm_calls
     if isinstance(result_metadata.get("llm"), dict):
         trace_metadata["llm"] = deepcopy(result_metadata["llm"])
     else:
@@ -215,6 +228,8 @@ def _collect_trace_metadata(agent_name: str | None, result_metadata: dict) -> di
         trace_metadata["rag"] = deepcopy(result_metadata["rag"])
     else:
         trace_metadata.update(_collect_agent_metadata(agent_name))
+    if isinstance(result_metadata.get("retrieval_calls"), list):
+        trace_metadata["retrieval_calls"] = deepcopy(result_metadata["retrieval_calls"])
     if agent_name == "legal" and isinstance(result_metadata.get("claim_extraction"), dict):
         trace_metadata["rag"] = {
             **trace_metadata.get("rag", {}),
@@ -247,3 +262,19 @@ def _collect_trace_metadata(agent_name: str | None, result_metadata: dict) -> di
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _elapsed_ms(start: float) -> float:
+    return round(max(0.0, (perf_counter() - start) * 1000), 3)
+
+
+def _safe_run_metrics(state: AgentState) -> dict | None:
+    try:
+        from backend.observability.run_metrics import build_run_metrics
+
+        metrics = build_run_metrics(state.session_id, state.trace, state.status, state.approval)
+        state.metadata["run_metrics"] = metrics
+        return deepcopy(metrics)
+    except Exception:
+        # Instrumentation must never change workflow outcome.
+        return None

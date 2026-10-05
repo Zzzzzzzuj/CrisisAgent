@@ -1,13 +1,13 @@
-import hashlib
 import json
 
 from backend.agents import context_pack
+from evaluation.frozen_hash import canonical_text_sha256
 from evaluation import p2_3b_retrieval_qualified_eval as runner
 
 
 def _data():
     raw = runner.DATASET.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == runner.FROZEN_SHA256
+    assert canonical_text_sha256(raw) == runner.FROZEN_SHA256
     return json.loads(raw.decode("utf-8"))
 
 

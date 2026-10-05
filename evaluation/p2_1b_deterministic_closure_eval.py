@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -11,6 +10,7 @@ from typing import Any
 from backend.agents.memory_retriever import retrieve_memories
 from backend.core.context_pack_runtime import ContextPackRuntimeProvider
 from backend.core.state import AgentState
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,7 +49,7 @@ def _build_pack(case: dict[str, Any]) -> dict[str, Any]:
 
 def evaluate(dataset_path: Path = DATASET, *, require_frozen_hash: bool = True) -> dict[str, Any]:
     raw = dataset_path.read_bytes()
-    dataset_sha = hashlib.sha256(raw).hexdigest()
+    dataset_sha = canonical_text_sha256(raw)
     if require_frozen_hash and dataset_sha != FROZEN_SHA256:
         raise ValueError("P2.1b holdout SHA-256 mismatch")
     data = json.loads(raw.decode("utf-8"))

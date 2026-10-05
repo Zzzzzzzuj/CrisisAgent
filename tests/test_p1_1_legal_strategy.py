@@ -1,6 +1,5 @@
 """Frozen, offline checks for bounded cross-action Legal decisions."""
 
-import hashlib
 import json
 from pathlib import Path
 
@@ -14,6 +13,7 @@ from backend.agents.legal_action_policy import (
 )
 from backend.agents.legal_claim_coverage import build_claim_coverage
 from backend.agents.legal_targeted_search import run_legal_action_loop
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 DATASET = Path(__file__).resolve().parents[1] / "evaluation" / "p1_1_legal_strategy_frozen.json"
@@ -23,8 +23,8 @@ RULE = {"chunk_id": "rule", "source": "regulation",
 
 
 def _scenarios():
-    raw = DATASET.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
-    assert hashlib.sha256(raw).hexdigest() == FROZEN_SHA256
+    raw = DATASET.read_bytes()
+    assert canonical_text_sha256(raw) == FROZEN_SHA256
     data = json.loads(raw.decode("utf-8"))
     return data["development"] + data["holdout"]
 

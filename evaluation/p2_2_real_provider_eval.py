@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import uuid
@@ -26,6 +25,7 @@ from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
 from backend.llm.config import get_llm_config
 from backend.llm.offline_guard import assert_external_model_call_allowed
 from backend.llm.parser import parse_json_response, validate_required_fields
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +37,7 @@ LEGAL_FIELDS = ("legal_risks", "safe_points", "revision_advice", "public_opinion
 
 
 def dataset_sha256(path: Path = DATASET) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return canonical_text_sha256(path.read_bytes())
 
 
 def validate_provider_config() -> dict[str, str]:
@@ -169,7 +169,7 @@ def _execute(condition_id: str, kind: str, payload: dict[str, Any], pack: dict[s
 
 def run(dataset_path: Path = DATASET, *, output_path: Path | None = None) -> dict[str, Any]:
     raw_dataset = dataset_path.read_bytes()
-    digest = hashlib.sha256(raw_dataset).hexdigest()
+    digest = canonical_text_sha256(raw_dataset)
     if FROZEN_SHA256 == "TO_BE_FROZEN_AFTER_FILE_CREATION" or digest != FROZEN_SHA256:
         raise ValueError("P2.2 frozen holdout SHA-256 mismatch; no request was made.")
     config = validate_provider_config()

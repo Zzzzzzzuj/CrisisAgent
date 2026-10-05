@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
 from backend.agents.context_pack import build_context_pack
 from backend.agents.memory_retriever import retrieve_memories
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -207,7 +207,7 @@ def evaluate(dataset_path: Path = DATASET) -> dict[str, Any]:
         pack_rows.append(row)
 
     return {
-        "version": data["version"], "dataset_sha256": hashlib.sha256(raw).hexdigest(),
+        "version": data["version"], "dataset_sha256": canonical_text_sha256(raw),
         "measurement_boundary": "synthetic offline retrieval, content sections, and Writer prompt construction; no Agent output",
         "memory": {
             "sample_size": len(data["queries"]), "memory_count": len(memories), "top_k": top_k,

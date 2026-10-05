@@ -1,7 +1,6 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from hashlib import sha256
 from pathlib import Path
 from threading import Event
 from time import sleep
@@ -21,6 +20,7 @@ from backend.db import repositories
 from backend.db.models import AgentCheckpoint
 from backend.db.repositories import ExecutionLease, SQLAlchemyCheckpointRepository, StaleExecutionLease, use_execution_lease
 from backend.db.session import Base
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 @pytest.fixture
@@ -53,7 +53,7 @@ def _expire(repository, session_id):
 
 def test_frozen_fault_scenarios_have_required_boundaries():
     frozen = Path("evaluation/p4_runtime_fault_scenarios_frozen.json").read_bytes()
-    assert sha256(frozen.replace(b"\r\n", b"\n").replace(b"\r", b"\n")).hexdigest() == (
+    assert canonical_text_sha256(frozen) == (
         "06bcd64f97ef7e456e4d015551588e60937c5b32cbfb77bbcde3b6780cb1f0a0")
     payload = json.loads(frozen)
     assert [row["id"] for row in payload["scenarios"]] == ["F1", "F2", "F3", "F4", "F5"]

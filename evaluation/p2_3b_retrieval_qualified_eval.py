@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import uuid
@@ -21,6 +20,7 @@ from backend.llm.client import get_last_llm_trace, reset_last_llm_trace
 from backend.llm.config import get_llm_config
 from backend.llm.offline_guard import assert_external_model_call_allowed
 from backend.llm.parser import parse_json_response, validate_required_fields
+from evaluation.frozen_hash import canonical_text_sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = ROOT / "evaluation" / "p2_3b_retrieval_qualified_holdout.json"
@@ -31,7 +31,7 @@ REQUIRED_FIELDS = ("statement", "strategy", "tone", "revisions")
 
 def load_frozen_dataset(path: Path = DATASET) -> tuple[dict, str]:
     raw = path.read_bytes()
-    digest = hashlib.sha256(raw).hexdigest()
+    digest = canonical_text_sha256(raw)
     if digest != FROZEN_SHA256:
         raise ValueError("P2.3b frozen dataset SHA-256 mismatch; no provider request was made.")
     return json.loads(raw.decode("utf-8")), digest

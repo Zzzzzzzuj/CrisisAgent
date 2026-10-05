@@ -16,6 +16,8 @@ def test_executor_runs_normal_plan():
     assert result["results"]["sentiment"] == {"risk_level": "high", "event": "test event"}
     assert result["failed_agents"] == []
     assert result["execution_trace"][0]["status"] == "success"
+    assert isinstance(result["execution_trace"][0]["duration_ms"], float)
+    assert result["execution_trace"][0]["duration_ms"] >= 0
 
 
 def test_executor_runs_multiple_agents_in_plan_order():
@@ -51,6 +53,27 @@ def test_executor_runs_multiple_agents_in_plan_order():
         "writer",
         "decision",
     ]
+
+
+def test_executor_keeps_each_safe_llm_call_summary_in_trace():
+    from backend.llm.client import _record_llm_trace
+
+    def runner(payload):
+        for duration in (2, 3):
+            _record_llm_trace(provider="mock", model="mock", agent_name="writer", latency_ms=duration,
+                              success=True, failure_type=None, fallback_used=False, retry_count=0,
+                              messages=[{"role": "user", "content": "private input"}],
+                              response_text="private output")
+        return {"statement": "safe"}
+
+    result = execute({"plan_id": "p-multi", "plan": [{"agent": "writer", "reason": "test"}]},
+                     {"event": "safe fixture"}, agent_registry={"writer": runner})
+    trace = result["execution_trace"][0]
+
+    assert len(trace["llm_calls"]) == 2
+    assert sum(call["latency_ms"] for call in trace["llm_calls"]) == 5
+    assert "private input" not in repr(trace)
+    assert "private output" not in repr(trace)
 
 
 def test_executor_records_invalid_agent_without_crashing():
@@ -122,4 +145,5 @@ def test_executor_output_schema_is_stable():
         "status",
         "output",
         "error",
+        "duration_ms",
     }
