@@ -1,8 +1,8 @@
-import hashlib
 import json
 
 from backend.agents.context_pack import build_context_pack
 from evaluation.p2_memory_contextpack_eval import evaluate
+from evaluation.frozen_hash import canonical_text_sha256
 
 
 HOLDOUT = "evaluation/p2_1_memory_contextpack_holdout.json"
@@ -13,8 +13,24 @@ def _dataset():
     from pathlib import Path
 
     raw = Path(HOLDOUT).read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == FROZEN_SHA256
+    assert canonical_text_sha256(raw) == FROZEN_SHA256
     return json.loads(raw.decode("utf-8"))
+
+
+def test_frozen_text_hash_is_independent_of_line_endings():
+    lf = b'{"case": "frozen"}\n'
+    crlf = lf.replace(b"\n", b"\r\n")
+    cr = lf.replace(b"\n", b"\r")
+
+    assert canonical_text_sha256(lf) == canonical_text_sha256(crlf)
+    assert canonical_text_sha256(lf) == canonical_text_sha256(cr)
+
+
+def test_frozen_text_hash_changes_when_content_changes():
+    original = b'{"case": "frozen"}\n'
+    changed = b'{"case": "altered"}\n'
+
+    assert canonical_text_sha256(original) != canonical_text_sha256(changed)
 
 
 def test_holdout_retrieval_abstains_without_erasing_relevant_matches():

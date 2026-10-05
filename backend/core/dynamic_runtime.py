@@ -10,6 +10,7 @@ from backend.core.plan_validator import validate_plan
 from backend.core.reasoning_mode import apply_reasoning_mode_to_state
 from backend.core.state import RUNNING, WAITING_HUMAN, AgentState
 from backend.harness.service import get_effective_harness_spec, get_runtime_harness_spec
+from backend.observability.run_metrics import build_run_metrics
 
 
 def run_dynamic_agent(
@@ -53,6 +54,7 @@ def run_dynamic_agent(
         "results": state.get_all_results(),
         "failed_agents": list(state.failed_agents),
         "execution_trace": list(state.trace),
+        "run_metrics": _safe_run_metrics(state),
         "harness_spec": deepcopy(state.metadata.get("harness_spec", {})),
         "state_status": state.status,
         "human_fact_request": deepcopy((state.metadata.get("human_fact") or {}).get("request")),
@@ -176,6 +178,7 @@ def build_dynamic_result(
             if item.get("agent") and item.get("status") == "success"
         ],
     }
+    run_metrics = _safe_run_metrics(state)
     return {
         "session_id": state.session_id,
         "plan_id": state.plan_id,
@@ -187,6 +190,7 @@ def build_dynamic_result(
         "results": state.get_all_results(),
         "failed_agents": list(state.failed_agents),
         "execution_trace": list(state.trace),
+        "run_metrics": run_metrics,
         "harness_spec": deepcopy(state.metadata.get("harness_spec", {})),
         "human_fact_request": deepcopy((state.metadata.get("human_fact") or {}).get("request")),
         "human_fact": deepcopy(state.metadata.get("human_fact")),
@@ -195,6 +199,16 @@ def build_dynamic_result(
         "legal_action_loop": deepcopy(state.metadata.get("legal_action_loop")),
         **_reasoning_mode_response(state),
     }
+
+
+def _safe_run_metrics(state: AgentState) -> dict | None:
+    try:
+        metrics = build_run_metrics(state.session_id, state.trace, state.status, state.approval)
+        state.metadata["run_metrics"] = deepcopy(metrics)
+        return metrics
+    except Exception:
+        # Metrics are diagnostic only and cannot affect runtime decisions.
+        return None
 
 
 def _reasoning_mode_response(state: AgentState) -> dict:

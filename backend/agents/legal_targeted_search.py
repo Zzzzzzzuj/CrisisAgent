@@ -23,6 +23,11 @@ from backend.agents.legal_action_proposal import (
     request_legal_action_proposal,
 )
 from backend.agents.legal_claim_relation import build_legal_claim_relations, evidence_ref
+from backend.llm.client import (
+    get_llm_trace_calls,
+    legal_operation_scope,
+    mark_llm_operation_fallback,
+)
 
 
 MAX_TARGETED_ROUNDS = 1
@@ -127,7 +132,13 @@ def execute_recommended_targeted_search(
             targeted_relation = {"legal_claim_relations": [], "relation_status": "skipped"}
         else:
             action["observation_type"] = "retrieval_hit"
-            targeted_relation = relation_call([claim], chunks, mode=mode, llm_call=llm_call)
+            with legal_operation_scope("legal.relation_check"):
+                targeted_relation = relation_call([claim], chunks, mode=mode, llm_call=llm_call)
+            if (isinstance(targeted_relation, dict)
+                    and targeted_relation.get("relation_status") == "fallback"):
+                mark_llm_operation_fallback(
+                    "Agent B", "legal.relation_check", "schema_validation_failed",
+                )
             if not isinstance(targeted_relation, dict):
                 action["observation_type"] = "invalid_output"
                 raise ValueError("Targeted relation returned an invalid result.")
@@ -684,7 +695,22 @@ def _select_legal_action(
         risk_level=risk_level,
     )
     decision["proposal_context_chars"] = len(str(context))
-    result = request_legal_action_proposal(context, llm_call=llm_call)
+    with legal_operation_scope("legal.action_proposal") as operation_identity:
+        result = request_legal_action_proposal(context, llm_call=llm_call)
+    decision["operation_type"] = operation_identity.get("operation_type", "unknown")
+    decision["operation_span_id"] = operation_identity.get("operation_span_id")
+    try:
+        calls = get_llm_trace_calls()
+    except Exception:
+        calls = []
+    if calls:
+        latest = calls[-1]
+        if (latest.get("operation_type") == decision["operation_type"]
+                and latest.get("operation_span_id") == decision["operation_span_id"]):
+            decision["llm_call_id"] = latest.get("llm_call_id")
+    if not isinstance(result, dict) or not isinstance(result.get("proposal"), dict):
+        failure_type = result.get("failure_type") if isinstance(result, dict) else "provider_error"
+        mark_llm_operation_fallback("Agent B", "legal.action_proposal", failure_type)
     decision["proposal_called"] = True
     proposal = result.get("proposal")
     if not isinstance(proposal, dict):
@@ -764,6 +790,7 @@ def _annotate_decision(action: dict, decision: dict) -> None:
         "executed_action", "executed_target_claim_index", "result_observation_type",
         "result_observation_status", "remaining_rounds", "remaining_tool_calls",
         "proposal_context_chars",
+        "operation_type", "operation_span_id", "llm_call_id",
         "dependency_type", "dependency_reason_code",
     ):
         if key in decision:

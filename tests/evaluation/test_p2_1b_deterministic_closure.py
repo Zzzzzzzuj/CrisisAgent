@@ -1,7 +1,7 @@
-import hashlib
 import json
 from pathlib import Path
 
+from evaluation.frozen_hash import canonical_text_sha256
 from evaluation.p2_1b_deterministic_closure_eval import evaluate
 
 
@@ -12,7 +12,7 @@ FROZEN_SHA256 = "9f61a24c2ae4a47bef44cb5320090fdb78e19f48c94939a75e817b513739337
 
 def test_p2_1b_holdout_is_frozen_and_covers_requested_scenarios():
     raw = HOLDOUT.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == FROZEN_SHA256
+    assert canonical_text_sha256(raw) == FROZEN_SHA256
     data = json.loads(raw.decode("utf-8"))
     assert len(data["queries"]) == 6
     assert len(data["context_cases"]) == 7

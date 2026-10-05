@@ -26,16 +26,30 @@ def context_pack_trace_metadata(pack: dict[str, Any]) -> dict[str, Any]:
     selected = [name for name in sections if _has_value(pack.get(name))]
     event_fact_count = sum(_has_value(value) for value in event_facts.values())
     digest = str(pack.get("context_pack_hash", ""))
+    chars_before = _safe_nonnegative_int(pack.get("pre_compression_estimated_chars"))
+    chars_after = len(str(pack.get("rendered_context", "")))
     return {
         "context_pack_id": f"cp_{digest[:16]}" if digest else None,
         "role": pack.get("target_agent", "general"),
-        "context_chars": len(str(pack.get("rendered_context", ""))),
+        "context_chars": chars_after,
+        "chars_before": chars_before,
+        "chars_after": chars_after,
+        "reduction_chars": chars_before - chars_after if chars_before is not None and chars_after is not None else None,
+        "reduction_ratio": round((chars_before - chars_after) / chars_before, 4)
+        if chars_before not in (None, 0) and chars_after is not None else None,
         "selected_sections": selected,
         "fact_count": event_fact_count,
         "evidence_count": len(pack.get("top_legal_evidence", [])) if isinstance(pack.get("top_legal_evidence"), list) else 0,
         "budget": pack.get("token_budget_hint"),
+        "budget_chars": pack.get("token_budget_hint") if pack.get("budget_unit") == "characters" else None,
         "truncated": bool(pack.get("dropped_fields")),
     }
+
+
+def _safe_nonnegative_int(value: Any) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    return None
 
 
 def summarize_trace_input(value: Any) -> dict[str, Any]:

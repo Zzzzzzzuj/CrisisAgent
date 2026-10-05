@@ -34,6 +34,16 @@ CASE_FIELDS: dict[str, tuple[str, ...]] = {
                     "provider_error_count"),
     "trace": ("trace_available", "diagnostic_fields_available", "trace_safety_passed"),
     "usage": ("prompt_tokens", "completion_tokens", "total_tokens", "usage_available"),
+    "case_integrity": ("case_input_sha256",),
+    "observability": (
+        "session_total_latency_ms", "logical_llm_calls", "http_attempts", "technical_retries",
+        "token_source", "input_tokens", "output_tokens", "total_tokens", "retrieval_call_count",
+        "retrieval_latency_ms", "retrieval_latency_status", "retrieval_status_counts",
+        "tool_call_count", "tool_latency_ms", "tool_status_counts", "fallback_count",
+        "fallback_categories", "human_fact_request_count", "human_fact_response_count",
+        "final_review_count", "approval_count", "rejection_count", "agent_metrics", "llm_calls",
+        "operation_metrics",
+    ),
     "diagnosis": ("claims", "event_fact_gap_candidates", "human_fact_dependency",
                   "writer_introduction_status"),
     "claim_extraction": ("claim_extraction_called", "provider_status", "parse_status",
@@ -69,6 +79,7 @@ METADATA_FIELDS = (
     "other_external_network_allowed", "git_branch", "git_commit",
     "working_tree_dirty", "evaluation_started_at", "claim_extraction_telemetry_version",
     "human_response_strategy", "max_fact_responses", "multi_fact_input_enabled",
+    "p5_0_baseline_commit",
 )
 
 
@@ -94,6 +105,11 @@ def _safe_group(name: str, value: Any) -> dict[str, Any]:
         return _safe_diagnosis(source)
     if name == "claim_extraction":
         return _safe_claim_extraction_telemetry(source)
+    if name == "observability":
+        return _safe_observability(source)
+    if name == "case_integrity":
+        digest = source.get("case_input_sha256")
+        return {"case_input_sha256": digest if isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest) else None}
     result: dict[str, Any] = {}
     for key in allowed:
         item = source.get(key)
@@ -151,6 +167,146 @@ def _safe_count(value: Any) -> int | None:
     return value if type(value) is int and 0 <= value <= 100000 else None
 
 
+def _safe_observability(source: Mapping[str, Any]) -> dict[str, Any]:
+    def number(value):
+        return round(float(value), 3) if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0 else None
+
+    def statuses(value):
+        if not isinstance(value, Mapping):
+            return {}
+        return {key: _safe_count(count) for key, count in value.items()
+                if _is_label(key, 40) and _safe_count(count) is not None}
+
+    def token_source(value):
+        return value if value in {"provider", "estimated", "unavailable", "mixed"} else "unavailable"
+
+    def safe_id(value):
+        return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{32}", value) else None
+
+    operation_types = {
+        "legal.claim_extraction", "legal.action_proposal", "legal.relation_check",
+        "legal.review", "unknown",
+    }
+    attempt_statuses = {"SUCCESS", "TIMEOUT", "HTTP_ERROR", "CONNECTION_ERROR", "UNKNOWN"}
+
+    def attempt_status_counts(value):
+        if not isinstance(value, Mapping):
+            return {}
+        return {key: _safe_count(count) for key, count in value.items()
+                if key in attempt_statuses and _safe_count(count) is not None}
+
+    agents = []
+    for item in source.get("agent_metrics", []) if isinstance(source.get("agent_metrics"), list) else []:
+        if not isinstance(item, Mapping) or not _is_label(item.get("agent_name"), 80):
+            continue
+        agents.append({key: _safe_count(item.get(key)) for key in ("execution_count", "llm_call_count",
+                       "retrieval_call_count", "tool_call_count")} | {
+            "agent_name": item["agent_name"],
+            "latency_ms": number(item.get("latency_ms")),
+            "llm_latency_ms": number(item.get("llm_latency_ms")),
+            "retrieval_latency_ms": number(item.get("retrieval_latency_ms")),
+            "tool_latency_ms": number(item.get("tool_latency_ms")),
+            "context_chars_before": _safe_count(item.get("context_chars_before")),
+            "context_chars_after": _safe_count(item.get("context_chars_after")),
+            "context_budget_chars": _safe_count(item.get("context_budget_chars")),
+            "context_truncated": item.get("context_truncated") if type(item.get("context_truncated")) is bool else None,
+            "input_tokens": _safe_count(item.get("input_tokens")),
+            "output_tokens": _safe_count(item.get("output_tokens")),
+            "total_tokens": _safe_count(item.get("total_tokens")),
+            "token_source": token_source(item.get("token_source")),
+        })
+
+    llm_calls = []
+    for item in source.get("llm_calls", []) if isinstance(source.get("llm_calls"), list) else []:
+        if not isinstance(item, Mapping) or not _is_label(item.get("agent_name"), 80):
+            continue
+        llm_calls.append({
+            "agent_name": item["agent_name"], "latency_ms": number(item.get("latency_ms")),
+            "success": item.get("success") if type(item.get("success")) is bool else None,
+            "failure_type": item.get("failure_type") if _is_label(item.get("failure_type"), 80) else None,
+            "fallback_used": item.get("fallback_used") if type(item.get("fallback_used")) is bool else None,
+            "http_attempt_count": _safe_count(item.get("http_attempt_count")),
+            "technical_retries": _safe_count(item.get("technical_retries")),
+            "input_tokens": _safe_count(item.get("input_tokens")),
+            "output_tokens": _safe_count(item.get("output_tokens")),
+            "total_tokens": _safe_count(item.get("total_tokens")),
+            "token_source": token_source(item.get("token_source")),
+            "llm_call_id": safe_id(item.get("llm_call_id")),
+            "operation_type": (item.get("operation_type") if item.get("operation_type") in operation_types
+                               else "unknown"),
+            "operation_span_id": safe_id(item.get("operation_span_id")),
+            "attempts": [
+                {"attempt_index": _safe_count(attempt.get("attempt_index")),
+                 "attempt_latency_ms": number(attempt.get("attempt_latency_ms")),
+                 "attempt_status": attempt.get("attempt_status")
+                    if attempt.get("attempt_status") in attempt_statuses else "UNKNOWN"}
+                for attempt in item.get("attempts", [])[:100]
+                if isinstance(attempt, Mapping)
+            ] if isinstance(item.get("attempts"), list) else [],
+        })
+
+    operation_metrics = []
+    for item in source.get("operation_metrics", []) if isinstance(source.get("operation_metrics"), list) else []:
+        if not isinstance(item, Mapping):
+            continue
+        operation_type = item.get("operation_type")
+        if operation_type not in operation_types:
+            operation_type = "unknown"
+        operation_metrics.append({
+            "operation_type": operation_type,
+            "operation_span_count": _safe_count(item.get("operation_span_count")),
+            "logical_call_count": _safe_count(item.get("logical_call_count")),
+            "http_attempt_count": _safe_count(item.get("http_attempt_count")),
+            "technical_retry_count": _safe_count(item.get("technical_retry_count")),
+            "success_count": _safe_count(item.get("success_count")),
+            "failure_count": _safe_count(item.get("failure_count")),
+            "latency_ms": number(item.get("latency_ms")),
+            "attempt_status_counts": attempt_status_counts(item.get("attempt_status_counts")),
+            "provider_input_tokens": (_safe_count(item.get("provider_input_tokens"))
+                                      if item.get("token_source") in {"provider", "mixed"} else None),
+            "provider_output_tokens": (_safe_count(item.get("provider_output_tokens"))
+                                       if item.get("token_source") in {"provider", "mixed"} else None),
+            "provider_total_tokens": (_safe_count(item.get("provider_total_tokens"))
+                                      if item.get("token_source") in {"provider", "mixed"} else None),
+            "token_source": token_source(item.get("token_source")),
+        })
+
+    safe = {
+        "session_total_latency_ms": number(source.get("session_total_latency_ms")),
+        "logical_llm_calls": _safe_count(source.get("logical_llm_calls")),
+        "http_attempts": _safe_count(source.get("http_attempts")),
+        "technical_retries": _safe_count(source.get("technical_retries")),
+        "token_source": token_source(source.get("token_source")),
+        "input_tokens": _safe_count(source.get("input_tokens")),
+        "output_tokens": _safe_count(source.get("output_tokens")),
+        "total_tokens": _safe_count(source.get("total_tokens")),
+        "retrieval_call_count": _safe_count(source.get("retrieval_call_count")),
+        "retrieval_latency_ms": number(source.get("retrieval_latency_ms")),
+        "retrieval_latency_status": source.get("retrieval_latency_status")
+            if source.get("retrieval_latency_status") in {"available", "partial", "unavailable"} else "unavailable",
+        "retrieval_status_counts": statuses(source.get("retrieval_status_counts")),
+        "tool_call_count": _safe_count(source.get("tool_call_count")),
+        "tool_latency_ms": number(source.get("tool_latency_ms")),
+        "tool_status_counts": statuses(source.get("tool_status_counts")),
+        "fallback_count": _safe_count(source.get("fallback_count")),
+        "fallback_categories": sorted({item[:80] for item in source.get("fallback_categories", [])
+                                        if _is_label(item, 80)})[:100],
+        "human_fact_request_count": _safe_count(source.get("human_fact_request_count")),
+        "human_fact_response_count": _safe_count(source.get("human_fact_response_count")),
+        "final_review_count": _safe_count(source.get("final_review_count")),
+        "approval_count": _safe_count(source.get("approval_count")),
+        "rejection_count": _safe_count(source.get("rejection_count")),
+        "agent_metrics": agents[:100], "llm_calls": llm_calls[:1000],
+        "operation_metrics": operation_metrics[:100],
+    }
+    if safe["token_source"] != "provider":
+        safe["input_tokens"] = safe["output_tokens"] = safe["total_tokens"] = None
+        for agent in safe["agent_metrics"]:
+            if agent["token_source"] != "provider":
+                agent["input_tokens"] = agent["output_tokens"] = agent["total_tokens"] = None
+    return safe
+
+
 def _safe_decision_telemetry(value: Any) -> list[dict[str, Any]]:
     """Allowlist action-decision facts without persisting business text."""
     if not isinstance(value, list):
@@ -176,6 +332,15 @@ def _safe_decision_telemetry(value: Any) -> list[dict[str, Any]]:
         for key in ("proposal_called", "validator_called", "validator_allowed",
                     "fallback_used", "proposal_fallback_used", "previous_observation_changed_state"):
             safe[key] = item.get(key) if type(item.get(key)) is bool else None
+        operation_type = item.get("operation_type")
+        safe["operation_type"] = (operation_type if operation_type in {
+            "legal.claim_extraction", "legal.action_proposal", "legal.relation_check",
+            "legal.review", "unknown",
+        } else "unknown")
+        for key in ("operation_span_id", "llm_call_id"):
+            identity = item.get(key)
+            safe[key] = (identity if isinstance(identity, str)
+                         and re.fullmatch(r"[0-9a-f]{32}", identity) else None)
         eligible = []
         for option in item.get("eligible_actions", []) if isinstance(item.get("eligible_actions"), list) else []:
             if not isinstance(option, Mapping) or not _is_label(option.get("action"), 80):
@@ -306,7 +471,7 @@ def _safe_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
         if isinstance(selected, list) else []
     )
     for key in ("frozen_file", "frozen_sha256", "AGENT_MODE", "OFFLINE_EVAL", "provider",
-                "model", "git_branch", "git_commit", "human_response_strategy"):
+                "model", "git_branch", "git_commit", "human_response_strategy", "p5_0_baseline_commit"):
         value = safe.get(key)
         if value is not None and not isinstance(value, (str, bool)):
             safe[key] = None

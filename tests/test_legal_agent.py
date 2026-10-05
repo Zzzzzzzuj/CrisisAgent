@@ -142,6 +142,8 @@ def test_legal_agent_gate_allows_retriever_once_and_records_hit(monkeypatch):
     assert rag_info["retrieval_skipped"] is False
     assert rag_info["retrieval_executed"] is True
     assert rag_info["retrieval_status"] == "executed_with_hits"
+    assert isinstance(rag_info["retrieval_latency_ms"], float)
+    assert rag_info["retrieval_latency_ms"] >= 0
     assert rag_info["rag_used"] is True
     assert rag_info["retrieval_backend"] == "markdown"
     assert rag_info["retrieval_query"]
@@ -152,6 +154,19 @@ def test_legal_agent_gate_allows_retriever_once_and_records_hit(monkeypatch):
     assert rag_info["evidence_quality"]["quality"] == "high"
     assert rag_info["evidence_quality"]["low_confidence"] is False
     assert "Legal Agent used" in rag_info["evidence_summary"]
+
+
+def test_timed_retrieval_records_only_safe_latency_and_status(monkeypatch):
+    monkeypatch.setattr(legal_agent, "retrieve", lambda query, top_k=3: {"chunks": [], "sources": []})
+    legal_agent._RETRIEVAL_CALLS_CONTEXT.set([])
+
+    legal_agent._timed_retrieve("PRIVATE QUERY", top_k=2)
+
+    calls = legal_agent._RETRIEVAL_CALLS_CONTEXT.get([])
+    assert len(calls) == 1
+    assert calls[0]["status"] == "NO_HIT"
+    assert calls[0]["latency_ms"] >= 0
+    assert "PRIVATE QUERY" not in repr(calls)
 
 
 def test_legal_agent_rag_enabled_false_skips_retrieval(monkeypatch):
